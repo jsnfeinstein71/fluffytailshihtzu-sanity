@@ -7,7 +7,6 @@
   --card:#ffffff;
   --shadow: 0 10px 30px rgba(16,24,40,.08);
   --radius: 18px;
-  --radius2: 14px;
   --max: 1100px;
   --blue:#1f6fff;
 }
@@ -393,10 +392,9 @@ a{
 @media (max-width:680px){
   .wrap{
     padding:16px 12px 40px;
-    overflow-x:hidden;
   }
 
-  .nav{
+  .navMain{
     display:flex;
     flex-wrap:nowrap;
     gap:8px;
@@ -407,11 +405,11 @@ a{
     margin-bottom:12px;
   }
 
-  .nav::-webkit-scrollbar{
+  .navMain::-webkit-scrollbar{
     display:none;
   }
 
-  .nav .btn{
+  .navMain .btn{
     flex:0 0 auto;
     white-space:nowrap;
     padding:9px 12px;
@@ -420,25 +418,48 @@ a{
   }
 
   .topbar{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:flex-start;
     gap:10px;
     margin-bottom:12px;
   }
 
-  .topbar .nav{
-    width:auto;
-    overflow-x:visible;
-  }
-
-  .pill{
+  .topbar .pill{
+    align-self:flex-start;
+    max-width:100%;
     font-size:12px;
     padding:7px 11px;
-    max-width:100%;
+  }
+
+  .navActions{
+    display:flex;
+    flex-wrap:nowrap;
+    gap:8px;
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+
+  .navActions::-webkit-scrollbar{
+    display:none;
+  }
+
+  .navActions .btn{
+    flex:0 0 auto;
+    white-space:nowrap;
+    padding:9px 12px;
+    font-size:13px;
+    min-height:40px;
   }
 
   .h1{
     font-size:28px;
     line-height:1.02;
     margin:0 0 8px;
+    overflow-wrap:anywhere;
   }
 
   .lead{
@@ -446,17 +467,13 @@ a{
     line-height:1.45;
     margin:0 0 10px;
     max-width:100%;
+    overflow-wrap:anywhere;
   }
 
   .sublead{
     font-size:15px;
     line-height:1.45;
     max-width:100%;
-  }
-
-  .h1,
-  .lead,
-  .sublead{
     overflow-wrap:anywhere;
   }
 
@@ -467,6 +484,7 @@ a{
 
   .card{
     border-radius:16px;
+    max-width:100%;
   }
 
   .pad{
