@@ -1,5 +1,6 @@
 import '../home.css'
 import {client} from '@/sanity/lib/client'
+import WaitlistModal from '../components/WaitlistModal'
 
 type SiteSettings = {
   goodDogUrl?: string
@@ -40,9 +41,11 @@ export default async function AboutPage() {
         </div>
 
         <div className="nav">
-          <a className="btn btnPrimary" href={waitlistUrl} target="_blank" rel="noreferrer">
-            Join the Waitlist
-          </a>
+          <WaitlistModal
+  waitlistUrl={waitlistUrl}
+  buttonLabel="Join the Waitlist"
+  className="btn btnPrimary"
+/>
           <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
             View on GoodDog
           </a>
