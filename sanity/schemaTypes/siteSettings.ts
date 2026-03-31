@@ -22,6 +22,30 @@ export const siteSettingsType = defineType({
       rows: 4,
     }),
     defineField({
+      name: 'heroImage',
+      title: 'Homepage Hero Image',
+      type: 'image',
+      options: {hotspot: true},
+    }),
+    defineField({
+      name: 'heroThumb1',
+      title: 'Homepage Hero Thumb 1',
+      type: 'image',
+      options: {hotspot: true},
+    }),
+    defineField({
+      name: 'heroThumb2',
+      title: 'Homepage Hero Thumb 2',
+      type: 'image',
+      options: {hotspot: true},
+    }),
+    defineField({
+      name: 'heroThumb3',
+      title: 'Homepage Hero Thumb 3',
+      type: 'image',
+      options: {hotspot: true},
+    }),
+    defineField({
       name: 'goodDogUrl',
       title: 'GoodDog URL',
       type: 'url',
@@ -38,3 +62,4 @@ export const siteSettingsType = defineType({
     }),
   ],
 })
+
