@@ -1,526 +1,317 @@
-:root{
-  --bg:#ffffff;
-  --text:#15181f;
-  --muted:#5a6472;
-  --line:#e6e8ee;
-  --soft:#f6f7fb;
-  --card:#ffffff;
-  --shadow: 0 10px 30px rgba(16,24,40,.08);
-  --radius: 18px;
-  --max: 1100px;
-  --blue:#1f6fff;
+import './home.css'
+import {client} from '@/sanity/lib/client'
+import WaitlistModal from './components/WaitlistModal'
+
+type SiteSettings = {
+  title?: string
+  homepageHeadline?: string
+  homepageIntro?: string
+  goodDogUrl?: string
+  waitlistUrl?: string
+  serviceArea?: string
 }
 
-*{
-  box-sizing:border-box;
+type Litter = {
+  title?: string
+  birthDate?: string
+  girlsCount?: number
+  boysCount?: number
+  summary?: string
+  groupPhotoUrl?: string
 }
 
-html, body{
-  max-width:100%;
-  overflow-x:hidden;
+const siteSettingsQuery = `*[_type == "siteSettings"][0]{
+  title,
+  homepageHeadline,
+  homepageIntro,
+  goodDogUrl,
+  waitlistUrl,
+  serviceArea
+}`
+
+const featuredLitterQuery = `*[_type == "litter" && featured == true][0]{
+  title,
+  birthDate,
+  girlsCount,
+  boysCount,
+  summary,
+  "groupPhotoUrl": groupPhoto.asset->url
+}`
+
+export default async function HomePage() {
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
+  const featuredLitter = await client.fetch<Litter>(featuredLitterQuery)
+
+  const goodDogUrl =
+    siteSettings?.goodDogUrl ||
+    'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama'
+
+  const waitlistUrl = siteSettings?.waitlistUrl || '#'
+
+  return (
+    <main className="wrap">
+      <div className="nav" style={{marginBottom: '16px'}}>
+        <a className="btn" href="/about">About</a>
+        <a className="btn" href="/available-puppies">Available Puppies</a>
+        <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
+        <a className="btn" href="/contact">Contact</a>
+      </div>
+
+      <div className="topbar">
+        <div className="pill">
+          <span className="dot"></span>
+          {featuredLitter?.birthDate
+            ? `New litter born ${formatShortDate(featuredLitter.birthDate)} • Waitlist open`
+            : 'Waitlist open'}
+        </div>
+
+        <div className="nav">
+          <WaitlistModal
+            waitlistUrl={waitlistUrl}
+            buttonLabel="Join the Waitlist"
+            className="btn btnPrimary"
+          />
+          <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
+            View on GoodDog
+          </a>
+        </div>
+      </div>
+
+      <h1 className="h1 h1Home">
+        {siteSettings?.homepageHeadline ||
+          'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'}
+      </h1>
+
+      <p className="lead">
+        {siteSettings?.homepageIntro ||
+          'FluffyTail Shih Tzu is a small, home-based breeder in Alabama. Our dogs live with us as family pets, and we work with families across the Southeast and beyond.'}
+      </p>
+
+      <p className="sublead">
+        {featuredLitter
+          ? `New litter born ${formatLongDate(featuredLitter.birthDate)}: ${featuredLitter.girlsCount ?? 0} girls and ${featuredLitter.boysCount ?? 0} boys. Individual photos coming soon.`
+          : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
+      </p>
+
+      {featuredLitter ? (
+        <div className="grid">
+          <div className="card">
+            <div className="photos">
+              <div className="heroPhoto">
+                {featuredLitter.groupPhotoUrl ? (
+                  <img
+                    src={featuredLitter.groupPhotoUrl}
+                    alt={featuredLitter.title || 'Featured litter'}
+                  />
+                ) : null}
+              </div>
+
+              <div className="thumbs">
+                <div className="thumb">
+                  {featuredLitter.groupPhotoUrl ? (
+                    <img
+                      src={featuredLitter.groupPhotoUrl}
+                      alt="Featured litter thumbnail"
+                    />
+                  ) : null}
+                </div>
+                <div className="thumb">
+                  {featuredLitter.groupPhotoUrl ? (
+                    <img
+                      src={featuredLitter.groupPhotoUrl}
+                      alt="Featured litter thumbnail"
+                    />
+                  ) : null}
+                </div>
+                <div className="thumb">
+                  {featuredLitter.groupPhotoUrl ? (
+                    <img
+                      src={featuredLitter.groupPhotoUrl}
+                      alt="Featured litter thumbnail"
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="pad">
+              <div className="ctaRow">
+                <WaitlistModal
+                  waitlistUrl={waitlistUrl}
+                  buttonLabel="Join the Waitlist"
+                  className="btn btnPrimary"
+                />
+                <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
+                  GoodDog profile
+                </a>
+                <span className="badge">No spam • No pressure</span>
+              </div>
+
+              <div className="divider"></div>
+
+              <div className="section">
+                <h2>About FluffyTail</h2>
+                <p className="lead" style={{marginBottom: 0}}>
+                  We raise our Shih Tzus in our home in Alabama, where they are part of the family
+                  from day one. We focus on temperament, socialization, and a straightforward
+                  experience for families looking for a well-loved companion.
+                </p>
+
+                <div className="qa">
+                  <div>
+                    <div className="q">Where do your breeding dogs live?</div>
+                    <div className="a">They live in our home with us as family pets.</div>
+                  </div>
+                  <div>
+                    <div className="q">What makes FluffyTail different?</div>
+                    <div className="a">
+                      We are a small, home-based breeder with a personal process, direct
+                      communication, and dogs raised in a real family environment.
+                    </div>
+                  </div>
+                  <div>
+                    <div className="q">How do I hear about new puppies first?</div>
+                    <div className="a">
+                      Join the waitlist and we will reach out when puppies are expected or available.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="pad">
+              <h2 className="panelTitle">At a glance</h2>
+              <div className="meta">
+                <span>📍 Mobile, Alabama area</span>
+                <span>🏠 Home-raised, family environment</span>
+                <span>🐶 Small breeder, not a kennel</span>
+                <span>🌎 Primarily Southeast, with broader reach</span>
+              </div>
+
+              <div className="ctaRow">
+                <WaitlistModal
+                  waitlistUrl={waitlistUrl}
+                  buttonLabel="Join the Waitlist"
+                  className="btn btnPrimary"
+                />
+                <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
+                  Request info
+                </a>
+              </div>
+
+              <div className="divider"></div>
+
+              <p className="lead" style={{margin: 0}}>
+                Prefer to browse first? Our GoodDog profile includes past listings, reviews, and
+                additional buyer information.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{marginTop: '16px'}}>
+          <div className="pad">
+            <h2 style={{marginTop: 0}}>No featured litter listed</h2>
+            <p className="lead" style={{marginBottom: 0}}>
+              Join the waitlist for updates and first notice when puppies are expected or available.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="card section" style={{marginTop: '18px'}}>
+        <div className="pad" style={{paddingBottom: 0}}>
+          <h2 style={{margin: '0 0 6px'}}>Current litter and past puppies</h2>
+          <p className="lead" style={{margin: 0}}>
+            {featuredLitter
+              ? `Our newest litter was born ${formatLongDate(
+                  featuredLitter.birthDate
+                )}. Individual puppy photos are coming soon. Below are a few past puppies as well.`
+              : 'Past puppies and upcoming litters will appear here.'}
+          </p>
+        </div>
+
+        <div className="strip" aria-label="Past puppies">
+          <div className="tile">
+            <div className="tileImg">
+              {featuredLitter?.groupPhotoUrl ? (
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+              ) : null}
+            </div>
+            <div className="tileMeta">
+              <p className="tileName">Girl 1</p>
+              <p className="tileSub">Coming soon</p>
+            </div>
+          </div>
+
+          <div className="tile">
+            <div className="tileImg">
+              {featuredLitter?.groupPhotoUrl ? (
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+              ) : null}
+            </div>
+            <div className="tileMeta">
+              <p className="tileName">Girl 2</p>
+              <p className="tileSub">Coming soon</p>
+            </div>
+          </div>
+
+          <div className="tile">
+            <div className="tileImg">
+              {featuredLitter?.groupPhotoUrl ? (
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+              ) : null}
+            </div>
+            <div className="tileMeta">
+              <p className="tileName">Boy 1</p>
+              <p className="tileSub">Coming soon</p>
+            </div>
+          </div>
+
+          <div className="tile">
+            <div className="tileImg">
+              {featuredLitter?.groupPhotoUrl ? (
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+              ) : null}
+            </div>
+            <div className="tileMeta">
+              <p className="tileName">Boy 2</p>
+              <p className="tileSub">Coming soon</p>
+            </div>
+          </div>
+
+          <div className="tile">
+            <div className="tileImg">
+              {featuredLitter?.groupPhotoUrl ? (
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+              ) : null}
+            </div>
+            <div className="tileMeta">
+              <p className="tileName">Boy 3</p>
+              <p className="tileSub">Coming soon</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="footer">
+        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
+      </div>
+    </main>
+  )
 }
 
-body{
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  color:var(--text);
-  background:var(--bg);
-  line-height:1.45;
+function formatShortDate(date?: string) {
+  if (!date) return ''
+  const d = new Date(date)
+  return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
 }
 
-a{
-  color:inherit;
-}
-
-.wrap{
-  max-width:var(--max);
-  margin:0 auto;
-  padding:28px 18px 70px;
-}
-
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  flex-wrap:wrap;
-  margin-bottom:18px;
-}
-
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
-  padding:8px 12px;
-  border:1px solid var(--line);
-  border-radius:999px;
-  background:var(--soft);
-  color:var(--muted);
-  font-size:13px;
-}
-
-.dot{
-  width:8px;
-  height:8px;
-  border-radius:999px;
-  background:#20c46a;
-}
-
-.nav{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:10px 14px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:#fff;
-  text-decoration:none;
-  font-weight:700;
-  font-size:14px;
-  box-shadow: 0 1px 0 rgba(16,24,40,.04);
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
-  cursor:pointer;
-}
-
-.btn:hover{
-  transform:translateY(-1px);
-  box-shadow:0 8px 20px rgba(16,24,40,.10);
-}
-
-.btnPrimary{
-  background:var(--blue);
-  border-color:var(--blue);
-  color:#fff;
-}
-
-.h1{
-  font-size:44px;
-  letter-spacing:-.02em;
-  margin:0 0 10px;
-  line-height:1.05;
-}
-
-.lead{
-  color:var(--muted);
-  margin:0 0 14px;
-  max-width:62ch;
-}
-
-.sublead{
-  color:var(--muted);
-  margin:0;
-  max-width:68ch;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns: 1.15fr .85fr;
-  gap:18px;
-  align-items:start;
-  margin-top:16px;
-}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
-
-.pad{
-  padding:18px;
-}
-
-.photos{
-  display:grid;
-  grid-template-columns: 1.45fr .55fr;
-  gap:10px;
-  padding:16px;
-  background:var(--soft);
-  border-bottom:1px solid var(--line);
-}
-
-.heroPhoto{
-  height:360px;
-  max-height:45vh;
-  overflow:hidden;
-  border-radius:18px;
-  background:linear-gradient(135deg, #e9ecf4, #f9fafc);
-  border:1px solid #dde2ee;
-  min-height:290px;
-}
-
-.heroPhoto img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.thumbs{
-  display:grid;
-  gap:10px;
-  grid-template-rows:repeat(3, 1fr);
-}
-
-.thumb{
-  height:110px;
-  overflow:hidden;
-  border-radius:14px;
-  background:linear-gradient(135deg, #eceff6, #ffffff);
-  border:1px solid #dde2ee;
-  min-height:90px;
-}
-
-.thumb img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.panelTitle{
-  font-size:16px;
-  margin:0 0 10px;
-}
-
-.meta{
-  display:grid;
-  gap:8px;
-  color:var(--muted);
-  font-size:14px;
-  margin:0 0 14px;
-}
-
-.meta span{
-  display:flex;
-  gap:8px;
-  align-items:center;
-}
-
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border:1px solid var(--line);
-  border-radius:12px;
-  background:var(--soft);
-  color:var(--muted);
-  font-size:13px;
-}
-
-.ctaRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-top:10px;
-}
-
-.section{
-  margin-top:18px;
-}
-
-.section h2{
-  font-size:20px;
-  margin:0 0 10px;
-  letter-spacing:-.01em;
-}
-
-.divider{
-  height:1px;
-  background:var(--line);
-  margin:16px 0;
-}
-
-.qa{
-  display:grid;
-  gap:10px;
-  margin-top:10px;
-}
-
-.q{
-  font-weight:800;
-  font-size:13px;
-}
-
-.a{
-  color:var(--muted);
-  font-size:14px;
-}
-
-.strip{
-  display:grid;
-  grid-auto-flow:column;
-  grid-auto-columns:160px;
-  gap:12px;
-  overflow:auto;
-  padding:14px 16px 18px;
-  scroll-snap-type:x mandatory;
-}
-
-.tile{
-  scroll-snap-align:start;
-  border:1px solid var(--line);
-  border-radius:14px;
-  background:#fff;
-  overflow:hidden;
-  box-shadow:0 6px 18px rgba(16,24,40,.06);
-  min-height:150px;
-}
-
-.tileImg{
-  height:105px;
-  overflow:hidden;
-  background:linear-gradient(135deg, #e9ecf4, #ffffff);
-  border-bottom:1px solid var(--line);
-}
-
-.tileImg img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.tileMeta{
-  padding:10px 10px 12px;
-}
-
-.tileName{
-  font-weight:900;
-  font-size:13px;
-  margin:0 0 2px;
-}
-
-.tileSub{
-  color:var(--muted);
-  font-size:12px;
-  margin:0;
-}
-
-.footer{
-  margin-top:26px;
-  color:#8a93a2;
-  font-size:12px;
-  text-align:center;
-}
-
-.modal{
-  position:fixed;
-  inset:0;
-  display:none;
-  z-index:9999;
-}
-
-.modalShow{
-  display:block;
-}
-
-.backdrop{
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,.55);
-}
-
-.sheet{
-  position:relative;
-  width:min(920px, calc(100% - 24px));
-  margin:28px auto;
-  background:#fff;
-  border-radius:18px;
-  overflow:hidden;
-  box-shadow:0 26px 90px rgba(0,0,0,.35);
-}
-
-.sheetHead{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  align-items:flex-start;
-  padding:16px 16px 12px;
-  border-bottom:1px solid var(--line);
-  background:var(--soft);
-}
-
-.sheetTitle{
-  font-weight:950;
-  font-size:16px;
-  margin:0;
-}
-
-.sheetSub{
-  color:var(--muted);
-  font-size:13px;
-  margin:4px 0 0;
-}
-
-.closeBtn{
-  border:1px solid var(--line);
-  background:#fff;
-  border-radius:12px;
-  padding:8px 10px;
-  cursor:pointer;
-  font-weight:900;
-}
-
-.sheetBody{
-  padding:14px;
-}
-
-.sheetBody iframe{
-  width:100%;
-  border:0;
-  border-radius:14px;
-  background:#fff;
-  height:720px;
-}
-
-@media (max-width:980px){
-  .grid{
-    grid-template-columns:1fr;
-  }
-}
-
-@media (max-width:680px){
-  .wrap{
-    padding:16px 12px 40px;
-  }
-
-  .nav{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-bottom:12px;
-    width:100%;
-  }
-
-  .nav .btn{
-    padding:9px 12px;
-    font-size:13px;
-    min-height:40px;
-    white-space:nowrap;
-  }
-
-  .topbar{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    justify-content:flex-start;
-    gap:10px;
-    margin-bottom:12px;
-  }
-
-  .pill{
-    font-size:12px;
-    padding:7px 11px;
-    max-width:100%;
-  }
-
-  .h1{
-    font-size:26px;
-    line-height:1.02;
-    margin:0 0 8px;
-    overflow-wrap:anywhere;
-  }
-
-  .h1Home{
-    font-size:24px;
-  }
-
-  .lead{
-    font-size:15px;
-    line-height:1.45;
-    margin:0 0 10px;
-    max-width:100%;
-    overflow-wrap:anywhere;
-  }
-
-  .sublead{
-    font-size:15px;
-    line-height:1.45;
-    max-width:100%;
-    overflow-wrap:anywhere;
-  }
-
-  .grid{
-    gap:14px;
-    margin-top:14px;
-  }
-
-  .card{
-    border-radius:16px;
-  }
-
-  .pad{
-    padding:14px;
-  }
-
-  .photos{
-    grid-template-columns:1fr;
-    padding:12px;
-    gap:8px;
-  }
-
-  .heroPhoto{
-    height:auto;
-    min-height:0;
-    max-height:none;
-    aspect-ratio:1 / 1;
-    border-radius:16px;
-  }
-
-  .thumbs{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    grid-template-rows:none;
-    gap:8px;
-  }
-
-  .thumb{
-    height:auto;
-    min-height:0;
-    aspect-ratio:1 / 1;
-    border-radius:12px;
-  }
-
-  .ctaRow{
-    gap:8px;
-  }
-
-  .section{
-    margin-top:14px;
-  }
-
-  .divider{
-    margin:14px 0;
-  }
-
-  .strip{
-    grid-auto-columns:140px;
-    gap:10px;
-    padding:12px 12px 16px;
-  }
-
-  .tileImg{
-    height:92px;
-  }
-}
-
-@media (max-width:520px){
-  .sheet{
-    margin:12px auto;
-  }
-
-  .sheetBody iframe{
-    height:820px;
-  }
+function formatLongDate(date?: string) {
+  if (!date) return ''
+  const d = new Date(date)
+  return d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})
 }
 
