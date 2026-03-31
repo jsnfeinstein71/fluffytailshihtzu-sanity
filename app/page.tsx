@@ -9,6 +9,10 @@ type SiteSettings = {
   goodDogUrl?: string
   waitlistUrl?: string
   serviceArea?: string
+  heroImageUrl?: string
+  heroThumb1Url?: string
+  heroThumb2Url?: string
+  heroThumb3Url?: string
 }
 
 type Litter = {
@@ -26,7 +30,11 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   homepageIntro,
   goodDogUrl,
   waitlistUrl,
-  serviceArea
+  serviceArea,
+  "heroImageUrl": heroImage.asset->url,
+  "heroThumb1Url": heroThumb1.asset->url,
+  "heroThumb2Url": heroThumb2.asset->url,
+  "heroThumb3Url": heroThumb3.asset->url
 }`
 
 const featuredLitterQuery = `*[_type == "litter" && featured == true][0]{
@@ -47,6 +55,11 @@ export default async function HomePage() {
     'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama'
 
   const waitlistUrl = siteSettings?.waitlistUrl || '#'
+
+  const heroImageUrl = siteSettings?.heroImageUrl || featuredLitter?.groupPhotoUrl
+  const heroThumb1Url = siteSettings?.heroThumb1Url || featuredLitter?.groupPhotoUrl
+  const heroThumb2Url = siteSettings?.heroThumb2Url || featuredLitter?.groupPhotoUrl
+  const heroThumb3Url = siteSettings?.heroThumb3Url || featuredLitter?.groupPhotoUrl
 
   return (
     <main className="wrap">
@@ -71,9 +84,6 @@ export default async function HomePage() {
             buttonLabel="Join the Waitlist"
             className="btn btnPrimary"
           />
-          <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-            View on GoodDog
-          </a>
         </div>
       </div>
 
@@ -98,36 +108,36 @@ export default async function HomePage() {
           <div className="card">
             <div className="photos photosHome">
               <div className="heroPhoto">
-                {featuredLitter.groupPhotoUrl ? (
+                {heroImageUrl ? (
                   <img
-                    src={featuredLitter.groupPhotoUrl}
-                    alt={featuredLitter.title || 'Featured litter'}
+                    src={heroImageUrl}
+                    alt="FluffyTail Shih Tzu homepage hero image"
                   />
                 ) : null}
               </div>
 
               <div className="thumbs thumbsHome">
                 <div className="thumb">
-                  {featuredLitter.groupPhotoUrl ? (
+                  {heroThumb1Url ? (
                     <img
-                      src={featuredLitter.groupPhotoUrl}
-                      alt="Featured litter thumbnail"
+                      src={heroThumb1Url}
+                      alt="FluffyTail Shih Tzu homepage thumb 1"
                     />
                   ) : null}
                 </div>
                 <div className="thumb">
-                  {featuredLitter.groupPhotoUrl ? (
+                  {heroThumb2Url ? (
                     <img
-                      src={featuredLitter.groupPhotoUrl}
-                      alt="Featured litter thumbnail"
+                      src={heroThumb2Url}
+                      alt="FluffyTail Shih Tzu homepage thumb 2"
                     />
                   ) : null}
                 </div>
                 <div className="thumb">
-                  {featuredLitter.groupPhotoUrl ? (
+                  {heroThumb3Url ? (
                     <img
-                      src={featuredLitter.groupPhotoUrl}
-                      alt="Featured litter thumbnail"
+                      src={heroThumb3Url}
+                      alt="FluffyTail Shih Tzu homepage thumb 3"
                     />
                   ) : null}
                 </div>
@@ -141,9 +151,6 @@ export default async function HomePage() {
                   buttonLabel="Join the Waitlist"
                   className="btn btnPrimary"
                 />
-                <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-                  GoodDog profile
-                </a>
                 <span className="badge">No spam • No pressure</span>
               </div>
 
@@ -196,16 +203,15 @@ export default async function HomePage() {
                   buttonLabel="Join the Waitlist"
                   className="btn btnPrimary"
                 />
-                <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-                  Request info
+                <a className="btn" href="/contact">
+                  Contact
                 </a>
               </div>
 
               <div className="divider"></div>
 
               <p className="lead" style={{margin: 0}}>
-                Prefer to browse first? Our GoodDog profile includes past listings, reviews, and
-                additional buyer information.
+                Prefer to browse first? Visit the contact page for questions, waitlist info, and next steps.
               </p>
             </div>
           </div>
