@@ -133,9 +133,11 @@ export default async function UpcomingLittersPage() {
             </div>
 
             <div className="ctaRow">
-              <a className="btn btnPrimary" href={waitlistUrl} target="_blank" rel="noreferrer">
-                Join the Waitlist
-              </a>
+              <WaitlistModal
+  waitlistUrl={waitlistUrl}
+  buttonLabel="Join the Waitlist"
+  className="btn btnPrimary"
+/>
               <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
                 GoodDog profile
               </a>
