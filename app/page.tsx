@@ -50,7 +50,7 @@ export default async function HomePage() {
 
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
+      <div className="nav" style={{marginBottom: '16px', rowGap: '8px'}}>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
