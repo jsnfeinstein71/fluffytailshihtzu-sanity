@@ -50,7 +50,7 @@ export default async function HomePage() {
 
   return (
     <main className="wrap">
-      <div className="nav navMain" style={{ marginBottom: '16px' }}>
+      <div className="nav" style={{marginBottom: '16px'}}>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
@@ -65,7 +65,7 @@ export default async function HomePage() {
             : 'Waitlist open'}
         </div>
 
-        <div className="nav navActions">
+        <div className="nav">
           <WaitlistModal
             waitlistUrl={waitlistUrl}
             buttonLabel="Join the Waitlist"
@@ -77,7 +77,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <h1 className="h1">
+      <h1 className="h1 h1Home">
         {siteSettings?.homepageHeadline ||
           'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'}
       </h1>
@@ -108,26 +108,17 @@ export default async function HomePage() {
             <div className="thumbs">
               <div className="thumb">
                 {featuredLitter?.groupPhotoUrl ? (
-                  <img
-                    src={featuredLitter.groupPhotoUrl}
-                    alt="Featured litter thumbnail"
-                  />
+                  <img src={featuredLitter.groupPhotoUrl} alt="Featured litter thumbnail" />
                 ) : null}
               </div>
               <div className="thumb">
                 {featuredLitter?.groupPhotoUrl ? (
-                  <img
-                    src={featuredLitter.groupPhotoUrl}
-                    alt="Featured litter thumbnail"
-                  />
+                  <img src={featuredLitter.groupPhotoUrl} alt="Featured litter thumbnail" />
                 ) : null}
               </div>
               <div className="thumb">
                 {featuredLitter?.groupPhotoUrl ? (
-                  <img
-                    src={featuredLitter.groupPhotoUrl}
-                    alt="Featured litter thumbnail"
-                  />
+                  <img src={featuredLitter.groupPhotoUrl} alt="Featured litter thumbnail" />
                 ) : null}
               </div>
             </div>
@@ -150,7 +141,7 @@ export default async function HomePage() {
 
             <div className="section">
               <h2>About FluffyTail</h2>
-              <p className="lead" style={{ marginBottom: 0 }}>
+              <p className="lead" style={{marginBottom: 0}}>
                 We raise our Shih Tzus in our home in Alabama, where they are part of the family
                 from day one. We focus on temperament, socialization, and a straightforward
                 experience for families looking for a well-loved companion.
@@ -202,7 +193,7 @@ export default async function HomePage() {
 
             <div className="divider"></div>
 
-            <p className="lead" style={{ margin: 0 }}>
+            <p className="lead" style={{margin: 0}}>
               Prefer to browse first? Our GoodDog profile includes past listings, reviews, and
               additional buyer information.
             </p>
@@ -210,10 +201,10 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="card section" style={{ marginTop: '18px' }}>
-        <div className="pad" style={{ paddingBottom: 0 }}>
-          <h2 style={{ margin: '0 0 6px' }}>Current litter and past puppies</h2>
-          <p className="lead" style={{ margin: 0 }}>
+      <div className="card section" style={{marginTop: '18px'}}>
+        <div className="pad" style={{paddingBottom: 0}}>
+          <h2 style={{margin: '0 0 6px'}}>Current litter and past puppies</h2>
+          <p className="lead" style={{margin: 0}}>
             {featuredLitter
               ? `Our newest litter was born ${formatLongDate(
                   featuredLitter.birthDate
@@ -226,10 +217,7 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img
-                  src={featuredLitter.groupPhotoUrl}
-                  alt="FluffyTail Shih Tzu puppy preview"
-                />
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -241,10 +229,7 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img
-                  src={featuredLitter.groupPhotoUrl}
-                  alt="FluffyTail Shih Tzu puppy preview"
-                />
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -256,10 +241,7 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img
-                  src={featuredLitter.groupPhotoUrl}
-                  alt="FluffyTail Shih Tzu puppy preview"
-                />
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -271,10 +253,7 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img
-                  src={featuredLitter.groupPhotoUrl}
-                  alt="FluffyTail Shih Tzu puppy preview"
-                />
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -286,10 +265,7 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img
-                  src={featuredLitter.groupPhotoUrl}
-                  alt="FluffyTail Shih Tzu puppy preview"
-                />
+                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -310,12 +286,12 @@ export default async function HomePage() {
 function formatShortDate(date?: string) {
   if (!date) return ''
   const d = new Date(date)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
 }
 
 function formatLongDate(date?: string) {
   if (!date) return ''
   const d = new Date(date)
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  return d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})
 }
 
