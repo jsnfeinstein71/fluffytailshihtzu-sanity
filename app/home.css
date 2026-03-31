@@ -499,3 +499,52 @@ a{color:inherit}
     height:92px;
   }
 }
+
+html, body{
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 680px){
+  .wrap{
+    overflow-x: hidden;
+  }
+
+  .nav{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav .btn{
+    flex: 0 1 auto;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .topbar .nav{
+    width: auto;
+  }
+
+  .h1,
+  .lead,
+  .sublead{
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 680px){
+  .navTopGrid{
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .navTopGrid .btn{
+    width: 100%;
+  }
+}
+
