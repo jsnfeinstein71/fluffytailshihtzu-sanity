@@ -18,12 +18,24 @@ type SiteSettings = {
 }
 
 type Litter = {
+  _id: string
   title?: string
   birthDate?: string
   girlsCount?: number
   boysCount?: number
   summary?: string
   groupPhotoUrl?: string
+}
+
+type Puppy = {
+  _id: string
+  name?: string
+  sex?: 'female' | 'male'
+  status?: 'available' | 'hold' | 'reserved' | 'gone-home'
+  notes?: string
+  sortOrder?: number
+  litterId?: string
+  photoUrl?: string
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
@@ -40,6 +52,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 const featuredLitterQuery = `*[_type == "litter" && featured == true][0]{
+  _id,
   title,
   birthDate,
   girlsCount,
@@ -48,20 +61,31 @@ const featuredLitterQuery = `*[_type == "litter" && featured == true][0]{
   "groupPhotoUrl": groupPhoto.asset->url
 }`
 
+const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
+  _id,
+  name,
+  sex,
+  status,
+  notes,
+  sortOrder,
+  "litterId": litter->_id,
+  "photoUrl": photo.asset->url
+}`
+
 export default async function HomePage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
   const featuredLitter = await client.fetch<Litter>(featuredLitterQuery)
-
-  const goodDogUrl =
-    siteSettings?.goodDogUrl ||
-    'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama'
+  const puppies = await client.fetch<Puppy[]>(puppiesQuery)
 
   const waitlistUrl = siteSettings?.waitlistUrl || '#'
-
   const heroImageUrl = siteSettings?.heroImageUrl || featuredLitter?.groupPhotoUrl
   const heroThumb1Url = siteSettings?.heroThumb1Url || featuredLitter?.groupPhotoUrl
   const heroThumb2Url = siteSettings?.heroThumb2Url || featuredLitter?.groupPhotoUrl
   const heroThumb3Url = siteSettings?.heroThumb3Url || featuredLitter?.groupPhotoUrl
+
+  const featuredPuppies = featuredLitter
+    ? puppies.filter((puppy) => puppy.litterId === featuredLitter._id)
+    : []
 
   return (
     <main className="wrap">
@@ -231,76 +255,36 @@ export default async function HomePage() {
 
       <div className="card section" style={{marginTop: '18px'}}>
         <div className="pad" style={{paddingBottom: 0}}>
-          <h2 style={{margin: '0 0 6px'}}>Current litter and past puppies</h2>
+          <h2 style={{margin: '0 0 6px'}}>Current litter and puppies</h2>
           <p className="lead" style={{margin: 0}}>
             {featuredLitter
               ? `Our newest litter was born ${formatLongDate(
                   featuredLitter.birthDate
-                )}. Individual puppy photos are coming soon. Below are a few past puppies as well.`
-              : 'Past puppies and upcoming litters will appear here.'}
+                )}. Meet the puppies below.`
+              : 'Current puppies will appear here.'}
           </p>
         </div>
 
-        <div className="strip" aria-label="Past puppies">
-          <div className="tile">
-            <div className="tileImg">
-              {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
-              ) : null}
+        <div className="strip" aria-label="Current puppies">
+          {featuredPuppies.length > 0 ? (
+            featuredPuppies.map((puppy) => (
+              <div className="tile" key={puppy._id}>
+                <div className="tileImg">
+                  {puppy.photoUrl ? (
+                    <img src={puppy.photoUrl} alt={puppy.name || 'Puppy'} />
+                  ) : null}
+                </div>
+                <div className="tileMeta">
+                  <p className="tileName">{puppy.name || 'Unnamed puppy'}</p>
+                  <p className="tileSub">{formatPuppyStatus(puppy.status)}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{padding: '14px 16px 18px', color: '#5a6472'}}>
+              No puppies listed yet.
             </div>
-            <div className="tileMeta">
-              <p className="tileName">Girl 1</p>
-              <p className="tileSub">Coming soon</p>
-            </div>
-          </div>
-
-          <div className="tile">
-            <div className="tileImg">
-              {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
-              ) : null}
-            </div>
-            <div className="tileMeta">
-              <p className="tileName">Girl 2</p>
-              <p className="tileSub">Coming soon</p>
-            </div>
-          </div>
-
-          <div className="tile">
-            <div className="tileImg">
-              {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
-              ) : null}
-            </div>
-            <div className="tileMeta">
-              <p className="tileName">Boy 1</p>
-              <p className="tileSub">Coming soon</p>
-            </div>
-          </div>
-
-          <div className="tile">
-            <div className="tileImg">
-              {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
-              ) : null}
-            </div>
-            <div className="tileMeta">
-              <p className="tileName">Boy 2</p>
-              <p className="tileSub">Coming soon</p>
-            </div>
-          </div>
-
-          <div className="tile">
-            <div className="tileImg">
-              {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
-              ) : null}
-            </div>
-            <div className="tileMeta">
-              <p className="tileName">Boy 3</p>
-              <p className="tileSub">Coming soon</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -321,5 +305,13 @@ function formatLongDate(date?: string) {
   if (!date) return ''
   const d = new Date(date)
   return d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})
+}
+
+function formatPuppyStatus(status?: string) {
+  if (status === 'available') return 'Available'
+  if (status === 'hold') return 'Hold'
+  if (status === 'reserved') return 'Reserved'
+  if (status === 'gone-home') return 'Gone Home'
+  return 'Available'
 }
 
