@@ -77,10 +77,6 @@ a{
   flex-wrap:wrap;
 }
 
-.navPageLinks{
-  width:100%;
-}
-
 .btn{
   display:inline-flex;
   align-items:center;
@@ -404,18 +400,21 @@ a{
   }
 
   .navPageLinks{
-    display:flex;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:1fr 1fr;
     gap:8px;
     width:100%;
     margin-bottom:12px;
   }
 
   .navPageLinks .btn{
-    white-space:nowrap;
-    padding:9px 12px;
+    width:100%;
+    min-width:0;
+    padding:9px 10px;
     font-size:13px;
     min-height:40px;
+    white-space:normal;
+    text-align:center;
   }
 
   .topbar{
@@ -435,10 +434,10 @@ a{
   }
 
   .navActions .btn{
-    white-space:nowrap;
     padding:9px 12px;
     font-size:13px;
     min-height:40px;
+    white-space:nowrap;
   }
 
   .pill{
@@ -496,6 +495,10 @@ a{
     gap:8px;
   }
 
+  .photosHome{
+    grid-template-columns:1fr;
+  }
+
   .heroPhoto{
     height:auto;
     min-height:0;
@@ -504,18 +507,8 @@ a{
     border-radius:16px;
   }
 
-  .thumbs{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    grid-template-rows:none;
-    gap:8px;
-  }
-
-  .thumb{
-    height:auto;
-    min-height:0;
-    aspect-ratio:1 / 1;
-    border-radius:12px;
+  .thumbsHome{
+    display:none;
   }
 
   .ctaRow{
