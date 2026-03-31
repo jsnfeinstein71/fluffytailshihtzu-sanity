@@ -20,6 +20,11 @@ html, body{
   overflow-x:hidden;
 }
 
+html{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -432,20 +437,21 @@ a{
   }
 
   .h1Home{
-    font-size:24px;
+    font-size:22px;
+    line-height:1.02;
   }
 
   .lead{
-    font-size:15px;
-    line-height:1.45;
+    font-size:14px;
+    line-height:1.4;
     margin:0 0 10px;
     max-width:100%;
     overflow-wrap:anywhere;
   }
 
   .sublead{
-    font-size:15px;
-    line-height:1.45;
+    font-size:14px;
+    line-height:1.4;
     max-width:100%;
     overflow-wrap:anywhere;
   }
