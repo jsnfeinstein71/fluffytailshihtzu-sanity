@@ -1,3 +1,5 @@
+export const revalidate = 60
+
 import './home.css'
 import {client} from '@/sanity/lib/client'
 import WaitlistModal from './components/WaitlistModal'
