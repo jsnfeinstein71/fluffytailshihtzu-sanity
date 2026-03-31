@@ -96,7 +96,7 @@ export default async function HomePage() {
       {featuredLitter ? (
         <div className="grid">
           <div className="card">
-            <div className="photos">
+            <div className="photos photosHome">
               <div className="heroPhoto">
                 {featuredLitter.groupPhotoUrl ? (
                   <img
@@ -106,7 +106,7 @@ export default async function HomePage() {
                 ) : null}
               </div>
 
-              <div className="thumbs">
+              <div className="thumbs thumbsHome">
                 <div className="thumb">
                   {featuredLitter.groupPhotoUrl ? (
                     <img
