@@ -87,14 +87,10 @@ export default async function HomePage() {
       </p>
 
       <p className="sublead">
-        {featuredLitter
-          ? `We have a new litter born ${formatLongDate(featuredLitter.birthDate)}: ${
-              (featuredLitter.girlsCount ?? 0) + (featuredLitter.boysCount ?? 0)
-            } puppies total, including ${featuredLitter.girlsCount ?? 0} girls and ${
-              featuredLitter.boysCount ?? 0
-            } boys. Individual photos will be added soon. Join the waitlist for updates and first notice.`
-          : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
-      </p>
+  {featuredLitter
+    ? `New litter born ${formatLongDate(featuredLitter.birthDate)}: ${featuredLitter.girlsCount ?? 0} girls and ${featuredLitter.boysCount ?? 0} boys. Individual photos coming soon.`
+    : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
+</p>
 
       <div className="grid">
         <div className="card">
