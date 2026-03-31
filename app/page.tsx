@@ -50,7 +50,7 @@ export default async function HomePage() {
 
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px', rowGap: '8px'}}>
+      <div className="nav" style={{marginBottom: '16px'}}>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
@@ -67,10 +67,10 @@ export default async function HomePage() {
 
         <div className="nav">
           <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
+            waitlistUrl={waitlistUrl}
+            buttonLabel="Join the Waitlist"
+            className="btn btnPrimary"
+          />
           <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
             View on GoodDog
           </a>
@@ -78,7 +78,8 @@ export default async function HomePage() {
       </div>
 
       <h1 className="h1">
-        {siteSettings?.homepageHeadline || 'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'}
+        {siteSettings?.homepageHeadline ||
+          'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'}
       </h1>
 
       <p className="lead">
@@ -87,10 +88,10 @@ export default async function HomePage() {
       </p>
 
       <p className="sublead">
-  {featuredLitter
-    ? `New litter born ${formatLongDate(featuredLitter.birthDate)}: ${featuredLitter.girlsCount ?? 0} girls and ${featuredLitter.boysCount ?? 0} boys. Individual photos coming soon.`
-    : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
-</p>
+        {featuredLitter
+          ? `New litter born ${formatLongDate(featuredLitter.birthDate)}: ${featuredLitter.girlsCount ?? 0} girls and ${featuredLitter.boysCount ?? 0} boys. Individual photos coming soon.`
+          : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
+      </p>
 
       <div className="grid">
         <div className="card">
@@ -107,17 +108,26 @@ export default async function HomePage() {
             <div className="thumbs">
               <div className="thumb">
                 {featuredLitter?.groupPhotoUrl ? (
-                  <img src={featuredLitter.groupPhotoUrl} alt="Featured litter thumbnail" />
+                  <img
+                    src={featuredLitter.groupPhotoUrl}
+                    alt="Featured litter thumbnail"
+                  />
                 ) : null}
               </div>
               <div className="thumb">
                 {featuredLitter?.groupPhotoUrl ? (
-                  <img src={featuredLitter.groupPhotoUrl} alt="Featured litter thumbnail" />
+                  <img
+                    src={featuredLitter.groupPhotoUrl}
+                    alt="Featured litter thumbnail"
+                  />
                 ) : null}
               </div>
               <div className="thumb">
                 {featuredLitter?.groupPhotoUrl ? (
-                  <img src={featuredLitter.groupPhotoUrl} alt="Featured litter thumbnail" />
+                  <img
+                    src={featuredLitter.groupPhotoUrl}
+                    alt="Featured litter thumbnail"
+                  />
                 ) : null}
               </div>
             </div>
@@ -125,7 +135,11 @@ export default async function HomePage() {
 
           <div className="pad">
             <div className="ctaRow">
-              <WaitlistModal waitlistUrl={waitlistUrl} buttonLabel="Join the Waitlist" className="btn btnPrimary" /> 
+              <WaitlistModal
+                waitlistUrl={waitlistUrl}
+                buttonLabel="Join the Waitlist"
+                className="btn btnPrimary"
+              />
               <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
                 GoodDog profile
               </a>
@@ -177,10 +191,10 @@ export default async function HomePage() {
 
             <div className="ctaRow">
               <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
+                waitlistUrl={waitlistUrl}
+                buttonLabel="Join the Waitlist"
+                className="btn btnPrimary"
+              />
               <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
                 Request info
               </a>
@@ -212,7 +226,10 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+                <img
+                  src={featuredLitter.groupPhotoUrl}
+                  alt="FluffyTail Shih Tzu puppy preview"
+                />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -224,7 +241,10 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+                <img
+                  src={featuredLitter.groupPhotoUrl}
+                  alt="FluffyTail Shih Tzu puppy preview"
+                />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -236,7 +256,10 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+                <img
+                  src={featuredLitter.groupPhotoUrl}
+                  alt="FluffyTail Shih Tzu puppy preview"
+                />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -248,7 +271,10 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+                <img
+                  src={featuredLitter.groupPhotoUrl}
+                  alt="FluffyTail Shih Tzu puppy preview"
+                />
               ) : null}
             </div>
             <div className="tileMeta">
@@ -260,7 +286,10 @@ export default async function HomePage() {
           <div className="tile">
             <div className="tileImg">
               {featuredLitter?.groupPhotoUrl ? (
-                <img src={featuredLitter.groupPhotoUrl} alt="FluffyTail Shih Tzu puppy preview" />
+                <img
+                  src={featuredLitter.groupPhotoUrl}
+                  alt="FluffyTail Shih Tzu puppy preview"
+                />
               ) : null}
             </div>
             <div className="tileMeta">
