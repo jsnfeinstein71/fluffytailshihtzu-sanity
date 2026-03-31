@@ -390,3 +390,112 @@ a{color:inherit}
   }
 }
 
+@media (max-width: 680px){
+  .wrap{
+    padding:16px 12px 40px;
+  }
+
+  .nav{
+    gap:8px;
+    margin-bottom:12px;
+  }
+
+  .btn{
+    padding:9px 12px;
+    font-size:13px;
+    min-height:40px;
+  }
+
+  .topbar{
+    gap:10px;
+    margin-bottom:12px;
+  }
+
+  .pill{
+    font-size:12px;
+    padding:7px 11px;
+    max-width:100%;
+  }
+
+  .h1{
+    font-size:28px;
+    line-height:1.02;
+    margin:0 0 8px;
+    word-break:normal;
+  }
+
+  .lead{
+    font-size:15px;
+    line-height:1.45;
+    margin:0 0 10px;
+    max-width:100%;
+  }
+
+  .sublead{
+    font-size:15px;
+    line-height:1.45;
+    max-width:100%;
+  }
+
+  .grid{
+    gap:14px;
+    margin-top:14px;
+  }
+
+  .card{
+    border-radius:16px;
+  }
+
+  .pad{
+    padding:14px;
+  }
+
+  .photos{
+    grid-template-columns:1fr;
+    padding:12px;
+    gap:8px;
+  }
+
+  .heroPhoto{
+    height:auto;
+    min-height:0;
+    max-height:none;
+    aspect-ratio: 4 / 4;
+    border-radius:16px;
+  }
+
+  .thumbs{
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:none;
+    gap:8px;
+  }
+
+  .thumb{
+    height:auto;
+    min-height:0;
+    aspect-ratio: 1 / 1;
+    border-radius:12px;
+  }
+
+  .ctaRow{
+    gap:8px;
+  }
+
+  .section{
+    margin-top:14px;
+  }
+
+  .divider{
+    margin:14px 0;
+  }
+
+  .strip{
+    grid-auto-columns:140px;
+    gap:10px;
+    padding:12px 12px 16px;
+  }
+
+  .tileImg{
+    height:92px;
+  }
+}
