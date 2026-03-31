@@ -1,3 +1,5 @@
+export const revalidate = 60
+
 import '../home.css'
 import {client} from '@/sanity/lib/client'
 import WaitlistModal from '../components/WaitlistModal'
@@ -18,6 +20,17 @@ type Litter = {
   groupPhotoUrl?: string
 }
 
+type Puppy = {
+  _id: string
+  name?: string
+  sex?: 'female' | 'male'
+  status?: 'available' | 'hold' | 'reserved' | 'gone-home'
+  notes?: string
+  sortOrder?: number
+  litterId?: string
+  photoUrl?: string
+}
+
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   goodDogUrl,
   waitlistUrl
@@ -34,9 +47,21 @@ const littersQuery = `*[_type == "litter"] | order(birthDate desc){
   "groupPhotoUrl": groupPhoto.asset->url
 }`
 
+const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
+  _id,
+  name,
+  sex,
+  status,
+  notes,
+  sortOrder,
+  "litterId": litter->_id,
+  "photoUrl": photo.asset->url
+}`
+
 export default async function AvailablePuppiesPage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
   const litters = await client.fetch<Litter[]>(littersQuery)
+  const puppies = await client.fetch<Puppy[]>(puppiesQuery)
 
   const goodDogUrl =
     siteSettings?.goodDogUrl ||
@@ -46,6 +71,9 @@ export default async function AvailablePuppiesPage() {
 
   const currentLitter = litters.find((litter) => litter.status === 'current')
   const pastLitters = litters.filter((litter) => litter.status !== 'current')
+  const currentPuppies = currentLitter
+    ? puppies.filter((puppy) => puppy.litterId === currentLitter._id)
+    : []
 
   return (
     <main className="wrap">
@@ -66,13 +94,10 @@ export default async function AvailablePuppiesPage() {
 
         <div className="nav">
           <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
-          <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-            View on GoodDog
-          </a>
+            waitlistUrl={waitlistUrl}
+            buttonLabel="Join the Waitlist"
+            className="btn btnPrimary"
+          />
         </div>
       </div>
 
@@ -84,107 +109,146 @@ export default async function AvailablePuppiesPage() {
       </p>
 
       {currentLitter ? (
-        <div className="grid">
-          <div className="card">
-            <div className="photos">
-              <div className="heroPhoto">
-                {currentLitter.groupPhotoUrl ? (
-                  <img
-                    src={currentLitter.groupPhotoUrl}
-                    alt={currentLitter.title || 'Current litter'}
-                  />
-                ) : null}
+        <>
+          <div className="grid">
+            <div className="card">
+              <div className="photos">
+                <div className="heroPhoto">
+                  {currentLitter.groupPhotoUrl ? (
+                    <img
+                      src={currentLitter.groupPhotoUrl}
+                      alt={currentLitter.title || 'Current litter'}
+                    />
+                  ) : null}
+                </div>
+
+                <div className="thumbs">
+                  <div className="thumb">
+                    {currentLitter.groupPhotoUrl ? (
+                      <img
+                        src={currentLitter.groupPhotoUrl}
+                        alt="Current litter thumbnail"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="thumb">
+                    {currentLitter.groupPhotoUrl ? (
+                      <img
+                        src={currentLitter.groupPhotoUrl}
+                        alt="Current litter thumbnail"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="thumb">
+                    {currentLitter.groupPhotoUrl ? (
+                      <img
+                        src={currentLitter.groupPhotoUrl}
+                        alt="Current litter thumbnail"
+                      />
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
-              <div className="thumbs">
-                <div className="thumb">
-                  {currentLitter.groupPhotoUrl ? (
-                    <img
-                      src={currentLitter.groupPhotoUrl}
-                      alt="Current litter thumbnail"
-                    />
-                  ) : null}
+              <div className="pad">
+                <div className="ctaRow">
+                  <WaitlistModal
+                    waitlistUrl={waitlistUrl}
+                    buttonLabel="Join the Waitlist"
+                    className="btn btnPrimary"
+                  />
+                  <a className="btn" href="/contact">
+                    Contact
+                  </a>
+                  <span className="badge">Current litter</span>
                 </div>
-                <div className="thumb">
-                  {currentLitter.groupPhotoUrl ? (
-                    <img
-                      src={currentLitter.groupPhotoUrl}
-                      alt="Current litter thumbnail"
-                    />
-                  ) : null}
-                </div>
-                <div className="thumb">
-                  {currentLitter.groupPhotoUrl ? (
-                    <img
-                      src={currentLitter.groupPhotoUrl}
-                      alt="Current litter thumbnail"
-                    />
+
+                <div className="divider"></div>
+
+                <div className="section">
+                  <h2>{currentLitter.title || 'Current Litter'}</h2>
+                  <p className="lead">
+                    Birth date: {formatLongDate(currentLitter.birthDate)}
+                  </p>
+                  <p className="lead">
+                    {currentLitter.girlsCount ?? 0} girls • {currentLitter.boysCount ?? 0} boys
+                  </p>
+                  {currentLitter.summary ? (
+                    <p className="lead" style={{marginBottom: 0}}>
+                      {currentLitter.summary}
+                    </p>
                   ) : null}
                 </div>
               </div>
             </div>
 
-            <div className="pad">
-              <div className="ctaRow">
-                <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
-                <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-                  Request info
-                </a>
-                <span className="badge">Current litter</span>
-              </div>
+            <div className="card">
+              <div className="pad">
+                <h2 className="panelTitle">At a glance</h2>
+                <div className="meta">
+                  <span>📍 Mobile, Alabama area</span>
+                  <span>🐶 {currentPuppies.length} puppies listed</span>
+                  <span>♀️ {currentPuppies.filter((p) => p.sex === 'female').length} girls</span>
+                  <span>♂️ {currentPuppies.filter((p) => p.sex === 'male').length} boys</span>
+                </div>
 
-              <div className="divider"></div>
+                <div className="ctaRow">
+                  <WaitlistModal
+                    waitlistUrl={waitlistUrl}
+                    buttonLabel="Join the Waitlist"
+                    className="btn btnPrimary"
+                  />
+                  <a className="btn" href="/contact">
+                    General inquiry
+                  </a>
+                </div>
 
-              <div className="section">
-                <h2>{currentLitter.title || 'Current Litter'}</h2>
-                <p className="lead">
-                  Birth date: {formatLongDate(currentLitter.birthDate)}
+                <div className="divider"></div>
+
+                <p className="lead" style={{margin: 0}}>
+                  Individual puppy photos and statuses are updated here as they become available.
                 </p>
-                <p className="lead">
-                  {currentLitter.girlsCount ?? 0} girls • {currentLitter.boysCount ?? 0} boys
-                </p>
-                {currentLitter.summary ? (
-                  <p className="lead" style={{marginBottom: 0}}>
-                    {currentLitter.summary}
-                  </p>
-                ) : null}
               </div>
             </div>
           </div>
 
-          <div className="card">
-            <div className="pad">
-              <h2 className="panelTitle">At a glance</h2>
-              <div className="meta">
-                <span>📍 Mobile, Alabama area</span>
-                <span>🐶 {(currentLitter.girlsCount ?? 0) + (currentLitter.boysCount ?? 0)} puppies total</span>
-                <span>♀️ {currentLitter.girlsCount ?? 0} girls</span>
-                <span>♂️ {currentLitter.boysCount ?? 0} boys</span>
-              </div>
-
-              <div className="ctaRow">
-                <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
-                <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-                  GoodDog profile
-                </a>
-              </div>
-
-              <div className="divider"></div>
-
+          <div className="card section" style={{marginTop: '18px'}}>
+            <div className="pad" style={{paddingBottom: 0}}>
+              <h2 style={{margin: '0 0 6px'}}>Current puppies</h2>
               <p className="lead" style={{margin: 0}}>
-                Individual puppy photos and statuses will be added as they become available.
+                Meet the puppies from the current litter.
               </p>
             </div>
+
+            <div className="puppyGrid">
+              {currentPuppies.map((puppy) => (
+                <div className="puppyCard" key={puppy._id}>
+                  <div className="puppyImageWrap">
+                    {puppy.photoUrl ? (
+                      <img
+                        className="puppyImage"
+                        src={puppy.photoUrl}
+                        alt={puppy.name || 'Puppy'}
+                      />
+                    ) : null}
+                  </div>
+                  <div className="puppyCardBody">
+                    <div className="puppyCardTop">
+                      <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                      <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                        {formatPuppyStatus(puppy.status)}
+                      </span>
+                    </div>
+                    <p className="puppyMetaLine">
+                      {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                    </p>
+                    {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       ) : (
         <div className="card" style={{marginTop: '16px'}}>
           <div className="pad">
@@ -245,5 +309,13 @@ function formatStatus(status?: string) {
   if (status === 'upcoming') return 'Upcoming'
   if (status === 'past') return 'Past'
   return 'Litter'
+}
+
+function formatPuppyStatus(status?: string) {
+  if (status === 'available') return 'Available'
+  if (status === 'hold') return 'Hold'
+  if (status === 'reserved') return 'Reserved'
+  if (status === 'gone-home') return 'Gone Home'
+  return 'Available'
 }
 
