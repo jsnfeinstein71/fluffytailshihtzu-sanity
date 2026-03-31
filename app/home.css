@@ -334,6 +334,101 @@ a{
   margin:0;
 }
 
+.puppyGrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:16px;
+  padding:16px;
+}
+
+.puppyCard{
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(16,24,40,.06);
+}
+
+.puppyImageWrap{
+  aspect-ratio:1 / 1;
+  background:var(--soft);
+  overflow:hidden;
+}
+
+.puppyImage{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.puppyCardBody{
+  padding:14px;
+}
+
+.puppyCardTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.puppyName{
+  margin:0;
+  font-size:18px;
+  line-height:1.15;
+}
+
+.puppyMetaLine{
+  margin:0 0 8px;
+  color:var(--muted);
+  font-size:14px;
+}
+
+.puppyNotes{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.45;
+}
+
+.statusBadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  white-space:nowrap;
+  border:1px solid var(--line);
+}
+
+.status-available{
+  background:#ecfdf3;
+  color:#067647;
+  border-color:#abefc6;
+}
+
+.status-hold{
+  background:#fffaeb;
+  color:#b54708;
+  border-color:#fedf89;
+}
+
+.status-reserved{
+  background:#eff8ff;
+  color:#175cd3;
+  border-color:#b2ddff;
+}
+
+.status-gone-home{
+  background:#f2f4f7;
+  color:#344054;
+  border-color:#d0d5dd;
+}
+
 .footer{
   margin-top:26px;
   color:#8a93a2;
@@ -414,6 +509,10 @@ a{
 @media (max-width:980px){
   .grid{
     grid-template-columns:1fr;
+  }
+
+  .puppyGrid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -558,6 +657,20 @@ a{
 
   .tileImg{
     height:92px;
+  }
+
+  .puppyGrid{
+    grid-template-columns:1fr;
+    gap:12px;
+    padding:12px;
+  }
+
+  .puppyCardBody{
+    padding:12px;
+  }
+
+  .puppyName{
+    font-size:17px;
   }
 }
 
