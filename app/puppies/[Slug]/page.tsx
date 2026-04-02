@@ -1,0 +1,139 @@
+export const revalidate = 60
+
+import '../../home.css'
+import {client} from '@/sanity/lib/client'
+import WaitlistModal from '../../components/WaitlistModal'
+
+type PuppyPageData = {
+  name?: string
+  slug?: string
+  sex?: 'female' | 'male'
+  status?: 'available' | 'hold' | 'reserved' | 'gone-home'
+  notes?: string
+  photoUrl?: string
+  litterTitle?: string
+}
+
+type SiteSettings = {
+  waitlistUrl?: string
+}
+
+const siteSettingsQuery = `*[_type == "siteSettings"][0]{
+  waitlistUrl
+}`
+
+const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
+  name,
+  "slug": slug.current,
+  sex,
+  status,
+  notes,
+  "photoUrl": photo.asset->url,
+  "litterTitle": litter->title
+}`
+
+export default async function PuppyDetailPage({
+  params,
+}: {
+  params: Promise<{slug: string}>
+}) {
+  const {slug} = await params
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
+  const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
+
+  const waitlistUrl = siteSettings?.waitlistUrl || '#'
+
+  if (!puppy) {
+    return (
+      <main className="wrap">
+        <h1 className="h1">Puppy not found</h1>
+        <p className="lead">This puppy page could not be found.</p>
+        <a className="btn" href="/available-puppies">Back to Available Puppies</a>
+      </main>
+    )
+  }
+
+  return (
+    <main className="wrap">
+      <div className="nav" style={{marginBottom: '16px'}}>
+        <a className="btn" href="/">Home</a>
+        <a className="btn" href="/available-puppies">Available Puppies</a>
+        <a className="btn" href="/contact">Contact</a>
+      </div>
+
+      <div className="grid">
+        <div className="card">
+          <div className="photos" style={{gridTemplateColumns: '1fr'}}>
+            <div className="heroPhoto">
+              {puppy.photoUrl ? (
+                <img src={puppy.photoUrl} alt={puppy.name || 'Puppy'} />
+              ) : null}
+            </div>
+          </div>
+
+          <div className="pad">
+            <h1 className="h1" style={{fontSize: '34px', marginBottom: '10px'}}>
+              {puppy.name || 'Unnamed puppy'}
+            </h1>
+
+            <div className="ctaRow" style={{marginTop: 0, marginBottom: '14px'}}>
+              <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                {formatPuppyStatus(puppy.status)}
+              </span>
+              <span className="badge">
+                {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+              </span>
+            </div>
+
+            {puppy.litterTitle ? (
+              <p className="lead">Litter: {puppy.litterTitle}</p>
+            ) : null}
+
+            {puppy.notes ? (
+              <p className="lead" style={{marginBottom: 0}}>
+                {puppy.notes}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="pad">
+            <h2 className="panelTitle">Interested in this puppy?</h2>
+
+            <p className="lead">
+              If you would like to ask about {puppy.name || 'this puppy'}, use the inquiry button
+              below and mention the puppy name in your message.
+            </p>
+
+            <div className="ctaRow">
+              <a
+                className="btn btnPrimary"
+                href={`/contact?puppy=${encodeURIComponent(puppy.name || '')}`}
+              >
+                Inquire About This Puppy
+              </a>
+              <WaitlistModal
+                waitlistUrl={waitlistUrl}
+                buttonLabel="Join the Waitlist"
+                className="btn"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="footer">
+        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
+      </div>
+    </main>
+  )
+}
+
+function formatPuppyStatus(status?: string) {
+  if (status === 'available') return 'Available'
+  if (status === 'hold') return 'Hold'
+  if (status === 'reserved') return 'Reserved'
+  if (status === 'gone-home') return 'Gone Home'
+  return 'Available'
+}
