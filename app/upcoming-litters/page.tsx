@@ -1,3 +1,5 @@
+export const revalidate = 60
+
 import '../home.css'
 import {client} from '@/sanity/lib/client'
 import WaitlistModal from '../components/WaitlistModal'
@@ -23,7 +25,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   waitlistUrl
 }`
 
-const upcomingLittersQuery = `*[_type == "litter" && status in ["upcoming", "current"]] | order(birthDate desc){
+const upcomingLittersQuery = `*[_type == "litter" && status in ["upcoming", "active"]] | order(birthDate desc){
   _id,
   title,
   birthDate,
@@ -56,15 +58,15 @@ export default async function UpcomingLittersPage() {
       <div className="topbar">
         <div className="pill">
           <span className="dot"></span>
-          Future updates and current litters
+          Future updates and active litters
         </div>
 
         <div className="nav">
           <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
+            waitlistUrl={waitlistUrl}
+            buttonLabel="Join the Waitlist"
+            className="btn btnPrimary"
+          />
           <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
             View on GoodDog
           </a>
@@ -74,7 +76,7 @@ export default async function UpcomingLittersPage() {
       <h1 className="h1">Upcoming Litters</h1>
 
       <p className="lead">
-        This is where FluffyTail shares current and upcoming litter information. Families on the
+        This is where FluffyTail shares active and upcoming litter information. Families on the
         waitlist hear first when timing is known and puppies become available.
       </p>
 
@@ -128,16 +130,16 @@ export default async function UpcomingLittersPage() {
             <div className="meta">
               <span>📍 Mobile, Alabama area</span>
               <span>📬 Waitlist updates available</span>
-              <span>🐶 Current and future litters</span>
+              <span>🐶 Active and future litters</span>
               <span>🌎 Primarily Southeast, with broader reach</span>
             </div>
 
             <div className="ctaRow">
               <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
+                waitlistUrl={waitlistUrl}
+                buttonLabel="Join the Waitlist"
+                className="btn btnPrimary"
+              />
               <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
                 GoodDog profile
               </a>
@@ -146,7 +148,7 @@ export default async function UpcomingLittersPage() {
             <div className="divider"></div>
 
             <p className="lead" style={{margin: 0}}>
-              Check back here for updates on current and future litters as information becomes
+              Check back here for updates on active and future litters as information becomes
               available.
             </p>
           </div>
@@ -155,13 +157,13 @@ export default async function UpcomingLittersPage() {
 
       <div className="card section" style={{marginTop: '18px'}}>
         <div className="pad" style={{paddingBottom: 0}}>
-          <h2 style={{margin: '0 0 6px'}}>Current and upcoming litter updates</h2>
+          <h2 style={{margin: '0 0 6px'}}>Active and upcoming litter updates</h2>
           <p className="lead" style={{margin: 0}}>
-            Litters marked current or upcoming will appear here.
+            Litters marked active or upcoming will appear here.
           </p>
         </div>
 
-        <div className="strip" aria-label="Current and upcoming litters">
+        <div className="strip" aria-label="Active and upcoming litters">
           {litters.length > 0 ? (
             litters.map((litter) => (
               <div className="tile" key={litter._id}>
@@ -181,7 +183,7 @@ export default async function UpcomingLittersPage() {
             ))
           ) : (
             <div style={{padding: '16px 0 18px 16px', color: '#5a6472'}}>
-              No current or upcoming litters listed yet.
+              No active or upcoming litters listed yet.
             </div>
           )}
         </div>
@@ -195,7 +197,7 @@ export default async function UpcomingLittersPage() {
 }
 
 function formatStatus(status?: string) {
-  if (status === 'current') return 'Current'
+  if (status === 'active') return 'Active'
   if (status === 'upcoming') return 'Upcoming'
   return 'Litter'
 }
