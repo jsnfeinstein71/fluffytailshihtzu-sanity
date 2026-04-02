@@ -23,6 +23,7 @@ type Litter = {
 type Puppy = {
   _id: string
   name?: string
+  slug?: string
   sex?: 'female' | 'male'
   status?: 'available' | 'hold' | 'reserved' | 'gone-home'
   notes?: string
@@ -50,6 +51,7 @@ const littersQuery = `*[_type == "litter"] | order(birthDate desc){
 const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   _id,
   name,
+  "slug": slug.current,
   sex,
   status,
   notes,
@@ -222,7 +224,11 @@ export default async function AvailablePuppiesPage() {
 
             <div className="puppyGrid">
               {currentPuppies.map((puppy) => (
-                <div className="puppyCard" key={puppy._id}>
+                <a
+                  className="puppyCard puppyCardLink"
+                  key={puppy._id}
+                  href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+                >
                   <div className="puppyImageWrap">
                     {puppy.photoUrl ? (
                       <img
@@ -244,7 +250,7 @@ export default async function AvailablePuppiesPage() {
                     </p>
                     {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
@@ -318,4 +324,3 @@ function formatPuppyStatus(status?: string) {
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
 }
-
