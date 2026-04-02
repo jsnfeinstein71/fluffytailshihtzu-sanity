@@ -23,10 +23,11 @@ export const litterType = defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Current', value: 'current'},
+          {title: 'Active', value: 'active'},
           {title: 'Upcoming', value: 'upcoming'},
           {title: 'Past', value: 'past'},
         ],
+        layout: 'dropdown',
       },
       validation: (Rule) => Rule.required(),
     }),
@@ -67,3 +68,4 @@ export const litterType = defineType({
     },
   },
 })
+
