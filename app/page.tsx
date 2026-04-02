@@ -24,6 +24,7 @@ type Litter = {
   girlsCount?: number
   boysCount?: number
   summary?: string
+  status?: string
   groupPhotoUrl?: string
 }
 
@@ -52,13 +53,14 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   "heroThumb3Url": heroThumb3.asset->url
 }`
 
-const featuredLitterQuery = `*[_type == "litter" && featured == true][0]{
+const activeLittersQuery = `*[_type == "litter" && status == "active"] | order(birthDate desc){
   _id,
   title,
   birthDate,
   girlsCount,
   boysCount,
   summary,
+  status,
   "groupPhotoUrl": groupPhoto.asset->url
 }`
 
@@ -76,18 +78,14 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
 
 export default async function HomePage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
-  const featuredLitter = await client.fetch<Litter>(featuredLitterQuery)
+  const activeLitters = await client.fetch<Litter[]>(activeLittersQuery)
   const puppies = await client.fetch<Puppy[]>(puppiesQuery)
 
   const waitlistUrl = siteSettings?.waitlistUrl || '#'
-  const heroImageUrl = siteSettings?.heroImageUrl || featuredLitter?.groupPhotoUrl
-  const heroThumb1Url = siteSettings?.heroThumb1Url || featuredLitter?.groupPhotoUrl
-  const heroThumb2Url = siteSettings?.heroThumb2Url || featuredLitter?.groupPhotoUrl
-  const heroThumb3Url = siteSettings?.heroThumb3Url || featuredLitter?.groupPhotoUrl
-
-  const featuredPuppies = featuredLitter
-    ? puppies.filter((puppy) => puppy.litterId === featuredLitter._id)
-    : []
+  const heroImageUrl = siteSettings?.heroImageUrl || activeLitters[0]?.groupPhotoUrl
+  const heroThumb1Url = siteSettings?.heroThumb1Url || activeLitters[0]?.groupPhotoUrl
+  const heroThumb2Url = siteSettings?.heroThumb2Url || activeLitters[0]?.groupPhotoUrl
+  const heroThumb3Url = siteSettings?.heroThumb3Url || activeLitters[0]?.groupPhotoUrl
 
   return (
     <main className="wrap">
@@ -101,8 +99,8 @@ export default async function HomePage() {
       <div className="topbar">
         <div className="pill">
           <span className="dot"></span>
-          {featuredLitter?.birthDate
-            ? `New litter born ${formatShortDate(featuredLitter.birthDate)} • Waitlist open`
+          {activeLitters.length > 0
+            ? `${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'} • Waitlist open`
             : 'Waitlist open'}
         </div>
 
@@ -126,185 +124,207 @@ export default async function HomePage() {
       </p>
 
       <p className="sublead">
-        {featuredLitter
-          ? `New litter born ${formatLongDate(featuredLitter.birthDate)}: ${featuredLitter.girlsCount ?? 0} girls and ${featuredLitter.boysCount ?? 0} boys. Individual photos coming soon.`
+        {activeLitters.length > 0
+          ? `We currently have ${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'} on the site. Browse the active litters and puppies below.`
           : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
       </p>
 
-      {featuredLitter ? (
-        <div className="grid">
-          <div className="card">
-            <div className="photos photosHome">
-              <div className="heroPhoto">
-                {heroImageUrl ? (
+      <div className="grid">
+        <div className="card">
+          <div className="photos photosHome">
+            <div className="heroPhoto">
+              {heroImageUrl ? (
+                <img
+                  src={heroImageUrl}
+                  alt="FluffyTail Shih Tzu homepage hero image"
+                />
+              ) : null}
+            </div>
+
+            <div className="thumbs thumbsHome">
+              <div className="thumb">
+                {heroThumb1Url ? (
                   <img
-                    src={heroImageUrl}
-                    alt="FluffyTail Shih Tzu homepage hero image"
+                    src={heroThumb1Url}
+                    alt="FluffyTail Shih Tzu homepage thumb 1"
                   />
                 ) : null}
               </div>
-
-              <div className="thumbs thumbsHome">
-                <div className="thumb">
-                  {heroThumb1Url ? (
-                    <img
-                      src={heroThumb1Url}
-                      alt="FluffyTail Shih Tzu homepage thumb 1"
-                    />
-                  ) : null}
-                </div>
-                <div className="thumb">
-                  {heroThumb2Url ? (
-                    <img
-                      src={heroThumb2Url}
-                      alt="FluffyTail Shih Tzu homepage thumb 2"
-                    />
-                  ) : null}
-                </div>
-                <div className="thumb">
-                  {heroThumb3Url ? (
-                    <img
-                      src={heroThumb3Url}
-                      alt="FluffyTail Shih Tzu homepage thumb 3"
-                    />
-                  ) : null}
-                </div>
+              <div className="thumb">
+                {heroThumb2Url ? (
+                  <img
+                    src={heroThumb2Url}
+                    alt="FluffyTail Shih Tzu homepage thumb 2"
+                  />
+                ) : null}
               </div>
-            </div>
-
-            <div className="pad">
-              <div className="ctaRow">
-                <WaitlistModal
-                  waitlistUrl={waitlistUrl}
-                  buttonLabel="Join the Waitlist"
-                  className="btn btnPrimary"
-                />
-                <span className="badge">No spam • No pressure</span>
-              </div>
-
-              <div className="divider"></div>
-
-              <div className="section">
-                <h2>About FluffyTail</h2>
-                <p className="lead" style={{marginBottom: 0}}>
-                  We raise our Shih Tzus in our home in Alabama, where they are part of the family
-                  from day one. We focus on temperament, socialization, and a straightforward
-                  experience for families looking for a well-loved companion.
-                </p>
-
-                <div className="qa">
-                  <div>
-                    <div className="q">Where do your breeding dogs live?</div>
-                    <div className="a">They live in our home with us as family pets.</div>
-                  </div>
-                  <div>
-                    <div className="q">What makes FluffyTail different?</div>
-                    <div className="a">
-                      We are a small, home-based breeder with a personal process, direct
-                      communication, and dogs raised in a real family environment.
-                    </div>
-                  </div>
-                  <div>
-                    <div className="q">How do I hear about new puppies first?</div>
-                    <div className="a">
-                      Join the waitlist and we will reach out when puppies are expected or available.
-                    </div>
-                  </div>
-                </div>
+              <div className="thumb">
+                {heroThumb3Url ? (
+                  <img
+                    src={heroThumb3Url}
+                    alt="FluffyTail Shih Tzu homepage thumb 3"
+                  />
+                ) : null}
               </div>
             </div>
           </div>
 
-          <div className="card">
-            <div className="pad">
-              <h2 className="panelTitle">At a glance</h2>
-              <div className="meta">
-                <span>📍 Mobile, Alabama area</span>
-                <span>🏠 Home-raised, family environment</span>
-                <span>🐶 Small breeder, not a kennel</span>
-                <span>🌎 Primarily Southeast, with broader reach</span>
-              </div>
+          <div className="pad">
+            <div className="ctaRow">
+              <WaitlistModal
+                waitlistUrl={waitlistUrl}
+                buttonLabel="Join the Waitlist"
+                className="btn btnPrimary"
+              />
+              <span className="badge">No spam • No pressure</span>
+            </div>
 
-              <div className="ctaRow">
-                <WaitlistModal
-                  waitlistUrl={waitlistUrl}
-                  buttonLabel="Join the Waitlist"
-                  className="btn btnPrimary"
-                />
-                <a className="btn" href="/contact">
-                  Contact
-                </a>
-              </div>
+            <div className="divider"></div>
 
-              <div className="divider"></div>
-
-              <p className="lead" style={{margin: 0}}>
-                Prefer to browse first? Visit the contact page for questions, waitlist info, and next steps.
+            <div className="section">
+              <h2>About FluffyTail</h2>
+              <p className="lead" style={{marginBottom: 0}}>
+                We raise our Shih Tzus in our home in Alabama, where they are part of the family
+                from day one. We focus on temperament, socialization, and a straightforward
+                experience for families looking for a well-loved companion.
               </p>
+
+              <div className="qa">
+                <div>
+                  <div className="q">Where do your breeding dogs live?</div>
+                  <div className="a">They live in our home with us as family pets.</div>
+                </div>
+                <div>
+                  <div className="q">What makes FluffyTail different?</div>
+                  <div className="a">
+                    We are a small, home-based breeder with a personal process, direct
+                    communication, and dogs raised in a real family environment.
+                  </div>
+                </div>
+                <div>
+                  <div className="q">How do I hear about new puppies first?</div>
+                  <div className="a">
+                    Join the waitlist and we will reach out when puppies are expected or available.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="card" style={{marginTop: '16px'}}>
+
+        <div className="card">
           <div className="pad">
-            <h2 style={{marginTop: 0}}>No featured litter listed</h2>
+            <h2 className="panelTitle">At a glance</h2>
+            <div className="meta">
+              <span>📍 Mobile, Alabama area</span>
+              <span>🏠 Home-raised, family environment</span>
+              <span>🐶 Small breeder, not a kennel</span>
+              <span>🌎 Primarily Southeast, with broader reach</span>
+              <span>📂 {activeLitters.length} active litter{activeLitters.length === 1 ? '' : 's'}</span>
+            </div>
+
+            <div className="ctaRow">
+              <WaitlistModal
+                waitlistUrl={waitlistUrl}
+                buttonLabel="Join the Waitlist"
+                className="btn btnPrimary"
+              />
+              <a className="btn" href="/contact">
+                Contact
+              </a>
+            </div>
+
+            <div className="divider"></div>
+
+            <p className="lead" style={{margin: 0}}>
+              Visit the contact page for questions, waitlist info, and next steps.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="section" style={{marginTop: '18px'}}>
+        <h2 style={{margin: '0 0 10px'}}>Active Litters</h2>
+      </div>
+
+      {activeLitters.length > 0 ? (
+        activeLitters.map((litter) => {
+          const litterPuppies = puppies.filter((puppy) => puppy.litterId === litter._id)
+
+          return (
+            <div className="card section" style={{marginTop: '18px'}} key={litter._id}>
+              <div className="pad" style={{paddingBottom: 0}}>
+                <h2 style={{margin: '0 0 6px'}}>
+                  {litter.title || 'Active litter'}
+                </h2>
+                <p className="lead" style={{margin: 0}}>
+                  Born {formatLongDate(litter.birthDate)} • {litter.girlsCount ?? 0} girls • {litter.boysCount ?? 0} boys
+                </p>
+                {litter.summary ? (
+                  <p className="lead" style={{marginTop: '10px', marginBottom: 0}}>
+                    {litter.summary}
+                  </p>
+                ) : null}
+              </div>
+
+              {litter.groupPhotoUrl ? (
+                <div className="pad" style={{paddingTop: '16px', paddingBottom: 0}}>
+                  <div className="heroPhoto" style={{height: 'auto', aspectRatio: '16 / 9', minHeight: 0, maxHeight: 'none'}}>
+                    <img src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} />
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="puppyGrid">
+                {litterPuppies.length > 0 ? (
+                  litterPuppies.map((puppy) => (
+                    <a
+                      className="puppyCard puppyCardLink"
+                      key={puppy._id}
+                      href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+                    >
+                      <div className="puppyImageWrap">
+                        {puppy.photoUrl ? (
+                          <img
+                            className="puppyImage"
+                            src={puppy.photoUrl}
+                            alt={puppy.name || 'Puppy'}
+                          />
+                        ) : null}
+                      </div>
+                      <div className="puppyCardBody">
+                        <div className="puppyCardTop">
+                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                            {formatPuppyStatus(puppy.status)}
+                          </span>
+                        </div>
+                        <p className="puppyMetaLine">
+                          {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                        </p>
+                        {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
+                      </div>
+                    </a>
+                  ))
+                ) : (
+                  <div style={{padding: '12px', color: '#5a6472'}}>
+                    No puppies listed yet for this litter.
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })
+      ) : (
+        <div className="card section" style={{marginTop: '18px'}}>
+          <div className="pad">
+            <h2 style={{marginTop: 0}}>No active litters listed</h2>
             <p className="lead" style={{marginBottom: 0}}>
               Join the waitlist for updates and first notice when puppies are expected or available.
             </p>
           </div>
         </div>
       )}
-
-      <div className="card section" style={{marginTop: '18px'}}>
-        <div className="pad" style={{paddingBottom: 0}}>
-          <h2 style={{margin: '0 0 6px'}}>Current litter and puppies</h2>
-          <p className="lead" style={{margin: 0}}>
-            {featuredLitter
-              ? `Our newest litter was born ${formatLongDate(
-                  featuredLitter.birthDate
-                )}. Meet the puppies below.`
-              : 'Current puppies will appear here.'}
-          </p>
-        </div>
-
-        <div className="puppyGrid">
-          {featuredPuppies.length > 0 ? (
-            featuredPuppies.map((puppy) => (
-              <a
-                className="puppyCard puppyCardLink"
-                key={puppy._id}
-                href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
-              >
-                <div className="puppyImageWrap">
-                  {puppy.photoUrl ? (
-                    <img
-                      className="puppyImage"
-                      src={puppy.photoUrl}
-                      alt={puppy.name || 'Puppy'}
-                    />
-                  ) : null}
-                </div>
-                <div className="puppyCardBody">
-                  <div className="puppyCardTop">
-                    <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                    <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                      {formatPuppyStatus(puppy.status)}
-                    </span>
-                  </div>
-                  <p className="puppyMetaLine">
-                    {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-                  </p>
-                  {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
-                </div>
-              </a>
-            ))
-          ) : (
-            <div style={{padding: '12px', color: '#5a6472'}}>
-              No puppies listed yet.
-            </div>
-          )}
-        </div>
-      </div>
 
       <div className="footer">
         © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
@@ -320,7 +340,7 @@ function formatShortDate(date?: string) {
 }
 
 function formatLongDate(date?: string) {
-  if (!date) return ''
+  if (!date) return 'Unknown'
   const d = new Date(date)
   return d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})
 }
@@ -332,3 +352,4 @@ function formatPuppyStatus(status?: string) {
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
 }
+
