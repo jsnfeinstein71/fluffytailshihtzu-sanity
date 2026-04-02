@@ -37,7 +37,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   waitlistUrl
 }`
 
-const littersQuery = `*[_type == "litter"] | order(birthDate desc){
+const littersQuery = `*[_type == "litter"] | order(sortOrder asc, birthDate asc){
   _id,
   title,
   birthDate,
