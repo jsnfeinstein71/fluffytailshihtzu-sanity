@@ -53,7 +53,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   "heroThumb3Url": heroThumb3.asset->url
 }`
 
-const activeLittersQuery = `*[_type == "litter" && status == "active"] | order(birthDate desc){
+const activeLittersQuery = `*[_type == "litter" && status == "active"] | order(sortOrder asc, birthDate asc){
   _id,
   title,
   birthDate,
