@@ -54,6 +54,12 @@ export const litterType = defineType({
       rows: 4,
     }),
     defineField({
+      name: 'sortOrder',
+      title: 'Sort Order',
+      type: 'number',
+      description: 'Lower numbers appear first. Leave blank to fall back to birth date order.',
+    }),
+    defineField({
       name: 'featured',
       title: 'Featured on Homepage',
       type: 'boolean',
