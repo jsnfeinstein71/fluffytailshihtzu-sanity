@@ -30,6 +30,7 @@ type Litter = {
 type Puppy = {
   _id: string
   name?: string
+  slug?: string
   sex?: 'female' | 'male'
   status?: 'available' | 'hold' | 'reserved' | 'gone-home'
   notes?: string
@@ -64,6 +65,7 @@ const featuredLitterQuery = `*[_type == "litter" && featured == true][0]{
 const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   _id,
   name,
+  "slug": slug.current,
   sex,
   status,
   notes,
@@ -265,23 +267,39 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <div className="strip" aria-label="Current puppies">
+        <div className="puppyGrid">
           {featuredPuppies.length > 0 ? (
             featuredPuppies.map((puppy) => (
-              <div className="tile" key={puppy._id}>
-                <div className="tileImg">
+              <a
+                className="puppyCard puppyCardLink"
+                key={puppy._id}
+                href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+              >
+                <div className="puppyImageWrap">
                   {puppy.photoUrl ? (
-                    <img src={puppy.photoUrl} alt={puppy.name || 'Puppy'} />
+                    <img
+                      className="puppyImage"
+                      src={puppy.photoUrl}
+                      alt={puppy.name || 'Puppy'}
+                    />
                   ) : null}
                 </div>
-                <div className="tileMeta">
-                  <p className="tileName">{puppy.name || 'Unnamed puppy'}</p>
-                  <p className="tileSub">{formatPuppyStatus(puppy.status)}</p>
+                <div className="puppyCardBody">
+                  <div className="puppyCardTop">
+                    <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                    <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                      {formatPuppyStatus(puppy.status)}
+                    </span>
+                  </div>
+                  <p className="puppyMetaLine">
+                    {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                  </p>
+                  {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
                 </div>
-              </div>
+              </a>
             ))
           ) : (
-            <div style={{padding: '14px 16px 18px', color: '#5a6472'}}>
+            <div style={{padding: '12px', color: '#5a6472'}}>
               No puppies listed yet.
             </div>
           )}
@@ -314,4 +332,3 @@ function formatPuppyStatus(status?: string) {
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
 }
-
