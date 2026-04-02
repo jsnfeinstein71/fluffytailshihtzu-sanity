@@ -12,26 +12,6 @@ export const litterType = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: 'sire',
-      title: 'Sire',
-      type: 'reference',
-      to: [{type: 'dog'}],
-      options: {
-        filter: 'sex == $sex',
-        filterParams: {sex: 'male'},
-      },
-    }),
-    defineField({
-      name: 'dam',
-      title: 'Dam',
-      type: 'reference',
-      to: [{type: 'dog'}],
-      options: {
-        filter: 'sex == $sex',
-        filterParams: {sex: 'female'},
-      },
-    }),
-    defineField({
       name: 'birthDate',
       title: 'Birth Date',
       type: 'date',
