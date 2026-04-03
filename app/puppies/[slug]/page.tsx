@@ -16,10 +16,12 @@ type PuppyPageData = {
 
 type SiteSettings = {
   waitlistUrl?: string
+  puppyInquiryUrl?: string
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  waitlistUrl
+  waitlistUrl,
+  puppyInquiryUrl
 }`
 
 const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
@@ -42,6 +44,12 @@ export default async function PuppyDetailPage({
   const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
 
   const waitlistUrl = siteSettings?.waitlistUrl || '#'
+  const puppyInquiryUrl = buildPuppyInquiryUrl({
+    baseUrl: siteSettings?.puppyInquiryUrl,
+    puppyName: puppy?.name,
+    litterTitle: puppy?.litterTitle,
+    slug: puppy?.slug,
+  })
 
   if (!puppy) {
     return (
@@ -85,9 +93,7 @@ export default async function PuppyDetailPage({
               </span>
             </div>
 
-            {puppy.litterTitle ? (
-              <p className="lead">Litter: {puppy.litterTitle}</p>
-            ) : null}
+            {puppy.litterTitle ? <p className="lead">Litter: {puppy.litterTitle}</p> : null}
 
             {puppy.notes ? (
               <p className="lead" style={{marginBottom: 0}}>
@@ -103,16 +109,25 @@ export default async function PuppyDetailPage({
 
             <p className="lead">
               If you would like to ask about {puppy.name || 'this puppy'}, use the inquiry button
-              below and mention the puppy name in your message.
+              below and your form will already include the puppy and litter details.
             </p>
 
             <div className="ctaRow">
-              <a
-                className="btn btnPrimary"
-                href={`/contact?puppy=${encodeURIComponent(puppy.name || '')}`}
-              >
-                Inquire About This Puppy
-              </a>
+              {puppyInquiryUrl ? (
+                <a
+                  className="btn btnPrimary"
+                  href={puppyInquiryUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Request Info About This Puppy
+                </a>
+              ) : (
+                <a className="btn btnPrimary" href="/contact">
+                  Contact About This Puppy
+                </a>
+              )}
+
               <WaitlistModal
                 waitlistUrl={waitlistUrl}
                 buttonLabel="Join the Waitlist"
@@ -136,4 +151,39 @@ function formatPuppyStatus(status?: string) {
   if (status === 'reserved') return 'Reserved'
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
+}
+
+function buildPuppyInquiryUrl({
+  baseUrl,
+  puppyName,
+  litterTitle,
+  slug,
+}: {
+  baseUrl?: string
+  puppyName?: string
+  litterTitle?: string
+  slug?: string
+}) {
+  if (!baseUrl) return ''
+
+  const message = buildPrefilledMessage(puppyName, litterTitle)
+  const puppyPageUrl = slug
+    ? `https://www.fluffytailshihtzu.com/puppies/${encodeURIComponent(slug)}`
+    : 'https://www.fluffytailshihtzu.com/available-puppies'
+
+  const separator = baseUrl.includes('?') ? '&' : '?'
+
+  return (
+    `${baseUrl}${separator}` +
+    `puppy=${encodeURIComponent(puppyName || '')}` +
+    `&litter=${encodeURIComponent(litterTitle || '')}` +
+    `&puppyPageUrl=${encodeURIComponent(puppyPageUrl)}` +
+    `&message=${encodeURIComponent(message)}`
+  )
+}
+
+function buildPrefilledMessage(puppyName?: string, litterTitle?: string) {
+  const puppyText = puppyName || 'this puppy'
+  const litterText = litterTitle ? ` from the ${litterTitle} litter` : ''
+  return `Hi, I’m interested in ${puppyText}${litterText}. Please send me more information.`
 }
