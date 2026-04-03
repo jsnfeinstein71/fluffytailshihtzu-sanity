@@ -44,12 +44,6 @@ export default async function PuppyDetailPage({
   const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
 
   const waitlistUrl = siteSettings?.waitlistUrl || '#'
-  const puppyInquiryUrl = buildPuppyInquiryUrl({
-    baseUrl: siteSettings?.puppyInquiryUrl,
-    puppyName: puppy?.name,
-    litterTitle: puppy?.litterTitle,
-    slug: puppy?.slug,
-  })
 
   if (!puppy) {
     return (
@@ -60,6 +54,13 @@ export default async function PuppyDetailPage({
       </main>
     )
   }
+
+  const puppyInquiryUrl = buildPuppyInquiryUrl({
+    baseUrl: siteSettings?.puppyInquiryUrl,
+    puppyName: puppy.name,
+    litterTitle: puppy.litterTitle,
+    slug: puppy.slug,
+  })
 
   return (
     <main className="wrap">
@@ -109,7 +110,7 @@ export default async function PuppyDetailPage({
 
             <p className="lead">
               If you would like to ask about {puppy.name || 'this puppy'}, use the inquiry button
-              below and your form will already include the puppy and litter details.
+              below and your message will already include the puppy and litter details.
             </p>
 
             <div className="ctaRow">
