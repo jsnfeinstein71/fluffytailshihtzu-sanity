@@ -546,94 +546,6 @@ export default function InboxClient({
       </div>
     </main>
   )
-
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files
-    if (!files || files.length === 0) return
-
-    setComposerError('')
-    setIsUploading(true)
-
-    try {
-      const nextImages: UploadedImage[] = []
-
-      for (const file of Array.from(files)) {
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const response = await fetch('/api/fluffytail/upload-image', {
-          method: 'POST',
-          body: formData,
-        })
-
-        const json = await response.json()
-
-        if (!response.ok || !json.url) {
-          throw new Error(json.error || 'Failed to upload image')
-        }
-
-        nextImages.push({
-          url: json.url,
-          name: file.name,
-        })
-      }
-
-      setUploadedImages((current) => [...current, ...nextImages])
-    } catch (error) {
-      console.error(error)
-      setComposerError('Image upload failed.')
-    } finally {
-      setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  function removeImage(index: number) {
-    setUploadedImages((current) => current.filter((_, i) => i !== index))
-  }
-
-  async function handleSend(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    if (!selectedConversation) return
-
-    const trimmedBody = replyBody.trim()
-
-    if (!trimmedBody && uploadedImages.length === 0) {
-      setComposerError('Add a message or a photo.')
-      return
-    }
-
-    setComposerError('')
-    setIsSending(true)
-
-    try {
-      const response = await fetch('/api/fluffytail/sms/send', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          to: selectedConversation.phone,
-          body: trimmedBody,
-          mediaUrls: uploadedImages.map((image) => image.url),
-        }),
-      })
-
-      const json = await response.json()
-
-      if (!response.ok || !json.ok) {
-        throw new Error(json.error || 'Failed to send message')
-      }
-
-      setReplyBody('')
-      setUploadedImages([])
-      router.refresh()
-    } catch (error) {
-      console.error(error)
-      setComposerError('Failed to send reply.')
-    } finally {
-      setIsSending(false)
-    }
-  }
 }
 
 function MessageBubble({message}: {message: SmsMessage}) {
@@ -688,12 +600,7 @@ function MessageBubble({message}: {message: SmsMessage}) {
         {message.mediaUrls?.length ? (
           <div style={{display: 'grid', gap: '10px'}}>
             {message.mediaUrls.map((url, index) => (
-              <a
-                key={`${url}-${index}`}
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer">
                 <img
                   src={url}
                   alt="Message media"
@@ -816,7 +723,7 @@ const conversationPreviewStyle: React.CSSProperties = {
   lineHeight: 1.35,
   display: '-webkit-box',
   WebkitLineClamp: 2,
-  WebkitBoxOrient: 'vertical',
+  WebkitBoxOrient: 'vertical' as const,
   overflow: 'hidden',
   wordBreak: 'break-word',
 }
