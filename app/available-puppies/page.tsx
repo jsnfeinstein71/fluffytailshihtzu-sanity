@@ -150,20 +150,6 @@ export default async function AvailablePuppiesPage() {
                 </div>
               </div>
 
-              {litter.groupPhotoUrl ? (
-                <div className="pad" style={{paddingTop: 0}}>
-                  <div
-                    className="heroPhoto"
-                    style={{height: 'auto', aspectRatio: '16 / 9', minHeight: 0, maxHeight: 'none'}}
-                  >
-                    <img
-                      src={litter.groupPhotoUrl}
-                      alt={litter.title || 'Litter photo'}
-                    />
-                  </div>
-                </div>
-              ) : null}
-
               <div className="pad" style={{paddingBottom: 0}}>
                 <h3 style={{margin: '0 0 6px'}}>Puppies in this litter</h3>
                 <p className="lead" style={{margin: 0}}>
