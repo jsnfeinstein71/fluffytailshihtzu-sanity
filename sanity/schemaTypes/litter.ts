@@ -30,7 +30,7 @@ export const litterType = defineType({
       options: {
         list: [
           {title: 'Planned', value: 'planned'},
-          {title: 'Current', value: 'current'},
+          {title: 'Active', value: 'current'},
           {title: 'Past', value: 'past'},
         ],
         layout: 'radio',
@@ -68,6 +68,19 @@ export const litterType = defineType({
       title: 'title',
       subtitle: 'status',
       media: 'heroImage',
+    },
+    prepare(selection) {
+      const subtitleMap: Record<string, string> = {
+        planned: 'planned',
+        current: 'active',
+        past: 'past',
+      }
+
+      return {
+        title: selection.title,
+        subtitle: subtitleMap[selection.subtitle as string] || selection.subtitle,
+        media: selection.media,
+      }
     },
   },
 })
