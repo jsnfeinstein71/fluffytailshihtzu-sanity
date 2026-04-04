@@ -1,13 +1,13 @@
 import {defineField, defineType} from 'sanity'
 
-export const puppyType = defineType({
-  name: 'puppy',
-  title: 'Puppies',
+export const litterType = defineType({
+  name: 'litter',
+  title: 'Litter',
   type: 'document',
   fields: [
     defineField({
-      name: 'name',
-      title: 'Puppy Name',
+      name: 'title',
+      title: 'Litter Title',
       type: 'string',
       validation: (Rule) => Rule.required(),
     }),
@@ -15,30 +15,13 @@ export const puppyType = defineType({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
-      options: {
-        source: 'name',
-        maxLength: 96,
-      },
+      options: {source: 'title', maxLength: 96},
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: 'litter',
-      title: 'Litter',
-      type: 'reference',
-      to: [{type: 'litter'}],
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: 'sex',
-      title: 'Sex',
-      type: 'string',
-      options: {
-        list: [
-          {title: 'Female', value: 'female'},
-          {title: 'Male', value: 'male'},
-        ],
-      },
-      validation: (Rule) => Rule.required(),
+      name: 'birthDate',
+      title: 'Birth Date',
+      type: 'date',
     }),
     defineField({
       name: 'status',
@@ -46,37 +29,45 @@ export const puppyType = defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Available', value: 'available'},
-          {title: 'Hold', value: 'hold'},
-          {title: 'Reserved', value: 'reserved'},
-          {title: 'Gone Home', value: 'gone-home'},
+          {title: 'Planned', value: 'planned'},
+          {title: 'Current', value: 'current'},
+          {title: 'Past', value: 'past'},
         ],
+        layout: 'radio',
       },
-      validation: (Rule) => Rule.required(),
+      initialValue: 'current',
     }),
     defineField({
-      name: 'photo',
-      title: 'Main Photo',
-      type: 'image',
-      options: {hotspot: true},
-    }),
-    defineField({
-      name: 'notes',
-      title: 'Notes',
+      name: 'description',
+      title: 'Description',
       type: 'text',
       rows: 4,
     }),
     defineField({
-      name: 'sortOrder',
-      title: 'Sort Order',
+      name: 'price',
+      title: 'Litter Price',
       type: 'number',
+      description: 'Default price for puppies in this litter unless a puppy has an override price.',
+    }),
+    defineField({
+      name: 'deposit',
+      title: 'Deposit',
+      type: 'number',
+      initialValue: 300,
+      description: 'Deposit amount included in the price.',
+    }),
+    defineField({
+      name: 'heroImage',
+      title: 'Hero Image',
+      type: 'image',
+      options: {hotspot: true},
     }),
   ],
   preview: {
     select: {
-      title: 'name',
+      title: 'title',
       subtitle: 'status',
-      media: 'photo',
+      media: 'heroImage',
     },
   },
 })
