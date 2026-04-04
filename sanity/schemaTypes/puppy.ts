@@ -1,13 +1,13 @@
 import {defineField, defineType} from 'sanity'
 
-export const litterType = defineType({
-  name: 'litter',
-  title: 'Litter',
+export const puppyType = defineType({
+  name: 'puppy',
+  title: 'Puppy',
   type: 'document',
   fields: [
     defineField({
-      name: 'title',
-      title: 'Litter Title',
+      name: 'name',
+      title: 'Puppy Name',
       type: 'string',
       validation: (Rule) => Rule.required(),
     }),
@@ -15,13 +15,15 @@ export const litterType = defineType({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
-      options: {source: 'title', maxLength: 96},
+      options: {source: 'name', maxLength: 96},
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: 'birthDate',
-      title: 'Birth Date',
-      type: 'date',
+      name: 'litter',
+      title: 'Litter',
+      type: 'reference',
+      to: [{type: 'litter'}],
+      validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: 'status',
@@ -29,45 +31,61 @@ export const litterType = defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Planned', value: 'planned'},
-          {title: 'Current', value: 'current'},
-          {title: 'Past', value: 'past'},
+          {title: 'Available', value: 'available'},
+          {title: 'Reserved', value: 'reserved'},
+          {title: 'Sold', value: 'sold'},
+          {title: 'Holdback', value: 'holdback'},
+        ],
+      },
+      initialValue: 'available',
+    }),
+    defineField({
+      name: 'sex',
+      title: 'Sex',
+      type: 'string',
+      options: {
+        list: [
+          {title: 'Male', value: 'male'},
+          {title: 'Female', value: 'female'},
         ],
         layout: 'radio',
       },
-      initialValue: 'current',
     }),
     defineField({
-      name: 'description',
-      title: 'Description',
+      name: 'color',
+      title: 'Color',
+      type: 'string',
+    }),
+    defineField({
+      name: 'summary',
+      title: 'Summary',
       type: 'text',
-      rows: 4,
+      rows: 3,
     }),
     defineField({
-      name: 'price',
-      title: 'Litter Price',
-      type: 'number',
-      description: 'Default price for puppies in this litter unless a puppy has an override price.',
-    }),
-    defineField({
-      name: 'deposit',
-      title: 'Deposit',
-      type: 'number',
-      initialValue: 300,
-      description: 'Deposit amount included in the price.',
-    }),
-    defineField({
-      name: 'heroImage',
-      title: 'Hero Image',
+      name: 'mainImage',
+      title: 'Main Image',
       type: 'image',
       options: {hotspot: true},
+    }),
+    defineField({
+      name: 'gallery',
+      title: 'Gallery',
+      type: 'array',
+      of: [{type: 'image'}],
+    }),
+    defineField({
+      name: 'overridePrice',
+      title: 'Override Price',
+      type: 'number',
+      description: 'Optional. If set, this price overrides the litter price for this puppy.',
     }),
   ],
   preview: {
     select: {
-      title: 'title',
+      title: 'name',
       subtitle: 'status',
-      media: 'heroImage',
+      media: 'mainImage',
     },
   },
 })
