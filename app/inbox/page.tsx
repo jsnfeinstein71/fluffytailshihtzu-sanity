@@ -15,11 +15,26 @@ export type SmsMessage = {
   receivedAt?: string
 }
 
+export type PuppyInquiry = {
+  _id: string
+  submittedAt?: string
+  name?: string
+  phone?: string
+  email?: string
+  preferredContactMethod?: string
+  message?: string
+  puppy?: string
+  litter?: string
+  puppyPageUrl?: string
+  source?: string
+}
+
 export type Conversation = {
   phone: string
   messages: SmsMessage[]
   latestAt?: string
   preview?: string
+  inquiry?: PuppyInquiry | null
 }
 
 const smsMessagesQuery = `*[_type == "smsMessage"] | order(receivedAt desc){
@@ -33,25 +48,56 @@ const smsMessagesQuery = `*[_type == "smsMessage"] | order(receivedAt desc){
   receivedAt
 }`
 
+const puppyInquiriesQuery = `*[_type == "puppyInquiry"] | order(submittedAt desc){
+  _id,
+  submittedAt,
+  name,
+  phone,
+  email,
+  preferredContactMethod,
+  message,
+  puppy,
+  litter,
+  puppyPageUrl,
+  source
+}`
+
 export default async function InboxPage() {
-  const messages = await client.fetch<SmsMessage[]>(smsMessagesQuery)
-  const conversations = buildConversations(messages)
+  const [messages, inquiries] = await Promise.all([
+    client.fetch<SmsMessage[]>(smsMessagesQuery),
+    client.fetch<PuppyInquiry[]>(puppyInquiriesQuery),
+  ])
+
+  const conversations = buildConversations(messages, inquiries)
 
   return <InboxClient conversations={conversations} />
 }
 
-function buildConversations(messages: SmsMessage[]): Conversation[] {
+function buildConversations(
+  messages: SmsMessage[],
+  inquiries: PuppyInquiry[]
+): Conversation[] {
+  const inquiryMap = new Map<string, PuppyInquiry>()
+
+  for (const inquiry of inquiries) {
+    const phone = normalizePhone(inquiry.phone)
+    if (phone && !inquiryMap.has(phone)) {
+      inquiryMap.set(phone, inquiry)
+    }
+  }
+
   const map = new Map<string, SmsMessage[]>()
 
   for (const message of messages) {
     const phone =
       message.direction === 'outbound'
-        ? message.to || 'Unknown'
-        : message.from || 'Unknown'
+        ? normalizePhone(message.to)
+        : normalizePhone(message.from)
 
-    const current = map.get(phone) || []
+    const key = phone || 'Unknown'
+    const current = map.get(key) || []
     current.push(message)
-    map.set(phone, current)
+    map.set(key, current)
   }
 
   return Array.from(map.entries())
@@ -69,6 +115,7 @@ function buildConversations(messages: SmsMessage[]): Conversation[] {
         messages: sortedMessages,
         latestAt: latest?.receivedAt,
         preview: latest?.body || '',
+        inquiry: inquiryMap.get(phone) || null,
       }
     })
     .sort((a, b) => {
@@ -76,4 +123,9 @@ function buildConversations(messages: SmsMessage[]): Conversation[] {
       const bTime = b.latestAt ? new Date(b.latestAt).getTime() : 0
       return bTime - aTime
     })
+}
+
+function normalizePhone(value?: string) {
+  if (!value) return ''
+  return value.replace(/[^\d+]/g, '')
 }
