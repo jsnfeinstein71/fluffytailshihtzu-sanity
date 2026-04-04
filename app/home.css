@@ -169,6 +169,7 @@ a{
   max-width:100%;
 }
 
+/* Default hero used on litter/detail sections */
 .heroPhoto{
   height:260px;
   max-height:32vh;
@@ -185,6 +186,13 @@ a{
   height:100%;
   object-fit:cover;
   display:block;
+}
+
+/* Homepage hero gets its own larger sizing */
+.photosHome .heroPhoto{
+  height:360px;
+  max-height:44vh;
+  min-height:300px;
 }
 
 .thumbs{
@@ -209,6 +217,11 @@ a{
   height:100%;
   object-fit:cover;
   display:block;
+}
+
+.photosHome .thumb{
+  height:112px;
+  min-height:92px;
 }
 
 .panelTitle{
@@ -520,6 +533,16 @@ a{
     min-height:180px;
     max-height:none;
   }
+
+  .photosHome .heroPhoto{
+    height:320px;
+    min-height:260px;
+  }
+
+  .photosHome .thumb{
+    height:98px;
+    min-height:82px;
+  }
 }
 
 @media (max-width:680px){
@@ -637,6 +660,10 @@ a{
     max-height:none;
     aspect-ratio:4 / 3;
     border-radius:16px;
+  }
+
+  .photosHome .heroPhoto{
+    aspect-ratio:1 / 1;
   }
 
   .thumbsHome{
