@@ -1,4 +1,3 @@
-// sanity/schemaTypes/smsMessage.ts
 import {defineField, defineType} from 'sanity'
 
 export const smsMessageType = defineType({
@@ -13,5 +12,24 @@ export const smsMessageType = defineType({
     defineField({name: 'direction', title: 'Direction', type: 'string'}),
     defineField({name: 'source', title: 'Source', type: 'string'}),
     defineField({name: 'receivedAt', title: 'Received At', type: 'datetime'}),
+    defineField({name: 'numMedia', title: 'Number of Media Items', type: 'number'}),
+    defineField({
+      name: 'mediaUrls',
+      title: 'Media URLs',
+      type: 'array',
+      of: [{type: 'url'}],
+    }),
   ],
+  preview: {
+    select: {
+      title: 'from',
+      subtitle: 'body',
+    },
+    prepare(selection) {
+      return {
+        title: selection.title || 'SMS Message',
+        subtitle: selection.subtitle || '',
+      }
+    },
+  },
 })
