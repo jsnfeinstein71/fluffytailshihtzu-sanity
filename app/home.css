@@ -170,13 +170,13 @@ a{
 }
 
 .heroPhoto{
-  height:300px;
-  max-height:38vh;
+  height:260px;
+  max-height:32vh;
   overflow:hidden;
   border-radius:18px;
   background:linear-gradient(135deg, #e9ecf4, #f9fafc);
   border:1px solid #dde2ee;
-  min-height:220px;
+  min-height:200px;
   max-width:100%;
 }
 
@@ -195,12 +195,12 @@ a{
 }
 
 .thumb{
-  height:92px;
+  height:82px;
   overflow:hidden;
   border-radius:14px;
   background:linear-gradient(135deg, #eceff6, #ffffff);
   border:1px solid #dde2ee;
-  min-height:76px;
+  min-height:70px;
   max-width:100%;
 }
 
@@ -305,7 +305,7 @@ a{
 }
 
 .tileImg{
-  height:96px;
+  height:88px;
   overflow:hidden;
   background:linear-gradient(135deg, #e9ecf4, #ffffff);
   border-bottom:1px solid var(--line);
@@ -337,8 +337,8 @@ a{
 .puppyGrid{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:12px;
-  padding:12px;
+  gap:10px;
+  padding:10px;
 }
 
 .puppyCard{
@@ -346,12 +346,11 @@ a{
   border-radius:14px;
   background:#fff;
   overflow:hidden;
-  box-shadow:0 6px 18px rgba(16,24,40,.06);
+  box-shadow:0 4px 14px rgba(16,24,40,.05);
 }
 
 .puppyImageWrap{
-  aspect-ratio: 1 / 1;
-  max-height: 210px;
+  aspect-ratio: 4 / 3;
   background:var(--soft);
   overflow:hidden;
 }
@@ -364,15 +363,15 @@ a{
 }
 
 .puppyCardBody{
-  padding:12px;
+  padding:10px 12px 12px;
 }
 
 .puppyCardTop{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
-  gap:10px;
-  margin-bottom:8px;
+  gap:8px;
+  margin-bottom:6px;
 }
 
 .puppyName{
@@ -382,7 +381,7 @@ a{
 }
 
 .puppyMetaLine{
-  margin:0 0 6px;
+  margin:0 0 5px;
   color:var(--muted);
   font-size:13px;
 }
@@ -517,8 +516,8 @@ a{
   }
 
   .heroPhoto{
-    height:260px;
-    min-height:200px;
+    height:220px;
+    min-height:180px;
     max-height:none;
   }
 }
@@ -663,7 +662,7 @@ a{
   }
 
   .tileImg{
-    height:88px;
+    height:84px;
   }
 
   .puppyGrid{
@@ -673,7 +672,6 @@ a{
   }
 
   .puppyImageWrap{
-    max-height:none;
     aspect-ratio: 4 / 3;
   }
 
