@@ -14,10 +14,22 @@ export const puppyInquiryType = defineType({
       title: 'Preferred Contact Method',
       type: 'string',
     }),
-    defineField({name: 'message', title: 'Message', type: 'text', rows: 4}),
+    defineField({name: 'message', title: 'Message', type: 'text', rows: 5}),
     defineField({name: 'puppy', title: 'Puppy', type: 'string'}),
     defineField({name: 'litter', title: 'Litter', type: 'string'}),
     defineField({name: 'puppyPageUrl', title: 'Puppy Page URL', type: 'url'}),
     defineField({name: 'source', title: 'Source', type: 'string'}),
   ],
+  preview: {
+    select: {
+      title: 'name',
+      subtitle: 'message',
+    },
+    prepare(selection) {
+      return {
+        title: selection.title || 'Puppy Inquiry',
+        subtitle: selection.subtitle || '',
+      }
+    },
+  },
 })
