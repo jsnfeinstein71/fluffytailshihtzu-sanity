@@ -17,6 +17,8 @@ type Litter = {
   boysCount?: number
   summary?: string
   status?: string
+  price?: number
+  deposit?: number
   groupPhotoUrl?: string
 }
 
@@ -29,6 +31,7 @@ type Puppy = {
   notes?: string
   sortOrder?: number
   litterId?: string
+  overridePrice?: number
   photoUrl?: string
 }
 
@@ -45,6 +48,8 @@ const littersQuery = `*[_type == "litter"] | order(sortOrder asc, birthDate asc)
   boysCount,
   summary,
   status,
+  price,
+  deposit,
   "groupPhotoUrl": groupPhoto.asset->url
 }`
 
@@ -57,6 +62,7 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   notes,
   sortOrder,
   "litterId": litter->_id,
+  overridePrice,
   "photoUrl": photo.asset->url
 }`
 
@@ -67,8 +73,8 @@ export default async function AvailablePuppiesPage() {
 
   const waitlistUrl = siteSettings?.waitlistUrl || '#'
 
-  const activeLitters = litters.filter((litter) => litter.status === 'active')
-  const pastLitters = litters.filter((litter) => litter.status !== 'active')
+  const activeLitters = litters.filter((litter) => litter.status === 'current' || litter.status === 'active')
+  const pastLitters = litters.filter((litter) => litter.status !== 'current' && litter.status !== 'active')
 
   return (
     <main className="wrap">
@@ -115,6 +121,14 @@ export default async function AvailablePuppiesPage() {
                   Born {formatLongDate(litter.birthDate)} • {litter.girlsCount ?? 0} girls •{' '}
                   {litter.boysCount ?? 0} boys
                 </p>
+
+                {litter.price ? (
+                  <p className="lead" style={{marginTop: '10px', marginBottom: 0, fontWeight: 700}}>
+                    {formatCurrency(litter.price)}
+                    {litter.deposit ? `, including a ${formatCurrency(litter.deposit)} deposit` : ''}
+                  </p>
+                ) : null}
+
                 {litter.summary ? (
                   <p className="lead" style={{marginTop: '10px', marginBottom: 0}}>
                     {litter.summary}
@@ -161,39 +175,52 @@ export default async function AvailablePuppiesPage() {
 
               <div className="puppyGrid">
                 {litterPuppies.length > 0 ? (
-                  litterPuppies.map((puppy) => (
-                    <a
-                      className="puppyCard puppyCardLink"
-                      key={puppy._id}
-                      href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
-                    >
-                      <div className="puppyImageWrap">
-                        {puppy.photoUrl ? (
-                          <img
-                            className="puppyImage"
-                            src={puppy.photoUrl}
-                            alt={puppy.name || 'Puppy'}
-                          />
-                        ) : null}
-                      </div>
-                      <div className="puppyCardBody">
-                        <div className="puppyCardTop">
-                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                            {formatPuppyStatus(puppy.status)}
-                          </span>
+                  litterPuppies.map((puppy) => {
+                    const price = puppy.overridePrice ?? litter.price
+
+                    return (
+                      <a
+                        className="puppyCard puppyCardLink"
+                        key={puppy._id}
+                        href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+                      >
+                        <div className="puppyImageWrap">
+                          {puppy.photoUrl ? (
+                            <img
+                              className="puppyImage"
+                              src={puppy.photoUrl}
+                              alt={puppy.name || 'Puppy'}
+                            />
+                          ) : null}
                         </div>
-                        <p className="puppyMetaLine">
-                          {puppy.sex === 'female'
-                            ? 'Female'
-                            : puppy.sex === 'male'
-                              ? 'Male'
-                              : 'Puppy'}
-                        </p>
-                        {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
-                      </div>
-                    </a>
-                  ))
+                        <div className="puppyCardBody">
+                          <div className="puppyCardTop">
+                            <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                            <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                              {formatPuppyStatus(puppy.status)}
+                            </span>
+                          </div>
+
+                          <p className="puppyMetaLine">
+                            {puppy.sex === 'female'
+                              ? 'Female'
+                              : puppy.sex === 'male'
+                                ? 'Male'
+                                : 'Puppy'}
+                          </p>
+
+                          {price ? (
+                            <p className="puppyMetaLine" style={{fontWeight: 700}}>
+                              {formatCurrency(price)}
+                              {litter.deposit ? ` • ${formatCurrency(litter.deposit)} deposit included` : ''}
+                            </p>
+                          ) : null}
+
+                          {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
+                        </div>
+                      </a>
+                    )
+                  })
                 ) : (
                   <div style={{padding: '12px', color: '#5a6472'}}>
                     No puppies listed yet for this litter.
@@ -253,8 +280,8 @@ function formatLongDate(date?: string) {
 }
 
 function formatStatus(status?: string) {
-  if (status === 'active') return 'Active'
-  if (status === 'upcoming') return 'Upcoming'
+  if (status === 'active' || status === 'current') return 'Active'
+  if (status === 'upcoming' || status === 'planned') return 'Upcoming'
   if (status === 'past') return 'Past'
   return 'Litter'
 }
@@ -267,3 +294,10 @@ function formatPuppyStatus(status?: string) {
   return 'Available'
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
