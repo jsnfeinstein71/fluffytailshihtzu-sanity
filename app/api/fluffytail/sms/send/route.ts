@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       receivedAt: new Date().toISOString(),
     })
 
-    return NextResponse.redirect(new URL('/inbox', req.url))
+    return NextResponse.redirect(new URL('/inbox', req.url), 303)
   } catch (error) {
     console.error('Failed to send SMS', error)
     return NextResponse.json({error: 'Failed to send SMS'}, {status: 500})
