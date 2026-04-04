@@ -17,6 +17,8 @@ type Litter = {
   boysCount?: number
   summary?: string
   status?: string
+  price?: number
+  deposit?: number
   groupPhotoUrl?: string
 }
 
@@ -25,7 +27,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   waitlistUrl
 }`
 
-const upcomingLittersQuery = `*[_type == "litter" && status in ["upcoming", "active"]] | order(sortOrder asc, birthDate asc){
+const upcomingLittersQuery = `*[_type == "litter" && status in ["planned", "upcoming", "current", "active"]] | order(sortOrder asc, birthDate asc){
   _id,
   title,
   birthDate,
@@ -33,6 +35,8 @@ const upcomingLittersQuery = `*[_type == "litter" && status in ["upcoming", "act
   boysCount,
   summary,
   status,
+  price,
+  deposit,
   "groupPhotoUrl": groupPhoto.asset->url
 }`
 
@@ -178,6 +182,12 @@ export default async function UpcomingLittersPage() {
                     {formatStatus(litter.status)}
                     {litter.birthDate ? ` • ${formatShortDate(litter.birthDate)}` : ''}
                   </p>
+                  {litter.price ? (
+                    <p className="tileSub" style={{marginTop: '4px'}}>
+                      {formatCurrency(litter.price)}
+                      {litter.deposit ? ` • ${formatCurrency(litter.deposit)} deposit included` : ''}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ))
@@ -197,8 +207,9 @@ export default async function UpcomingLittersPage() {
 }
 
 function formatStatus(status?: string) {
-  if (status === 'active') return 'Active'
-  if (status === 'upcoming') return 'Upcoming'
+  if (status === 'active' || status === 'current') return 'Active'
+  if (status === 'upcoming' || status === 'planned') return 'Upcoming'
+  if (status === 'past') return 'Past'
   return 'Litter'
 }
 
@@ -208,3 +219,10 @@ function formatShortDate(date?: string) {
   return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
