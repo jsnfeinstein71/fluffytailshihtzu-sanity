@@ -1,10 +1,9 @@
-// app/api/fluffytail/sms/inbound/route.ts
 import {NextRequest, NextResponse} from 'next/server'
 import {createClient} from '@sanity/client'
 
 export const runtime = 'nodejs'
 
-const writeClient = createClient({
+const sanity = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
   apiVersion: '2025-01-01',
@@ -15,27 +14,35 @@ const writeClient = createClient({
 export async function POST(req: NextRequest) {
   const formData = await req.formData()
 
-  const payload = {
-    messageSid: String(formData.get('MessageSid') || ''),
-    from: String(formData.get('From') || ''),
-    to: String(formData.get('To') || ''),
-    body: String(formData.get('Body') || ''),
-    receivedAt: new Date().toISOString(),
+  const messageSid = String(formData.get('MessageSid') || '')
+  const from = String(formData.get('From') || '')
+  const to = String(formData.get('To') || '')
+  const body = String(formData.get('Body') || '')
+  const numMedia = Number(formData.get('NumMedia') || '0')
+  const receivedAt = new Date().toISOString()
+
+  const mediaUrls: string[] = []
+
+  for (let i = 0; i < numMedia; i += 1) {
+    const mediaUrl = String(formData.get(`MediaUrl${i}`) || '')
+    if (mediaUrl) mediaUrls.push(mediaUrl)
   }
 
   try {
-    await writeClient.create({
+    await sanity.create({
       _type: 'smsMessage',
-      messageSid: payload.messageSid,
-      from: payload.from,
-      to: payload.to,
-      body: payload.body,
+      messageSid,
+      from,
+      to,
+      body,
       direction: 'inbound',
       source: 'fluffytail',
-      receivedAt: payload.receivedAt,
+      receivedAt,
+      numMedia,
+      mediaUrls,
     })
   } catch (error) {
-    console.error('Failed to save inbound SMS', error)
+    console.error('Failed to save inbound SMS/MMS', error)
   }
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
