@@ -19,29 +19,27 @@ const twilioClient = twilio(
 
 export async function POST(req: NextRequest) {
   try {
-    const contentType = req.headers.get('content-type') || ''
+    const payload = await req.json()
 
-    let to = ''
-    let body = ''
+    const to = String(payload.to || '').trim()
+    const body = String(payload.body || '').trim()
+    const mediaUrls = Array.isArray(payload.mediaUrls)
+      ? payload.mediaUrls.map((value: unknown) => String(value)).filter(Boolean)
+      : []
 
-    if (contentType.includes('application/json')) {
-      const json = await req.json()
-      to = json.to || ''
-      body = json.body || ''
-    } else {
-      const formData = await req.formData()
-      to = String(formData.get('to') || '')
-      body = String(formData.get('body') || '')
+    if (!to) {
+      return NextResponse.json({error: 'Missing recipient number'}, {status: 400})
     }
 
-    if (!to || !body) {
-      return NextResponse.json({error: 'Missing to or body'}, {status: 400})
+    if (!body && mediaUrls.length === 0) {
+      return NextResponse.json({error: 'Message body or media is required'}, {status: 400})
     }
 
     const message = await twilioClient.messages.create({
       from: process.env.TWILIO_FROM_NUMBER!,
       to,
-      body,
+      body: body || undefined,
+      mediaUrl: mediaUrls.length > 0 ? mediaUrls : undefined,
     })
 
     await sanity.create({
@@ -53,11 +51,13 @@ export async function POST(req: NextRequest) {
       direction: 'outbound',
       source: 'fluffytail',
       receivedAt: new Date().toISOString(),
+      numMedia: mediaUrls.length,
+      mediaUrls,
     })
 
-    return NextResponse.redirect(new URL('/inbox', req.url), 303)
+    return NextResponse.json({ok: true, sid: message.sid})
   } catch (error) {
-    console.error('Failed to send SMS', error)
-    return NextResponse.json({error: 'Failed to send SMS'}, {status: 500})
+    console.error('Failed to send SMS/MMS', error)
+    return NextResponse.json({error: 'Failed to send SMS/MMS'}, {status: 500})
   }
 }
