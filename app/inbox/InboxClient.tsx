@@ -15,7 +15,8 @@ export default function InboxClient({
   conversations: Conversation[]
 }) {
   const router = useRouter()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const galleryInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
   const [selectedPhone, setSelectedPhone] = useState(conversations[0]?.phone || '')
   const [search, setSearch] = useState('')
@@ -110,7 +111,8 @@ export default function InboxClient({
       setComposerError('Image upload failed.')
     } finally {
       setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (galleryInputRef.current) galleryInputRef.current.value = ''
+      if (cameraInputRef.current) cameraInputRef.current.value = ''
     }
   }
 
@@ -497,7 +499,16 @@ export default function InboxClient({
                     ) : null}
 
                     <input
-                      ref={fileInputRef}
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                      style={{display: 'none'}}
+                    />
+
+                    <input
+                      ref={cameraInputRef}
                       type="file"
                       accept="image/*"
                       capture="environment"
@@ -510,10 +521,19 @@ export default function InboxClient({
                       <button
                         type="button"
                         className="btn"
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => galleryInputRef.current?.click()}
                         disabled={isUploading || isSending}
                       >
-                        {isUploading ? 'Uploading Photo...' : 'Add Photo'}
+                        Gallery
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => cameraInputRef.current?.click()}
+                        disabled={isUploading || isSending}
+                      >
+                        Camera
                       </button>
 
                       <button
@@ -521,7 +541,11 @@ export default function InboxClient({
                         type="submit"
                         disabled={isUploading || isSending}
                       >
-                        {isSending ? 'Sending...' : 'Send Reply'}
+                        {isUploading
+                          ? 'Uploading...'
+                          : isSending
+                            ? 'Sending...'
+                            : 'Send Reply'}
                       </button>
                     </div>
 
