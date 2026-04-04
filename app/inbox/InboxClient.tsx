@@ -27,12 +27,23 @@ export default function InboxClient({
     return conversations.filter((conversation) => {
       const inPhone = conversation.phone.toLowerCase().includes(q)
       const inPreview = (conversation.preview || '').toLowerCase().includes(q)
-      return inPhone || inPreview
+      const inName = (conversation.inquiry?.name || '').toLowerCase().includes(q)
+      const inEmail = (conversation.inquiry?.email || '').toLowerCase().includes(q)
+      const inPuppy = (conversation.inquiry?.puppy || '').toLowerCase().includes(q)
+      const inLitter = (conversation.inquiry?.litter || '').toLowerCase().includes(q)
+
+      return inPhone || inPreview || inName || inEmail || inPuppy || inLitter
     })
   }, [conversations, search])
 
   const selectedConversation =
     filtered.find((c) => c.phone === selectedPhone) || filtered[0] || null
+
+  useEffect(() => {
+    if (!selectedConversation && filtered[0]) {
+      setSelectedPhone(filtered[0].phone)
+    }
+  }, [filtered, selectedConversation])
 
   const openConversation = (phone: string) => {
     setSelectedPhone(phone)
@@ -98,7 +109,7 @@ export default function InboxClient({
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search number or message"
+                placeholder="Search name, number, puppy, message"
                 style={{
                   width: '100%',
                   borderRadius: '14px',
@@ -120,6 +131,11 @@ export default function InboxClient({
               ) : (
                 filtered.map((conversation) => {
                   const isActive = selectedConversation?.phone === conversation.phone
+                  const title = conversation.inquiry?.name || conversation.phone
+                  const subtitleParts = [
+                    conversation.inquiry?.puppy ? `Puppy: ${conversation.inquiry.puppy}` : '',
+                    conversation.inquiry?.litter ? conversation.inquiry.litter : '',
+                  ].filter(Boolean)
 
                   return (
                     <button
@@ -154,17 +170,50 @@ export default function InboxClient({
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {conversation.phone}
+                            {title}
                           </div>
+
+                          {conversation.inquiry?.name ? (
+                            <div
+                              style={{
+                                fontSize: '13px',
+                                opacity: 0.7,
+                                marginBottom: '4px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {conversation.phone}
+                            </div>
+                          ) : null}
+
+                          {subtitleParts.length > 0 ? (
+                            <div
+                              style={{
+                                fontSize: '13px',
+                                opacity: 0.8,
+                                marginBottom: '6px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {subtitleParts.join(' • ')}
+                            </div>
+                          ) : null}
 
                           <div
                             style={{
                               fontSize: '14px',
                               opacity: 0.75,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
                               marginBottom: '6px',
+                              lineHeight: 1.35,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical' as const,
+                              overflow: 'hidden',
+                              wordBreak: 'break-word',
                             }}
                           >
                             {conversation.preview || 'No message'}
@@ -214,7 +263,7 @@ export default function InboxClient({
                     gap: '12px',
                   }}
                 >
-                  <div style={{minWidth: 0}}>
+                  <div style={{minWidth: 0, width: '100%'}}>
                     {isMobile ? (
                       <button
                         type="button"
@@ -232,14 +281,60 @@ export default function InboxClient({
                         margin: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
+                        wordBreak: 'break-word',
                       }}
                     >
-                      {selectedConversation.phone}
+                      {selectedConversation.inquiry?.name || selectedConversation.phone}
                     </h2>
 
-                    <p className="lead" style={{margin: '6px 0 0 0'}}>
-                      {selectedConversation.messages.length} messages
-                    </p>
+                    {selectedConversation.inquiry?.name ? (
+                      <p className="lead" style={{margin: '6px 0 0 0'}}>
+                        {selectedConversation.phone}
+                      </p>
+                    ) : null}
+
+                    {selectedConversation.inquiry ? (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: '6px',
+                          marginTop: '12px',
+                          fontSize: '14px',
+                          opacity: 0.82,
+                        }}
+                      >
+                        {selectedConversation.inquiry.email ? (
+                          <div>Email: {selectedConversation.inquiry.email}</div>
+                        ) : null}
+                        {selectedConversation.inquiry.preferredContactMethod ? (
+                          <div>
+                            Prefers: {selectedConversation.inquiry.preferredContactMethod}
+                          </div>
+                        ) : null}
+                        {selectedConversation.inquiry.puppy ? (
+                          <div>Puppy: {selectedConversation.inquiry.puppy}</div>
+                        ) : null}
+                        {selectedConversation.inquiry.litter ? (
+                          <div>Litter: {selectedConversation.inquiry.litter}</div>
+                        ) : null}
+                        {selectedConversation.inquiry.puppyPageUrl ? (
+                          <div style={{wordBreak: 'break-word'}}>
+                            Page:{' '}
+                            <a
+                              href={selectedConversation.inquiry.puppyPageUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open puppy page
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="lead" style={{margin: '6px 0 0 0'}}>
+                        {selectedConversation.messages.length} messages
+                      </p>
+                    )}
                   </div>
 
                   {!isMobile ? (
@@ -290,7 +385,9 @@ export default function InboxClient({
                       name="body"
                       required
                       rows={3}
-                      placeholder={`Reply to ${selectedConversation.phone}`}
+                      placeholder={`Reply to ${
+                        selectedConversation.inquiry?.name || selectedConversation.phone
+                      }`}
                       style={{
                         width: '100%',
                         borderRadius: '14px',
@@ -357,7 +454,14 @@ function MessageBubble({message}: {message: SmsMessage}) {
           </span>
         </div>
 
-        <div style={{whiteSpace: 'pre-wrap', lineHeight: 1.45}}>
+        <div
+          style={{
+            whiteSpace: 'pre-wrap',
+            lineHeight: 1.45,
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
+          }}
+        >
           {message.body || '(No message body)'}
         </div>
       </div>
