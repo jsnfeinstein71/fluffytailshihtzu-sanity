@@ -13,6 +13,8 @@ export type SmsMessage = {
   direction?: string
   source?: string
   receivedAt?: string
+  numMedia?: number
+  mediaUrls?: string[]
 }
 
 export type PuppyInquiry = {
@@ -45,7 +47,9 @@ const smsMessagesQuery = `*[_type == "smsMessage"] | order(receivedAt desc){
   body,
   direction,
   source,
-  receivedAt
+  receivedAt,
+  numMedia,
+  mediaUrls
 }`
 
 const puppyInquiriesQuery = `*[_type == "puppyInquiry"] | order(submittedAt desc){
@@ -114,7 +118,9 @@ function buildConversations(
         phone,
         messages: sortedMessages,
         latestAt: latest?.receivedAt,
-        preview: latest?.body || '',
+        preview:
+          latest?.body ||
+          (latest?.mediaUrls && latest.mediaUrls.length > 0 ? 'Photo' : ''),
         inquiry: inquiryMap.get(phone) || null,
       }
     })
