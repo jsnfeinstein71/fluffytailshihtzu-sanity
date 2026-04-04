@@ -25,6 +25,8 @@ type Litter = {
   boysCount?: number
   summary?: string
   status?: string
+  price?: number
+  deposit?: number
   groupPhotoUrl?: string
 }
 
@@ -37,6 +39,7 @@ type Puppy = {
   notes?: string
   sortOrder?: number
   litterId?: string
+  overridePrice?: number
   photoUrl?: string
 }
 
@@ -53,7 +56,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   "heroThumb3Url": heroThumb3.asset->url
 }`
 
-const activeLittersQuery = `*[_type == "litter" && status == "active"] | order(sortOrder asc, birthDate asc){
+const activeLittersQuery = `*[_type == "litter" && status in ["active", "current"]] | order(sortOrder asc, birthDate asc){
   _id,
   title,
   birthDate,
@@ -61,6 +64,8 @@ const activeLittersQuery = `*[_type == "litter" && status == "active"] | order(s
   boysCount,
   summary,
   status,
+  price,
+  deposit,
   "groupPhotoUrl": groupPhoto.asset->url
 }`
 
@@ -73,6 +78,7 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   notes,
   sortOrder,
   "litterId": litter->_id,
+  overridePrice,
   "photoUrl": photo.asset->url
 }`
 
@@ -260,6 +266,14 @@ export default async function HomePage() {
                 <p className="lead" style={{margin: 0}}>
                   Born {formatLongDate(litter.birthDate)} • {litter.girlsCount ?? 0} girls • {litter.boysCount ?? 0} boys
                 </p>
+
+                {litter.price ? (
+                  <p className="lead" style={{marginTop: '10px', marginBottom: 0, fontWeight: 700}}>
+                    {formatCurrency(litter.price)}
+                    {litter.deposit ? `, including a ${formatCurrency(litter.deposit)} deposit` : ''}
+                  </p>
+                ) : null}
+
                 {litter.summary ? (
                   <p className="lead" style={{marginTop: '10px', marginBottom: 0}}>
                     {litter.summary}
@@ -277,35 +291,47 @@ export default async function HomePage() {
 
               <div className="puppyGrid">
                 {litterPuppies.length > 0 ? (
-                  litterPuppies.map((puppy) => (
-                    <a
-                      className="puppyCard puppyCardLink"
-                      key={puppy._id}
-                      href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
-                    >
-                      <div className="puppyImageWrap">
-                        {puppy.photoUrl ? (
-                          <img
-                            className="puppyImage"
-                            src={puppy.photoUrl}
-                            alt={puppy.name || 'Puppy'}
-                          />
-                        ) : null}
-                      </div>
-                      <div className="puppyCardBody">
-                        <div className="puppyCardTop">
-                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                            {formatPuppyStatus(puppy.status)}
-                          </span>
+                  litterPuppies.map((puppy) => {
+                    const price = puppy.overridePrice ?? litter.price
+
+                    return (
+                      <a
+                        className="puppyCard puppyCardLink"
+                        key={puppy._id}
+                        href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+                      >
+                        <div className="puppyImageWrap">
+                          {puppy.photoUrl ? (
+                            <img
+                              className="puppyImage"
+                              src={puppy.photoUrl}
+                              alt={puppy.name || 'Puppy'}
+                            />
+                          ) : null}
                         </div>
-                        <p className="puppyMetaLine">
-                          {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-                        </p>
-                        {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
-                      </div>
-                    </a>
-                  ))
+                        <div className="puppyCardBody">
+                          <div className="puppyCardTop">
+                            <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                            <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                              {formatPuppyStatus(puppy.status)}
+                            </span>
+                          </div>
+                          <p className="puppyMetaLine">
+                            {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                          </p>
+
+                          {price ? (
+                            <p className="puppyMetaLine" style={{fontWeight: 700}}>
+                              {formatCurrency(price)}
+                              {litter.deposit ? ` • ${formatCurrency(litter.deposit)} deposit included` : ''}
+                            </p>
+                          ) : null}
+
+                          {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
+                        </div>
+                      </a>
+                    )
+                  })
                 ) : (
                   <div style={{padding: '12px', color: '#5a6472'}}>
                     No puppies listed yet for this litter.
@@ -333,12 +359,6 @@ export default async function HomePage() {
   )
 }
 
-function formatShortDate(date?: string) {
-  if (!date) return ''
-  const d = new Date(date)
-  return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
-}
-
 function formatLongDate(date?: string) {
   if (!date) return 'Unknown'
   const d = new Date(date)
@@ -353,3 +373,10 @@ function formatPuppyStatus(status?: string) {
   return 'Available'
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
