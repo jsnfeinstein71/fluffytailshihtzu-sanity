@@ -68,8 +68,12 @@ export default async function PuppyDetailPage({
     slug: puppy.slug,
   })
 
-  const price = puppy.overridePrice ?? puppy.litterPrice
+  const totalPrice = puppy.overridePrice ?? puppy.litterPrice
   const deposit = puppy.litterDeposit
+  const finalPayment =
+    typeof totalPrice === 'number' && typeof deposit === 'number'
+      ? Math.max(totalPrice - deposit, 0)
+      : undefined
 
   return (
     <main className="wrap">
@@ -105,11 +109,85 @@ export default async function PuppyDetailPage({
 
             {puppy.litterTitle ? <p className="lead">Litter: {puppy.litterTitle}</p> : null}
 
-            {price ? (
-              <p className="lead" style={{fontWeight: 700}}>
-                {formatCurrency(price)}
-                {deposit ? `, including a ${formatCurrency(deposit)} deposit` : ''}
-              </p>
+            {typeof totalPrice === 'number' ? (
+              <div
+                style={{
+                  marginTop: '14px',
+                  marginBottom: '14px',
+                  padding: '16px 18px',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  borderRadius: '18px',
+                  background: 'rgba(0,0,0,0.02)',
+                  maxWidth: '360px',
+                }}
+              >
+                {typeof deposit === 'number' ? (
+                  <>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <span className="lead" style={{margin: 0}}>
+                        Deposit
+                      </span>
+                      <span style={{fontWeight: 700}}>{formatCurrencyWithCents(deposit)}</span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <span className="lead" style={{margin: 0}}>
+                        Final payment
+                      </span>
+                      <span style={{fontWeight: 700}}>
+                        {formatCurrencyWithCents(finalPayment ?? 0)}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        borderTop: '1px solid rgba(0,0,0,0.18)',
+                        margin: '8px 0 12px',
+                      }}
+                    />
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                      }}
+                    >
+                      <span style={{fontWeight: 800}}>Total</span>
+                      <span style={{fontWeight: 800}}>
+                        {formatCurrencyWithCents(totalPrice)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                    }}
+                  >
+                    <span style={{fontWeight: 800}}>Total</span>
+                    <span style={{fontWeight: 800}}>
+                      {formatCurrencyWithCents(totalPrice)}
+                    </span>
+                  </div>
+                )}
+              </div>
             ) : null}
 
             {puppy.notes ? (
@@ -205,10 +283,11 @@ function buildPrefilledMessage(puppyName?: string, litterTitle?: string) {
   return `Hi, I’m interested in ${puppyText}${litterText}. Please send me more information.`
 }
 
-function formatCurrency(value: number) {
+function formatCurrencyWithCents(value: number) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
 }
