@@ -1,6 +1,6 @@
 'use client'
 
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import type {Conversation, SmsMessage} from './page'
 
 export default function InboxClient({
@@ -10,6 +10,15 @@ export default function InboxClient({
 }) {
   const [selectedPhone, setSelectedPhone] = useState(conversations[0]?.phone || '')
   const [search, setSearch] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 900)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -24,6 +33,14 @@ export default function InboxClient({
 
   const selectedConversation =
     filtered.find((c) => c.phone === selectedPhone) || filtered[0] || null
+
+  const openConversation = (phone: string) => {
+    setSelectedPhone(phone)
+    if (isMobile) setMobileView('thread')
+  }
+
+  const showList = !isMobile || mobileView === 'list'
+  const showThread = !isMobile || mobileView === 'thread'
 
   return (
     <main className="wrap">
@@ -46,197 +63,256 @@ export default function InboxClient({
         </div>
       </div>
 
-      <h1 className="h1">Inbox</h1>
-      <p className="lead">Messages from FluffyTail customer conversations.</p>
+      <h1 className="h1" style={{marginBottom: '10px'}}>
+        Inbox
+      </h1>
+      <p className="lead" style={{marginBottom: '18px'}}>
+        Messages from FluffyTail customer conversations.
+      </p>
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '340px 1fr',
+          gridTemplateColumns: isMobile ? '1fr' : '360px 1fr',
           gap: '18px',
-          marginTop: '18px',
           alignItems: 'start',
         }}
       >
-        <aside className="card" style={{overflow: 'hidden'}}>
-          <div className="pad">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '12px',
-              }}
-            >
-              <h2 className="panelTitle" style={{margin: 0}}>
-                Conversations
-              </h2>
-              <span className="badge">{filtered.length}</span>
-            </div>
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search number or message"
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{borderTop: '1px solid rgba(0,0,0,0.08)'}}>
-            {filtered.length === 0 ? (
-              <div className="pad">
-                <p className="lead" style={{margin: 0}}>
-                  No matching conversations.
-                </p>
-              </div>
-            ) : (
-              filtered.map((conversation) => {
-                const isActive = selectedConversation?.phone === conversation.phone
-
-                return (
-                  <button
-                    key={conversation.phone}
-                    onClick={() => setSelectedPhone(conversation.phone)}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      border: '0',
-                      background: isActive ? 'rgba(0,0,0,0.04)' : 'transparent',
-                      borderBottom: '1px solid rgba(0,0,0,0.06)',
-                      padding: '14px 16px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'start',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                      }}
-                    >
-                      <div style={{minWidth: 0}}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            fontSize: '16px',
-                            marginBottom: '4px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {conversation.phone}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '14px',
-                            opacity: 0.75,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {conversation.preview || 'No message'}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          opacity: 0.65,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {formatShortDate(conversation.latestAt)}
-                      </div>
-                    </div>
-                  </button>
-                )
-              })
-            )}
-          </div>
-        </aside>
-
-        <section className="card" style={{overflow: 'hidden'}}>
-          {!selectedConversation ? (
+        {showList ? (
+          <aside className="card" style={{overflow: 'hidden'}}>
             <div className="pad">
-              <p className="lead" style={{margin: 0}}>
-                No conversation selected.
-              </p>
-            </div>
-          ) : (
-            <>
               <div
-                className="pad"
                 style={{
-                  borderBottom: '1px solid rgba(0,0,0,0.08)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '12px',
+                  marginBottom: '12px',
                 }}
               >
-                <div>
-                  <h2 className="panelTitle" style={{margin: 0}}>
-                    {selectedConversation.phone}
-                  </h2>
-                  <p className="lead" style={{margin: '6px 0 0 0'}}>
-                    {selectedConversation.messages.length} messages
+                <h2 className="panelTitle" style={{margin: 0}}>
+                  Conversations
+                </h2>
+                <span className="badge">{filtered.length}</span>
+              </div>
+
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search number or message"
+                style={{
+                  width: '100%',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  padding: '12px 14px',
+                  font: 'inherit',
+                  background: '#fff',
+                }}
+              />
+            </div>
+
+            <div style={{borderTop: '1px solid rgba(0,0,0,0.08)'}}>
+              {filtered.length === 0 ? (
+                <div className="pad">
+                  <p className="lead" style={{margin: 0}}>
+                    No matching conversations.
                   </p>
                 </div>
+              ) : (
+                filtered.map((conversation) => {
+                  const isActive = selectedConversation?.phone === conversation.phone
 
-                <div className="badge">
-                  Latest {formatDateTime(selectedConversation.latestAt)}
-                </div>
-              </div>
+                  return (
+                    <button
+                      key={conversation.phone}
+                      onClick={() => openConversation(conversation.phone)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        border: '0',
+                        background: isActive ? 'rgba(0,0,0,0.04)' : 'transparent',
+                        borderBottom: '1px solid rgba(0,0,0,0.06)',
+                        padding: '14px 16px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          alignItems: 'start',
+                        }}
+                      >
+                        <div style={{minWidth: 0, flex: 1}}>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '16px',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {conversation.phone}
+                          </div>
 
-              <div
-                style={{
-                  padding: '18px',
-                  display: 'grid',
-                  gap: '12px',
-                  maxHeight: '68vh',
-                  overflowY: 'auto',
-                  background: 'rgba(0,0,0,0.015)',
-                }}
-              >
-                {selectedConversation.messages.map((message) => (
-                  <MessageBubble key={message._id} message={message} />
-                ))}
-              </div>
+                          <div
+                            style={{
+                              fontSize: '14px',
+                              opacity: 0.75,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              marginBottom: '6px',
+                            }}
+                          >
+                            {conversation.preview || 'No message'}
+                          </div>
 
-              <div className="pad" style={{borderTop: '1px solid rgba(0,0,0,0.08)'}}>
-                <form action="/api/fluffytail/sms/send" method="POST">
-                  <input type="hidden" name="to" value={selectedConversation.phone} />
+                          <div style={{fontSize: '12px', opacity: 0.65}}>
+                            {conversation.messages.length} message
+                            {conversation.messages.length === 1 ? '' : 's'}
+                          </div>
+                        </div>
 
-                  <label
-                    style={{
-                      display: 'block',
-                      fontWeight: 700,
-                      marginBottom: '8px',
-                    }}
-                  >
-                    Reply
-                  </label>
-
-                  <textarea
-                    name="body"
-                    required
-                    rows={4}
-                    placeholder={`Reply to ${selectedConversation.phone}`}
-                    style={textareaStyle}
-                  />
-
-                  <div className="ctaRow" style={{marginTop: '12px'}}>
-                    <button className="btn btnPrimary" type="submit">
-                      Send Reply
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            opacity: 0.65,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {formatShortDate(conversation.latestAt)}
+                        </div>
+                      </div>
                     </button>
-                  </div>
-                </form>
+                  )
+                })
+              )}
+            </div>
+          </aside>
+        ) : null}
+
+        {showThread ? (
+          <section className="card" style={{overflow: 'hidden'}}>
+            {!selectedConversation ? (
+              <div className="pad">
+                <p className="lead" style={{margin: 0}}>
+                  No conversation selected.
+                </p>
               </div>
-            </>
-          )}
-        </section>
+            ) : (
+              <>
+                <div
+                  className="pad"
+                  style={{
+                    borderBottom: '1px solid rgba(0,0,0,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{minWidth: 0}}>
+                    {isMobile ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => setMobileView('list')}
+                        style={{marginBottom: '10px'}}
+                      >
+                        ← Conversations
+                      </button>
+                    ) : null}
+
+                    <h2
+                      className="panelTitle"
+                      style={{
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {selectedConversation.phone}
+                    </h2>
+
+                    <p className="lead" style={{margin: '6px 0 0 0'}}>
+                      {selectedConversation.messages.length} messages
+                    </p>
+                  </div>
+
+                  {!isMobile ? (
+                    <div className="badge">
+                      Latest {formatDateTime(selectedConversation.latestAt)}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div
+                  style={{
+                    padding: '18px',
+                    display: 'grid',
+                    gap: '12px',
+                    maxHeight: isMobile ? '50vh' : '62vh',
+                    overflowY: 'auto',
+                    background: 'rgba(0,0,0,0.015)',
+                  }}
+                >
+                  {selectedConversation.messages.map((message) => (
+                    <MessageBubble key={message._id} message={message} />
+                  ))}
+                </div>
+
+                <div
+                  className="pad"
+                  style={{
+                    borderTop: '1px solid rgba(0,0,0,0.08)',
+                    position: 'sticky',
+                    bottom: 0,
+                    background: '#fff',
+                  }}
+                >
+                  <form action="/api/fluffytail/sms/send" method="POST">
+                    <input type="hidden" name="to" value={selectedConversation.phone} />
+
+                    <label
+                      style={{
+                        display: 'block',
+                        fontWeight: 700,
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Reply
+                    </label>
+
+                    <textarea
+                      name="body"
+                      required
+                      rows={3}
+                      placeholder={`Reply to ${selectedConversation.phone}`}
+                      style={{
+                        width: '100%',
+                        borderRadius: '14px',
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        padding: '12px 14px',
+                        font: 'inherit',
+                        resize: 'vertical',
+                        background: '#fff',
+                      }}
+                    />
+
+                    <div className="ctaRow" style={{marginTop: '12px'}}>
+                      <button className="btn btnPrimary" type="submit">
+                        Send Reply
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </>
+            )}
+          </section>
+        ) : null}
       </div>
 
       <div className="footer">
@@ -258,7 +334,7 @@ function MessageBubble({message}: {message: SmsMessage}) {
     >
       <div
         style={{
-          maxWidth: '78%',
+          maxWidth: '84%',
           background: outbound ? 'rgba(37, 99, 235, 0.10)' : '#fff',
           border: '1px solid rgba(0,0,0,0.08)',
           borderRadius: '18px',
@@ -277,7 +353,7 @@ function MessageBubble({message}: {message: SmsMessage}) {
         >
           <span className="badge">{outbound ? 'You' : 'Customer'}</span>
           <span style={{fontSize: '12px', opacity: 0.65}}>
-            {formatDateTime(message.receivedAt)}
+            {formatTimeOnly(message.receivedAt)}
           </span>
         </div>
 
@@ -311,21 +387,13 @@ function formatShortDate(value?: string) {
   }).format(date)
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  borderRadius: '14px',
-  border: '1px solid rgba(0,0,0,0.12)',
-  padding: '10px 12px',
-  font: 'inherit',
-  background: '#fff',
-}
+function formatTimeOnly(value?: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
 
-const textareaStyle: React.CSSProperties = {
-  width: '100%',
-  borderRadius: '14px',
-  border: '1px solid rgba(0,0,0,0.12)',
-  padding: '12px 14px',
-  font: 'inherit',
-  resize: 'vertical',
-  background: '#fff',
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date)
 }
