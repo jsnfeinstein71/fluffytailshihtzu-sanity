@@ -39,7 +39,6 @@ type Puppy = {
   notes?: string
   sortOrder?: number
   litterId?: string
-  overridePrice?: number
   photoUrl?: string
 }
 
@@ -78,7 +77,6 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   notes,
   sortOrder,
   "litterId": litter->_id,
-  overridePrice,
   "photoUrl": photo.asset->url
 }`
 
@@ -283,47 +281,35 @@ export default async function HomePage() {
 
               <div className="puppyGrid">
                 {litterPuppies.length > 0 ? (
-                  litterPuppies.map((puppy) => {
-                    const price = puppy.overridePrice ?? litter.price
-
-                    return (
-                      <a
-                        className="puppyCard puppyCardLink"
-                        key={puppy._id}
-                        href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
-                      >
-                        <div className="puppyImageWrap">
-                          {puppy.photoUrl ? (
-                            <img
-                              className="puppyImage"
-                              src={puppy.photoUrl}
-                              alt={puppy.name || 'Puppy'}
-                            />
-                          ) : null}
+                  litterPuppies.map((puppy) => (
+                    <a
+                      className="puppyCard puppyCardLink"
+                      key={puppy._id}
+                      href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+                    >
+                      <div className="puppyImageWrap">
+                        {puppy.photoUrl ? (
+                          <img
+                            className="puppyImage"
+                            src={puppy.photoUrl}
+                            alt={puppy.name || 'Puppy'}
+                          />
+                        ) : null}
+                      </div>
+                      <div className="puppyCardBody">
+                        <div className="puppyCardTop">
+                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                            {formatPuppyStatus(puppy.status)}
+                          </span>
                         </div>
-                        <div className="puppyCardBody">
-                          <div className="puppyCardTop">
-                            <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                            <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                              {formatPuppyStatus(puppy.status)}
-                            </span>
-                          </div>
-                          <p className="puppyMetaLine">
-                            {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-                          </p>
-
-                          {price ? (
-                            <p className="puppyMetaLine" style={{fontWeight: 700}}>
-                              {formatCurrency(price)}
-                              {litter.deposit ? ` • ${formatCurrency(litter.deposit)} deposit included` : ''}
-                            </p>
-                          ) : null}
-
-                          {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
-                        </div>
-                      </a>
-                    )
-                  })
+                        <p className="puppyMetaLine">
+                          {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                        </p>
+                        {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
+                      </div>
+                    </a>
+                  ))
                 ) : (
                   <div style={{padding: '12px', color: '#5a6472'}}>
                     No puppies listed yet for this litter.
