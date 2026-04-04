@@ -19,7 +19,20 @@ const twilioClient = twilio(
 
 export async function POST(req: NextRequest) {
   try {
-    const {to, body} = await req.json()
+    const contentType = req.headers.get('content-type') || ''
+
+    let to = ''
+    let body = ''
+
+    if (contentType.includes('application/json')) {
+      const json = await req.json()
+      to = json.to || ''
+      body = json.body || ''
+    } else {
+      const formData = await req.formData()
+      to = String(formData.get('to') || '')
+      body = String(formData.get('body') || '')
+    }
 
     if (!to || !body) {
       return NextResponse.json({error: 'Missing to or body'}, {status: 400})
@@ -42,7 +55,7 @@ export async function POST(req: NextRequest) {
       receivedAt: new Date().toISOString(),
     })
 
-    return NextResponse.json({ok: true, sid: message.sid})
+    return NextResponse.redirect(new URL('/inbox', req.url))
   } catch (error) {
     console.error('Failed to send SMS', error)
     return NextResponse.json({error: 'Failed to send SMS'}, {status: 500})
