@@ -18,52 +18,128 @@ const twilioClient = twilio(
 )
 
 type TallyField = {
+  key?: string
   label?: string
   type?: string
   value?: unknown
   options?: {id: string; text: string}[]
 }
 
+type TallyPayload = {
+  data?: {
+    fields?: TallyField[]
+  }
+  hiddenFields?: Record<string, unknown>
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json()
+    const payload = (await req.json()) as TallyPayload
     const fields: TallyField[] = payload?.data?.fields || []
+    const hiddenFields = payload?.hiddenFields || {}
 
-    const getField = (labels: string[]) =>
-      fields.find((field) => labels.includes(field.label || ''))
+    const getFieldValue = (matches: string[]) => {
+      for (const field of fields) {
+        const fieldKey = String(field.key || '').trim()
+        const fieldLabel = String(field.label || '').trim()
 
-    const getValue = (labels: string[]) => {
-      const field = getField(labels)
-      if (!field) return ''
+        const matched =
+          matches.includes(fieldKey) ||
+          matches.includes(fieldLabel) ||
+          matches.includes(fieldKey.toLowerCase()) ||
+          matches.includes(fieldLabel.toLowerCase())
 
-      if (Array.isArray(field.value) && field.options?.length) {
-        const ids = field.value.map(String)
-        const texts = field.options
-          .filter((option) => ids.includes(option.id))
-          .map((option) => option.text)
-        return texts.join(', ')
+        if (!matched) continue
+
+        if (Array.isArray(field.value) && field.options?.length) {
+          const ids = field.value.map(String)
+          const texts = field.options
+            .filter((option) => ids.includes(option.id))
+            .map((option) => option.text)
+          return texts.join(', ').trim()
+        }
+
+        if (Array.isArray(field.value)) {
+          return field.value.map(String).join(', ').trim()
+        }
+
+        if (
+          typeof field.value === 'string' ||
+          typeof field.value === 'number' ||
+          typeof field.value === 'boolean'
+        ) {
+          return String(field.value).trim()
+        }
       }
 
-      if (Array.isArray(field.value)) {
-        return field.value.map(String).join(', ')
-      }
-
-      return typeof field.value === 'string' || typeof field.value === 'number'
-        ? String(field.value)
-        : ''
+      return ''
     }
 
-    const name = getValue(['Name', 'Full name', 'Full Name'])
-    const phone = getValue(['Phone number', 'Phone'])
-    const email = getValue(['Email address', 'Email'])
-    const preferredContactMethod = getValue([
-      'Preferred contact method',
-      'Preferred Contact Method',
-    ])
-    const message = getValue(['Message'])
-    const puppy = getValue(['puppy', 'Puppy'])
-    const litter = getValue(['litter', 'Litter'])
-    const puppyPageUrl = getValue(['puppyPageUrl', 'Puppy Page URL'])
+    const getHiddenValue = (matches: string[]) => {
+      for (const key of Object.keys(hiddenFields)) {
+        const keyLower = key.toLowerCase()
+        const matched =
+          matches.includes(key) ||
+          matches.includes(keyLower)
+
+        if (!matched) continue
+
+        const value = hiddenFields[key]
+
+        if (
+          typeof value === 'string' ||
+          typeof value === 'number' ||
+          typeof value === 'boolean'
+        ) {
+          return String(value).trim()
+        }
+      }
+
+      return ''
+    }
+
+    const firstNonEmpty = (...values: string[]) =>
+      values.find((value) => value && value.trim())?.trim() || ''
+
+    const name = firstNonEmpty(
+      getFieldValue(['Name', 'Full name', 'full name', 'name'])
+    )
+
+    const phone = firstNonEmpty(
+      getFieldValue(['Phone number', 'phone number', 'Phone', 'phone'])
+    )
+
+    const email = firstNonEmpty(
+      getFieldValue(['Email address', 'email address', 'Email', 'email'])
+    )
+
+    const preferredContactMethod = firstNonEmpty(
+      getFieldValue([
+        'Preferred contact method',
+        'preferred contact method',
+        'Preferred Contact Method',
+        'preferredcontactmethod',
+      ])
+    )
+
+    const visibleMessage = getFieldValue(['Message', 'message'])
+    const hiddenMessage = getHiddenValue(['message'])
+    const message = firstNonEmpty(visibleMessage, hiddenMessage)
+
+    const puppy = firstNonEmpty(
+      getFieldValue(['Puppy', 'puppy']),
+      getHiddenValue(['puppy'])
+    )
+
+    const litter = firstNonEmpty(
+      getFieldValue(['Litter', 'litter']),
+      getHiddenValue(['litter'])
+    )
+
+    const puppyPageUrl = firstNonEmpty(
+      getFieldValue(['Puppy Page URL', 'puppy page url', 'puppypageurl']),
+      getHiddenValue(['puppypageurl', 'puppyPageUrl'.toLowerCase()])
+    )
 
     await sanity.create({
       _type: 'puppyInquiry',
@@ -89,6 +165,7 @@ export async function POST(req: NextRequest) {
       phone ? `Phone: ${phone}` : '',
       email ? `Email: ${email}` : '',
       preferredContactMethod ? `Prefers: ${preferredContactMethod}` : '',
+      message ? `Message: ${message}` : '',
       `Inbox: ${inboxUrl}`,
     ]
       .filter(Boolean)
@@ -109,6 +186,8 @@ export async function POST(req: NextRequest) {
       direction: 'outbound',
       source: 'fluffytail-alert',
       receivedAt: new Date().toISOString(),
+      numMedia: 0,
+      mediaUrls: [],
     })
 
     return NextResponse.json({ok: true})
