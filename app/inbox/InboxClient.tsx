@@ -237,6 +237,7 @@ export default function InboxClient({
                   const title =
                     conversation.inquiry?.name?.trim() ||
                     formatDisplayPhone(conversation.phone)
+
                   const subtitleParts = [
                     conversation.inquiry?.puppy ? `Puppy: ${conversation.inquiry.puppy}` : '',
                     conversation.inquiry?.litter ? conversation.inquiry.litter : '',
@@ -267,11 +268,9 @@ export default function InboxClient({
                         <div style={{minWidth: 0, flex: 1}}>
                           <div style={conversationTitleStyle}>{title}</div>
 
-                          {conversation.inquiry?.name ? (
-                            <div style={conversationPhoneStyle}>
-                              {formatDisplayPhone(conversation.phone)}
-                            </div>
-                          ) : null}
+                          <div style={conversationPhoneStyle}>
+                            {formatDisplayPhone(conversation.phone)}
+                          </div>
 
                           {subtitleParts.length > 0 ? (
                             <div style={conversationMetaStyle}>
@@ -411,9 +410,27 @@ export default function InboxClient({
                     background: 'rgba(0,0,0,0.015)',
                   }}
                 >
-                  {selectedConversation.messages.map((message) => (
-                    <MessageBubble key={message._id} message={message} />
-                  ))}
+                  {selectedConversation.messages.length > 0 ? (
+                    selectedConversation.messages.map((message) => (
+                      <MessageBubble key={message._id} message={message} />
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        background: '#fff',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        borderRadius: '18px',
+                        padding: '14px 16px',
+                      }}
+                    >
+                      <div style={{fontWeight: 700, marginBottom: '8px'}}>
+                        Inquiry received
+                      </div>
+                      <div style={{whiteSpace: 'pre-wrap', lineHeight: 1.45}}>
+                        {selectedConversation.inquiry?.message || 'No message included.'}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div
