@@ -79,6 +79,43 @@ export default async function InboxPage() {
 
                 <div className="divider"></div>
 
+                <form
+                  action="/api/fluffytail/sms/send"
+                  method="POST"
+                  style={{marginTop: '16px', marginBottom: '18px'}}
+                >
+                  <input type="hidden" name="to" value={conversation.phone} />
+                  <label
+                    style={{
+                      display: 'block',
+                      fontWeight: 600,
+                      marginBottom: '8px',
+                    }}
+                  >
+                    Reply
+                  </label>
+                  <textarea
+                    name="body"
+                    required
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(0,0,0,0.12)',
+                      padding: '12px 14px',
+                      font: 'inherit',
+                      resize: 'vertical',
+                      background: '#fff',
+                    }}
+                    placeholder={`Reply to ${conversation.phone}`}
+                  />
+                  <div className="ctaRow" style={{marginTop: '12px'}}>
+                    <button className="btn btnPrimary" type="submit">
+                      Send Reply
+                    </button>
+                  </div>
+                </form>
+
                 <div style={{display: 'grid', gap: '14px'}}>
                   {conversation.messages.map((message) => (
                     <div key={message._id}>
@@ -122,22 +159,26 @@ function buildConversations(messages: SmsMessage[]): Conversation[] {
   const map = new Map<string, SmsMessage[]>()
 
   for (const message of messages) {
-    const phone = message.from || 'Unknown'
+    const phone = message.direction === 'outbound' ? message.to || 'Unknown' : message.from || 'Unknown'
     const current = map.get(phone) || []
     current.push(message)
     map.set(phone, current)
   }
 
   return Array.from(map.entries())
-    .map(([phone, groupedMessages]) => ({
-      phone,
-      messages: groupedMessages.sort((a, b) => {
+    .map(([phone, groupedMessages]) => {
+      const sortedMessages = groupedMessages.sort((a, b) => {
         const aTime = a.receivedAt ? new Date(a.receivedAt).getTime() : 0
         const bTime = b.receivedAt ? new Date(b.receivedAt).getTime() : 0
         return bTime - aTime
-      }),
-      latestAt: groupedMessages[0]?.receivedAt,
-    }))
+      })
+
+      return {
+        phone,
+        messages: sortedMessages,
+        latestAt: sortedMessages[0]?.receivedAt,
+      }
+    })
     .sort((a, b) => {
       const aTime = a.latestAt ? new Date(a.latestAt).getTime() : 0
       const bTime = b.latestAt ? new Date(b.latestAt).getTime() : 0
