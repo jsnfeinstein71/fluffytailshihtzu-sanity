@@ -1,17 +1,31 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
+import {useRouter} from 'next/navigation'
 import type {Conversation, SmsMessage} from './page'
+
+type UploadedImage = {
+  url: string
+  name: string
+}
 
 export default function InboxClient({
   conversations,
 }: {
   conversations: Conversation[]
 }) {
+  const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
   const [selectedPhone, setSelectedPhone] = useState(conversations[0]?.phone || '')
   const [search, setSearch] = useState('')
   const [isMobile, setIsMobile] = useState(false)
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
+  const [replyBody, setReplyBody] = useState('')
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [composerError, setComposerError] = useState('')
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 900)
@@ -45,6 +59,12 @@ export default function InboxClient({
     }
   }, [filtered, selectedConversation])
 
+  useEffect(() => {
+    setReplyBody('')
+    setUploadedImages([])
+    setComposerError('')
+  }, [selectedPhone])
+
   const openConversation = (phone: string) => {
     setSelectedPhone(phone)
     if (isMobile) setMobileView('thread')
@@ -52,6 +72,94 @@ export default function InboxClient({
 
   const showList = !isMobile || mobileView === 'list'
   const showThread = !isMobile || mobileView === 'thread'
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    setComposerError('')
+    setIsUploading(true)
+
+    try {
+      const nextImages: UploadedImage[] = []
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch('/api/fluffytail/upload-image', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const json = await response.json()
+
+        if (!response.ok || !json.url) {
+          throw new Error(json.error || 'Failed to upload image')
+        }
+
+        nextImages.push({
+          url: json.url,
+          name: file.name,
+        })
+      }
+
+      setUploadedImages((current) => [...current, ...nextImages])
+    } catch (error) {
+      console.error(error)
+      setComposerError('Image upload failed.')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function removeImage(index: number) {
+    setUploadedImages((current) => current.filter((_, i) => i !== index))
+  }
+
+  async function handleSend(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!selectedConversation) return
+
+    const trimmedBody = replyBody.trim()
+
+    if (!trimmedBody && uploadedImages.length === 0) {
+      setComposerError('Add a message or a photo.')
+      return
+    }
+
+    setComposerError('')
+    setIsSending(true)
+
+    try {
+      const response = await fetch('/api/fluffytail/sms/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          to: selectedConversation.phone,
+          body: trimmedBody,
+          mediaUrls: uploadedImages.map((image) => image.url),
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to send message')
+      }
+
+      setReplyBody('')
+      setUploadedImages([])
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setComposerError('Failed to send reply.')
+    } finally {
+      setIsSending(false)
+    }
+  }
 
   return (
     <main className="wrap">
@@ -110,14 +218,7 @@ export default function InboxClient({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name, number, puppy, message"
-                style={{
-                  width: '100%',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  padding: '12px 14px',
-                  font: 'inherit',
-                  background: '#fff',
-                }}
+                style={inputStyle}
               />
             </div>
 
@@ -131,7 +232,9 @@ export default function InboxClient({
               ) : (
                 filtered.map((conversation) => {
                   const isActive = selectedConversation?.phone === conversation.phone
-                  const title = conversation.inquiry?.name?.trim() || formatDisplayPhone(conversation.phone)
+                  const title =
+                    conversation.inquiry?.name?.trim() ||
+                    formatDisplayPhone(conversation.phone)
                   const subtitleParts = [
                     conversation.inquiry?.puppy ? `Puppy: ${conversation.inquiry.puppy}` : '',
                     conversation.inquiry?.litter ? conversation.inquiry.litter : '',
@@ -160,78 +263,31 @@ export default function InboxClient({
                         }}
                       >
                         <div style={{minWidth: 0, flex: 1}}>
-                          <div
-                            style={{
-                              fontWeight: 700,
-                              fontSize: '16px',
-                              marginBottom: '4px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {title}
-                          </div>
+                          <div style={conversationTitleStyle}>{title}</div>
 
                           {conversation.inquiry?.name ? (
-                            <div
-                              style={{
-                                fontSize: '13px',
-                                opacity: 0.7,
-                                marginBottom: '4px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
+                            <div style={conversationPhoneStyle}>
                               {formatDisplayPhone(conversation.phone)}
                             </div>
                           ) : null}
 
                           {subtitleParts.length > 0 ? (
-                            <div
-                              style={{
-                                fontSize: '13px',
-                                opacity: 0.8,
-                                marginBottom: '6px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
+                            <div style={conversationMetaStyle}>
                               {subtitleParts.join(' • ')}
                             </div>
                           ) : null}
 
-                          <div
-                            style={{
-                              fontSize: '14px',
-                              opacity: 0.75,
-                              marginBottom: '6px',
-                              lineHeight: 1.35,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical' as const,
-                              overflow: 'hidden',
-                              wordBreak: 'break-word',
-                            }}
-                          >
+                          <div style={conversationPreviewStyle}>
                             {conversation.preview || 'No message'}
                           </div>
 
-                          <div style={{fontSize: '12px', opacity: 0.65}}>
+                          <div style={conversationCountStyle}>
                             {conversation.messages.length} message
                             {conversation.messages.length === 1 ? '' : 's'}
                           </div>
                         </div>
 
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            opacity: 0.65,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
+                        <div style={conversationDateStyle}>
                           {formatShortDate(conversation.latestAt)}
                         </div>
                       </div>
@@ -367,9 +423,7 @@ export default function InboxClient({
                     background: '#fff',
                   }}
                 >
-                  <form action="/api/fluffytail/sms/send" method="POST">
-                    <input type="hidden" name="to" value={selectedConversation.phone} />
-
+                  <form onSubmit={handleSend}>
                     <label
                       style={{
                         display: 'block',
@@ -381,29 +435,104 @@ export default function InboxClient({
                     </label>
 
                     <textarea
-                      name="body"
-                      required
+                      value={replyBody}
+                      onChange={(e) => setReplyBody(e.target.value)}
                       rows={3}
                       placeholder={`Reply to ${
                         selectedConversation.inquiry?.name?.trim() ||
                         formatDisplayPhone(selectedConversation.phone)
                       }`}
-                      style={{
-                        width: '100%',
-                        borderRadius: '14px',
-                        border: '1px solid rgba(0,0,0,0.12)',
-                        padding: '12px 14px',
-                        font: 'inherit',
-                        resize: 'vertical',
-                        background: '#fff',
-                      }}
+                      style={textareaStyle}
+                    />
+
+                    {uploadedImages.length > 0 ? (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: '10px',
+                          marginTop: '12px',
+                        }}
+                      >
+                        {uploadedImages.map((image, index) => (
+                          <div
+                            key={`${image.url}-${index}`}
+                            style={{
+                              border: '1px solid rgba(0,0,0,0.08)',
+                              borderRadius: '14px',
+                              padding: '10px',
+                              background: '#fff',
+                            }}
+                          >
+                            <img
+                              src={image.url}
+                              alt={image.name}
+                              style={{
+                                width: '100%',
+                                maxWidth: '220px',
+                                borderRadius: '10px',
+                                display: 'block',
+                                marginBottom: '8px',
+                              }}
+                            />
+                            <div
+                              style={{
+                                fontSize: '13px',
+                                opacity: 0.75,
+                                marginBottom: '8px',
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {image.name}
+                            </div>
+                            <button
+                              type="button"
+                              className="btn"
+                              onClick={() => removeImage(index)}
+                            >
+                              Remove Photo
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      multiple
+                      onChange={handleFileChange}
+                      style={{display: 'none'}}
                     />
 
                     <div className="ctaRow" style={{marginTop: '12px'}}>
-                      <button className="btn btnPrimary" type="submit">
-                        Send Reply
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading || isSending}
+                      >
+                        {isUploading ? 'Uploading Photo...' : 'Add Photo'}
+                      </button>
+
+                      <button
+                        className="btn btnPrimary"
+                        type="submit"
+                        disabled={isUploading || isSending}
+                      >
+                        {isSending ? 'Sending...' : 'Send Reply'}
                       </button>
                     </div>
+
+                    {composerError ? (
+                      <p
+                        className="lead"
+                        style={{marginTop: '12px', color: '#b42318', marginBottom: 0}}
+                      >
+                        {composerError}
+                      </p>
+                    ) : null}
                   </form>
                 </div>
               </>
@@ -417,6 +546,94 @@ export default function InboxClient({
       </div>
     </main>
   )
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    setComposerError('')
+    setIsUploading(true)
+
+    try {
+      const nextImages: UploadedImage[] = []
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch('/api/fluffytail/upload-image', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const json = await response.json()
+
+        if (!response.ok || !json.url) {
+          throw new Error(json.error || 'Failed to upload image')
+        }
+
+        nextImages.push({
+          url: json.url,
+          name: file.name,
+        })
+      }
+
+      setUploadedImages((current) => [...current, ...nextImages])
+    } catch (error) {
+      console.error(error)
+      setComposerError('Image upload failed.')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function removeImage(index: number) {
+    setUploadedImages((current) => current.filter((_, i) => i !== index))
+  }
+
+  async function handleSend(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!selectedConversation) return
+
+    const trimmedBody = replyBody.trim()
+
+    if (!trimmedBody && uploadedImages.length === 0) {
+      setComposerError('Add a message or a photo.')
+      return
+    }
+
+    setComposerError('')
+    setIsSending(true)
+
+    try {
+      const response = await fetch('/api/fluffytail/sms/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          to: selectedConversation.phone,
+          body: trimmedBody,
+          mediaUrls: uploadedImages.map((image) => image.url),
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to send message')
+      }
+
+      setReplyBody('')
+      setUploadedImages([])
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setComposerError('Failed to send reply.')
+    } finally {
+      setIsSending(false)
+    }
+  }
 }
 
 function MessageBubble({message}: {message: SmsMessage}) {
@@ -454,16 +671,43 @@ function MessageBubble({message}: {message: SmsMessage}) {
           </span>
         </div>
 
-        <div
-          style={{
-            whiteSpace: 'pre-wrap',
-            lineHeight: 1.45,
-            wordBreak: 'break-word',
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {message.body || '(No message body)'}
-        </div>
+        {message.body ? (
+          <div
+            style={{
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.45,
+              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
+              marginBottom: message.mediaUrls?.length ? '10px' : 0,
+            }}
+          >
+            {message.body}
+          </div>
+        ) : null}
+
+        {message.mediaUrls?.length ? (
+          <div style={{display: 'grid', gap: '10px'}}>
+            {message.mediaUrls.map((url, index) => (
+              <a
+                key={`${url}-${index}`}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <img
+                  src={url}
+                  alt="Message media"
+                  style={{
+                    width: '100%',
+                    maxWidth: '240px',
+                    borderRadius: '12px',
+                    display: 'block',
+                  }}
+                />
+              </a>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -517,4 +761,73 @@ function formatDisplayPhone(value?: string) {
   }
 
   return value
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: '14px',
+  border: '1px solid rgba(0,0,0,0.12)',
+  padding: '12px 14px',
+  font: 'inherit',
+  background: '#fff',
+}
+
+const textareaStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: '14px',
+  border: '1px solid rgba(0,0,0,0.12)',
+  padding: '12px 14px',
+  font: 'inherit',
+  resize: 'vertical',
+  background: '#fff',
+}
+
+const conversationTitleStyle: React.CSSProperties = {
+  fontWeight: 700,
+  fontSize: '16px',
+  marginBottom: '4px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+const conversationPhoneStyle: React.CSSProperties = {
+  fontSize: '13px',
+  opacity: 0.7,
+  marginBottom: '4px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+const conversationMetaStyle: React.CSSProperties = {
+  fontSize: '13px',
+  opacity: 0.8,
+  marginBottom: '6px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+const conversationPreviewStyle: React.CSSProperties = {
+  fontSize: '14px',
+  opacity: 0.75,
+  marginBottom: '6px',
+  lineHeight: 1.35,
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  wordBreak: 'break-word',
+}
+
+const conversationCountStyle: React.CSSProperties = {
+  fontSize: '12px',
+  opacity: 0.65,
+}
+
+const conversationDateStyle: React.CSSProperties = {
+  fontSize: '12px',
+  opacity: 0.65,
+  whiteSpace: 'nowrap',
 }
