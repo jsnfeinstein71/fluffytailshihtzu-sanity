@@ -12,6 +12,9 @@ type PuppyPageData = {
   notes?: string
   photoUrl?: string
   litterTitle?: string
+  overridePrice?: number
+  litterPrice?: number
+  litterDeposit?: number
 }
 
 type SiteSettings = {
@@ -31,7 +34,10 @@ const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
   status,
   notes,
   "photoUrl": photo.asset->url,
-  "litterTitle": litter->title
+  overridePrice,
+  "litterTitle": litter->title,
+  "litterPrice": litter->price,
+  "litterDeposit": litter->deposit
 }`
 
 export default async function PuppyDetailPage({
@@ -61,6 +67,9 @@ export default async function PuppyDetailPage({
     litterTitle: puppy.litterTitle,
     slug: puppy.slug,
   })
+
+  const price = puppy.overridePrice ?? puppy.litterPrice
+  const deposit = puppy.litterDeposit
 
   return (
     <main className="wrap">
@@ -95,6 +104,13 @@ export default async function PuppyDetailPage({
             </div>
 
             {puppy.litterTitle ? <p className="lead">Litter: {puppy.litterTitle}</p> : null}
+
+            {price ? (
+              <p className="lead" style={{fontWeight: 700}}>
+                {formatCurrency(price)}
+                {deposit ? `, including a ${formatCurrency(deposit)} deposit` : ''}
+              </p>
+            ) : null}
 
             {puppy.notes ? (
               <p className="lead" style={{marginBottom: 0}}>
@@ -187,4 +203,12 @@ function buildPrefilledMessage(puppyName?: string, litterTitle?: string) {
   const puppyText = puppyName || 'this puppy'
   const litterText = litterTitle ? ` from the ${litterTitle} litter` : ''
   return `Hi, I’m interested in ${puppyText}${litterText}. Please send me more information.`
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
 }
