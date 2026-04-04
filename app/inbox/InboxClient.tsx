@@ -26,6 +26,7 @@ export default function InboxClient({
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [composerError, setComposerError] = useState('')
 
   useEffect(() => {
@@ -160,6 +161,50 @@ export default function InboxClient({
       setComposerError('Failed to send reply.')
     } finally {
       setIsSending(false)
+    }
+  }
+
+  async function handleDeleteConversation() {
+    if (!selectedConversation) return
+
+    const label =
+      selectedConversation.inquiry?.name?.trim() ||
+      formatDisplayPhone(selectedConversation.phone)
+
+    const confirmed = window.confirm(
+      `Delete this conversation for ${label}? This will remove its messages and matching inquiry.`
+    )
+
+    if (!confirmed) return
+
+    setComposerError('')
+    setIsDeleting(true)
+
+    try {
+      const response = await fetch('/inbox/api/delete-conversation', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          phone: selectedConversation.phone,
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to delete conversation')
+      }
+
+      setSelectedPhone('')
+      if (isMobile) {
+        setMobileView('list')
+      }
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setComposerError('Failed to delete conversation.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -539,7 +584,7 @@ export default function InboxClient({
                         type="button"
                         className="btn"
                         onClick={() => galleryInputRef.current?.click()}
-                        disabled={isUploading || isSending}
+                        disabled={isUploading || isSending || isDeleting}
                       >
                         Gallery
                       </button>
@@ -548,15 +593,24 @@ export default function InboxClient({
                         type="button"
                         className="btn"
                         onClick={() => cameraInputRef.current?.click()}
-                        disabled={isUploading || isSending}
+                        disabled={isUploading || isSending || isDeleting}
                       >
                         Camera
                       </button>
 
                       <button
+                        type="button"
+                        className="btn"
+                        onClick={handleDeleteConversation}
+                        disabled={isUploading || isSending || isDeleting}
+                      >
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                      </button>
+
+                      <button
                         className="btn btnPrimary"
                         type="submit"
-                        disabled={isUploading || isSending}
+                        disabled={isUploading || isSending || isDeleting}
                       >
                         {isUploading
                           ? 'Uploading...'
