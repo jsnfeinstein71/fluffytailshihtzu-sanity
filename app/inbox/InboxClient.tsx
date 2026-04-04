@@ -131,7 +131,7 @@ export default function InboxClient({
               ) : (
                 filtered.map((conversation) => {
                   const isActive = selectedConversation?.phone === conversation.phone
-                  const title = conversation.inquiry?.name || conversation.phone
+                  const title = conversation.inquiry?.name?.trim() || formatDisplayPhone(conversation.phone)
                   const subtitleParts = [
                     conversation.inquiry?.puppy ? `Puppy: ${conversation.inquiry.puppy}` : '',
                     conversation.inquiry?.litter ? conversation.inquiry.litter : '',
@@ -184,7 +184,7 @@ export default function InboxClient({
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {conversation.phone}
+                              {formatDisplayPhone(conversation.phone)}
                             </div>
                           ) : null}
 
@@ -284,14 +284,13 @@ export default function InboxClient({
                         wordBreak: 'break-word',
                       }}
                     >
-                      {selectedConversation.inquiry?.name || selectedConversation.phone}
+                      {selectedConversation.inquiry?.name?.trim() ||
+                        formatDisplayPhone(selectedConversation.phone)}
                     </h2>
 
-                    {selectedConversation.inquiry?.name ? (
-                      <p className="lead" style={{margin: '6px 0 0 0'}}>
-                        {selectedConversation.phone}
-                      </p>
-                    ) : null}
+                    <p className="lead" style={{margin: '6px 0 0 0'}}>
+                      {formatDisplayPhone(selectedConversation.phone)}
+                    </p>
 
                     {selectedConversation.inquiry ? (
                       <div
@@ -386,7 +385,8 @@ export default function InboxClient({
                       required
                       rows={3}
                       placeholder={`Reply to ${
-                        selectedConversation.inquiry?.name || selectedConversation.phone
+                        selectedConversation.inquiry?.name?.trim() ||
+                        formatDisplayPhone(selectedConversation.phone)
                       }`}
                       style={{
                         width: '100%',
@@ -500,4 +500,21 @@ function formatTimeOnly(value?: string) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(date)
+}
+
+function formatDisplayPhone(value?: string) {
+  if (!value) return 'Unknown'
+
+  const digits = value.replace(/\D/g, '')
+
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  }
+
+  if (digits.length === 11 && digits.startsWith('1')) {
+    const local = digits.slice(1)
+    return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`
+  }
+
+  return value
 }
