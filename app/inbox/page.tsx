@@ -90,45 +90,68 @@ function buildConversations(
     }
   }
 
-  const map = new Map<string, SmsMessage[]>()
+  const customerMessages = messages.filter(
+    (message) => message.source !== 'fluffytail-alert'
+  )
 
-  for (const message of messages) {
+  const phoneSet = new Set<string>()
+
+  for (const inquiry of inquiries) {
+    const phone = normalizePhone(inquiry.phone)
+    if (phone) phoneSet.add(phone)
+  }
+
+  for (const message of customerMessages) {
     const phone =
       message.direction === 'outbound'
         ? normalizePhone(message.to)
         : normalizePhone(message.from)
 
-    const key = phone || 'Unknown'
-    const current = map.get(key) || []
-    current.push(message)
-    map.set(key, current)
+    if (phone) phoneSet.add(phone)
   }
 
-  return Array.from(map.entries())
-    .map(([phone, groupedMessages]) => {
-      const sortedMessages = [...groupedMessages].sort((a, b) => {
+  const conversations: Conversation[] = Array.from(phoneSet).map((phone) => {
+    const groupedMessages = customerMessages
+      .filter((message) => {
+        const messagePhone =
+          message.direction === 'outbound'
+            ? normalizePhone(message.to)
+            : normalizePhone(message.from)
+
+        return messagePhone === phone
+      })
+      .sort((a, b) => {
         const aTime = a.receivedAt ? new Date(a.receivedAt).getTime() : 0
         const bTime = b.receivedAt ? new Date(b.receivedAt).getTime() : 0
         return aTime - bTime
       })
 
-      const latest = sortedMessages[sortedMessages.length - 1]
+    const inquiry = inquiryMap.get(phone) || null
+    const latestMessage = groupedMessages[groupedMessages.length - 1]
 
-      return {
-        phone,
-        messages: sortedMessages,
-        latestAt: latest?.receivedAt,
-        preview:
-          latest?.body ||
-          (latest?.mediaUrls && latest.mediaUrls.length > 0 ? 'Photo' : ''),
-        inquiry: inquiryMap.get(phone) || null,
-      }
-    })
-    .sort((a, b) => {
-      const aTime = a.latestAt ? new Date(a.latestAt).getTime() : 0
-      const bTime = b.latestAt ? new Date(b.latestAt).getTime() : 0
-      return bTime - aTime
-    })
+    const latestAt =
+      latestMessage?.receivedAt || inquiry?.submittedAt || undefined
+
+    const preview =
+      latestMessage?.body ||
+      (latestMessage?.mediaUrls && latestMessage.mediaUrls.length > 0
+        ? 'Photo'
+        : inquiry?.message || 'New inquiry')
+
+    return {
+      phone,
+      messages: groupedMessages,
+      latestAt,
+      preview,
+      inquiry,
+    }
+  })
+
+  return conversations.sort((a, b) => {
+    const aTime = a.latestAt ? new Date(a.latestAt).getTime() : 0
+    const bTime = b.latestAt ? new Date(b.latestAt).getTime() : 0
+    return bTime - aTime
+  })
 }
 
 function normalizePhone(value?: string) {
