@@ -138,7 +138,7 @@ export default async function HomePage() {
       <div className="grid">
         <div className="card">
           <div className="photos photosHome">
-            <div className="heroPhoto">
+            <div className="homeHeroMain">
               {heroImageUrl ? (
                 <img
                   src={heroImageUrl}
@@ -147,8 +147,8 @@ export default async function HomePage() {
               ) : null}
             </div>
 
-            <div className="thumbs thumbsHome">
-              <div className="thumb">
+            <div className="homeHeroThumbs">
+              <div className="homeHeroThumb">
                 {heroThumb1Url ? (
                   <img
                     src={heroThumb1Url}
@@ -156,7 +156,7 @@ export default async function HomePage() {
                   />
                 ) : null}
               </div>
-              <div className="thumb">
+              <div className="homeHeroThumb">
                 {heroThumb2Url ? (
                   <img
                     src={heroThumb2Url}
@@ -164,7 +164,7 @@ export default async function HomePage() {
                   />
                 ) : null}
               </div>
-              <div className="thumb">
+              <div className="homeHeroThumb">
                 {heroThumb3Url ? (
                   <img
                     src={heroThumb3Url}
@@ -282,8 +282,8 @@ export default async function HomePage() {
               </div>
 
               {litter.groupPhotoUrl ? (
-                <div className="pad" style={{paddingTop: '16px', paddingBottom: 0}}>
-                  <div className="heroPhoto" style={{height: 'auto', aspectRatio: '16 / 9', minHeight: 0, maxHeight: 'none'}}>
+                <div className="pad litterHeroWrap">
+                  <div className="litterHeroImage">
                     <img src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} />
                   </div>
                 </div>
