@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {createClient} from '@sanity/client'
+import twilio from 'twilio'
 
 export const runtime = 'nodejs'
 
@@ -10,6 +11,11 @@ const sanity = createClient({
   token: process.env.SANITY_API_WRITE_TOKEN!,
   useCdn: false,
 })
+
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+)
 
 type TallyField = {
   label?: string
@@ -47,21 +53,60 @@ export async function POST(req: NextRequest) {
         : ''
     }
 
+    const name = getValue(['Name', 'Full name', 'Full Name'])
+    const phone = getValue(['Phone number', 'Phone'])
+    const email = getValue(['Email address', 'Email'])
+    const preferredContactMethod = getValue([
+      'Preferred contact method',
+      'Preferred Contact Method',
+    ])
+    const message = getValue(['Message'])
+    const puppy = getValue(['puppy', 'Puppy'])
+    const litter = getValue(['litter', 'Litter'])
+    const puppyPageUrl = getValue(['puppyPageUrl', 'Puppy Page URL'])
+
     await sanity.create({
       _type: 'puppyInquiry',
       submittedAt: new Date().toISOString(),
-      name: getValue(['Name', 'Full name', 'Full Name']),
-      phone: getValue(['Phone number', 'Phone']),
-      email: getValue(['Email address', 'Email']),
-      preferredContactMethod: getValue([
-        'Preferred contact method',
-        'Preferred Contact Method',
-      ]),
-      message: getValue(['Message']),
-      puppy: getValue(['puppy', 'Puppy']),
-      litter: getValue(['litter', 'Litter']),
-      puppyPageUrl: getValue(['puppyPageUrl', 'Puppy Page URL']),
+      name,
+      phone,
+      email,
+      preferredContactMethod,
+      message,
+      puppy,
+      litter,
+      puppyPageUrl,
       source: 'fluffytail',
+    })
+
+    const alertBody = [
+      'New puppy inquiry',
+      puppy ? `Puppy: ${puppy}` : '',
+      litter ? `Litter: ${litter}` : '',
+      name ? `Name: ${name}` : '',
+      phone ? `Phone: ${phone}` : '',
+      email ? `Email: ${email}` : '',
+      preferredContactMethod ? `Prefers: ${preferredContactMethod}` : '',
+      puppyPageUrl ? `Page: ${puppyPageUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const alertMessage = await twilioClient.messages.create({
+      from: process.env.TWILIO_FROM_NUMBER!,
+      to: process.env.FLUFFYTAIL_ALERT_NUMBER!,
+      body: alertBody,
+    })
+
+    await sanity.create({
+      _type: 'smsMessage',
+      messageSid: alertMessage.sid,
+      from: process.env.TWILIO_FROM_NUMBER!,
+      to: process.env.FLUFFYTAIL_ALERT_NUMBER!,
+      body: alertBody,
+      direction: 'outbound',
+      source: 'fluffytail-alert',
+      receivedAt: new Date().toISOString(),
     })
 
     return NextResponse.json({ok: true})
