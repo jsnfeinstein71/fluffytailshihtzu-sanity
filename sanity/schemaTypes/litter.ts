@@ -2,7 +2,7 @@ import {defineField, defineType} from 'sanity'
 
 export const litterType = defineType({
   name: 'litter',
-  title: 'Litters',
+  title: 'Litter',
   type: 'document',
   fields: [
     defineField({
@@ -12,10 +12,16 @@ export const litterType = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'slug',
+      title: 'Slug',
+      type: 'slug',
+      options: {source: 'title', maxLength: 96},
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
       name: 'birthDate',
       title: 'Birth Date',
       type: 'date',
-      validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: 'status',
@@ -23,55 +29,45 @@ export const litterType = defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Active', value: 'active'},
-          {title: 'Upcoming', value: 'upcoming'},
+          {title: 'Planned', value: 'planned'},
+          {title: 'Current', value: 'current'},
           {title: 'Past', value: 'past'},
         ],
-        layout: 'dropdown',
+        layout: 'radio',
       },
-      validation: (Rule) => Rule.required(),
+      initialValue: 'current',
     }),
     defineField({
-      name: 'girlsCount',
-      title: 'Girls Count',
-      type: 'number',
-    }),
-    defineField({
-      name: 'boysCount',
-      title: 'Boys Count',
-      type: 'number',
-    }),
-    defineField({
-      name: 'groupPhoto',
-      title: 'Group Photo',
-      type: 'image',
-      options: {hotspot: true},
-    }),
-    defineField({
-      name: 'summary',
-      title: 'Summary',
+      name: 'description',
+      title: 'Description',
       type: 'text',
       rows: 4,
     }),
     defineField({
-      name: 'sortOrder',
-      title: 'Sort Order',
+      name: 'price',
+      title: 'Litter Price',
       type: 'number',
-      description: 'Lower numbers appear first. Leave blank to fall back to birth date order.',
+      description: 'Default price for puppies in this litter unless a puppy has an override price.',
     }),
     defineField({
-      name: 'featured',
-      title: 'Featured on Homepage',
-      type: 'boolean',
-      initialValue: false,
+      name: 'deposit',
+      title: 'Deposit',
+      type: 'number',
+      initialValue: 300,
+      description: 'Deposit amount included in the price.',
+    }),
+    defineField({
+      name: 'heroImage',
+      title: 'Hero Image',
+      type: 'image',
+      options: {hotspot: true},
     }),
   ],
   preview: {
     select: {
       title: 'title',
-      media: 'groupPhoto',
-      subtitle: 'birthDate',
+      subtitle: 'status',
+      media: 'heroImage',
     },
   },
 })
-
