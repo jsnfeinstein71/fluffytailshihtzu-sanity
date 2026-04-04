@@ -78,9 +78,7 @@ export async function POST(req: NextRequest) {
     const getHiddenValue = (matches: string[]) => {
       for (const key of Object.keys(hiddenFields)) {
         const keyLower = key.toLowerCase()
-        const matched =
-          matches.includes(key) ||
-          matches.includes(keyLower)
+        const matched = matches.includes(key) || matches.includes(keyLower)
 
         if (!matched) continue
 
@@ -138,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     const puppyPageUrl = firstNonEmpty(
       getFieldValue(['Puppy Page URL', 'puppy page url', 'puppypageurl']),
-      getHiddenValue(['puppypageurl', 'puppyPageUrl'.toLowerCase()])
+      getHiddenValue(['puppypageurl'])
     )
 
     await sanity.create({
@@ -171,24 +169,46 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join('\n')
 
-    const alertMessage = await twilioClient.messages.create({
-      from: process.env.TWILIO_FROM_NUMBER!,
-      to: process.env.FLUFFYTAIL_ALERT_NUMBER!,
-      body: alertBody,
-    })
+    const alertNumbers = [
+      process.env.FLUFFYTAIL_ALERT_NUMBER?.trim(),
+      process.env.FLUFFYTAIL_ALERT_NUMBER_2?.trim(),
+    ].filter(Boolean) as string[]
 
-    await sanity.create({
-      _type: 'smsMessage',
-      messageSid: alertMessage.sid,
-      from: process.env.TWILIO_FROM_NUMBER!,
-      to: process.env.FLUFFYTAIL_ALERT_NUMBER!,
-      body: alertBody,
-      direction: 'outbound',
-      source: 'fluffytail-alert',
-      receivedAt: new Date().toISOString(),
-      numMedia: 0,
-      mediaUrls: [],
-    })
+    const sentAlerts = []
+
+    for (const alertNumber of alertNumbers) {
+      const alertMessage = await twilioClient.messages.create({
+        from: process.env.TWILIO_FROM_NUMBER!,
+        to: alertNumber,
+        body: alertBody,
+      })
+
+      sentAlerts.push({
+        sid: alertMessage.sid,
+        to: alertNumber,
+      })
+    }
+
+    if (sentAlerts.length > 0) {
+      const transaction = sanity.transaction()
+
+      for (const sent of sentAlerts) {
+        transaction.create({
+          _type: 'smsMessage',
+          messageSid: sent.sid,
+          from: process.env.TWILIO_FROM_NUMBER!,
+          to: sent.to,
+          body: alertBody,
+          direction: 'outbound',
+          source: 'fluffytail-alert',
+          receivedAt: new Date().toISOString(),
+          numMedia: 0,
+          mediaUrls: [],
+        })
+      }
+
+      await transaction.commit()
+    }
 
     return NextResponse.json({ok: true})
   } catch (error) {
