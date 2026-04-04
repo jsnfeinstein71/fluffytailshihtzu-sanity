@@ -127,5 +127,16 @@ function buildConversations(
 
 function normalizePhone(value?: string) {
   if (!value) return ''
-  return value.replace(/[^\d+]/g, '')
+
+  const digits = value.replace(/\D/g, '')
+
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return digits.slice(1)
+  }
+
+  if (digits.length === 10) {
+    return digits
+  }
+
+  return digits
 }
