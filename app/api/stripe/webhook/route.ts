@@ -95,5 +95,54 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (event.type === 'invoice.paid') {
+    const invoice = event.data.object as Stripe.Invoice
+
+    const stripeInvoiceId = invoice.id
+    const puppySlug = invoice.metadata?.puppySlug
+    const puppyName = invoice.metadata?.puppyName
+    const customerName = invoice.metadata?.customerName
+    const customerEmail = invoice.metadata?.customerEmail
+    const customerPhone = invoice.metadata?.customerPhone
+
+    const amountPaid = (invoice.amount_paid || 0) / 100
+
+    if (stripeInvoiceId && puppySlug && amountPaid > 0) {
+      const existing = await sanity.fetch<{_id: string} | null>(
+        `*[_type == "paymentRecord" && stripeInvoiceId == $invoiceId][0]{_id}` as string,
+        {invoiceId: stripeInvoiceId} as Record<string, string>
+      )
+
+      if (!existing) {
+        await sanity.create({
+          _type: 'paymentRecord',
+          stripeInvoiceId,
+          paymentType: 'invoice',
+          amountPaid,
+          puppySlug,
+          puppyName,
+          customerName,
+          customerEmail,
+          customerPhone,
+          paymentStatus: 'paid',
+          createdAt: new Date().toISOString(),
+        })
+      }
+
+      const existingInvoiceRecord = await sanity.fetch<{_id: string} | null>(
+        `*[_type == "invoiceRecord" && stripeInvoiceId == $invoiceId][0]{_id}` as string,
+        {invoiceId: stripeInvoiceId} as Record<string, string>
+      )
+
+      if (existingInvoiceRecord?._id) {
+        await sanity.patch(existingInvoiceRecord._id).set({
+          status: invoice.status || 'paid',
+          amountPaid: (invoice.amount_paid || 0) / 100,
+          amountRemaining: (invoice.amount_remaining || 0) / 100,
+        }).commit()
+      }
+    }
+  }
+
   return NextResponse.json({received: true})
 }
