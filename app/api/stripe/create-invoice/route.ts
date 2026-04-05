@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       collection_method: 'send_invoice',
       days_until_due: 30,
       auto_advance: true,
+      pending_invoice_items_behavior: 'include',
       metadata: {
         puppySlug,
         puppyName,
