@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    if (!invoice.id) {
+      return NextResponse.json({error: 'Stripe invoice ID missing'}, {status: 500})
+    }
+
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id)
 
     await sanity.create({
