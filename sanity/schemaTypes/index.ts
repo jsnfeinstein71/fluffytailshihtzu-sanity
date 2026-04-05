@@ -5,6 +5,7 @@ import {faqType} from './faq'
 import {smsMessageType} from './smsMessage'
 import {puppyInquiryType} from './puppyInquiry'
 import {paymentRecordType} from './paymentRecord'
+import {depositLinkType} from './depositLink'
 
 export const schemaTypes = [
   siteSettingsType,
@@ -14,4 +15,5 @@ export const schemaTypes = [
   smsMessageType,
   puppyInquiryType,
   paymentRecordType,
+  depositLinkType,
 ]
