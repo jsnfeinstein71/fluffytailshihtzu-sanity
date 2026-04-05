@@ -1,4 +1,3 @@
-Here is the full app/inbox/InboxClient.tsx file.
 'use client'
 
 import {useEffect, useMemo, useRef, useState} from 'react'
