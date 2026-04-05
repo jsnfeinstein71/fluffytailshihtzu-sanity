@@ -406,6 +406,7 @@ export default function InboxClient({
                   const subtitleParts = [
                     conversation.inquiry?.puppy ? `Puppy: ${conversation.inquiry.puppy}` : '',
                     conversation.inquiry?.litter ? conversation.inquiry.litter : '',
+                    conversation.paymentRecord ? formatPaymentStatus(conversation.paymentRecord) : '',
                   ].filter(Boolean)
 
                   return (
@@ -932,6 +933,27 @@ function toE164(value?: string) {
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
   if (digits.length === 10) return `+1${digits}`
   return value.startsWith('+') ? value : `+${digits}`
+}
+
+function formatPaymentStatus(paymentRecord?: {
+  paymentType?: string
+  paymentStatus?: string
+  amountPaid?: number
+}) {
+  if (!paymentRecord) return ''
+
+  const isDeposit = paymentRecord.paymentType === 'deposit'
+  const isPaid = paymentRecord.paymentStatus === 'paid'
+
+  if (isDeposit && isPaid) {
+    return `Deposit paid${typeof paymentRecord.amountPaid === 'number' ? ` ($${paymentRecord.amountPaid})` : ''}`
+  }
+
+  if (isDeposit) {
+    return 'Deposit sent'
+  }
+
+  return paymentRecord.paymentStatus || 'Payment activity'
 }
 
 function formatDateTime(value?: string) {
