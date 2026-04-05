@@ -31,6 +31,8 @@ export default function InboxClient({
   const [isSendingDepositLink, setIsSendingDepositLink] = useState(false)
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false)
   const [isSendingInvoice, setIsSendingInvoice] = useState(false)
+  const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false)
+  const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false)
   const [composerError, setComposerError] = useState('')
   const [depositMessage, setDepositMessage] = useState('')
 
@@ -275,15 +277,15 @@ export default function InboxClient({
     }
 
     const response = await fetch('/api/stripe/create-invoice', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify({
-    puppySlug,
-    customerName,
-    customerEmail,
-    customerPhone,
-  }),
-})
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        puppySlug,
+        customerName,
+        customerEmail,
+        customerPhone,
+      }),
+    })
 
     const json = await response.json()
 
@@ -295,6 +297,48 @@ export default function InboxClient({
       url: json.url as string,
       puppyName,
       customerName,
+    }
+  }
+
+  async function createManualPaymentLink(amount: number) {
+    if (!selectedConversation?.inquiry) {
+      throw new Error('No inquiry is attached to this conversation.')
+    }
+
+    const puppySlug = extractPuppySlug(selectedConversation.inquiry.puppyPageUrl)
+    const customerName = selectedConversation.inquiry.name?.trim() || ''
+    const customerEmail = selectedConversation.inquiry.email?.trim() || ''
+    const customerPhone = toE164(selectedConversation.phone)
+
+    if (!puppySlug) {
+      throw new Error('This conversation is missing puppy page URL.')
+    }
+
+    if (amount <= 0) {
+      throw new Error('Amount must be greater than zero.')
+    }
+
+    const response = await fetch('/api/stripe/create-payment-link', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        puppySlug,
+        customerName,
+        customerEmail,
+        customerPhone,
+        amount,
+      }),
+    })
+
+    const json = await response.json()
+
+    if (!response.ok || !json.url) {
+      throw new Error(json.error || 'Failed to create payment link')
+    }
+
+    return {
+      url: json.url as string,
+      amount,
     }
   }
 
@@ -430,6 +474,82 @@ export default function InboxClient({
     }
   }
 
+  async function handleCreatePaymentLink() {
+    const input = window.prompt('Payment amount in dollars', '100')
+    if (!input) return
+
+    const amount = Number(input)
+
+    setComposerError('')
+    setDepositMessage('')
+    setIsCreatingPaymentLink(true)
+
+    try {
+      const result = await createManualPaymentLink(amount)
+
+      try {
+        await navigator.clipboard.writeText(result.url)
+        setDepositMessage(`Payment link for $${result.amount} created, copied, and opened in a new tab.`)
+      } catch {
+        setDepositMessage(`Payment link for $${result.amount} created and opened in a new tab.`)
+      }
+
+      window.open(result.url, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      console.error(error)
+      setComposerError(error instanceof Error ? error.message : 'Failed to create payment link.')
+    } finally {
+      setIsCreatingPaymentLink(false)
+    }
+  }
+
+  async function handleSendPaymentLink() {
+    if (!selectedConversation) return
+
+    const input = window.prompt('Payment amount in dollars', '100')
+    if (!input) return
+
+    const amount = Number(input)
+
+    setComposerError('')
+    setDepositMessage('')
+    setIsSendingPaymentLink(true)
+
+    try {
+      const result = await createManualPaymentLink(amount)
+      const firstName =
+        selectedConversation.inquiry?.name?.trim().split(/\s+/)[0] || 'there'
+
+      const smsBody =
+        `Hi ${firstName}, here is your secure payment link for $${amount} toward your puppy balance:\n\n` +
+        `${result.url}`
+
+      const response = await fetch('/api/fluffytail/sms/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          to: toE164(selectedConversation.phone),
+          body: smsBody,
+          mediaUrls: [],
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to send payment link')
+      }
+
+      setDepositMessage(`Payment link for $${amount} created and sent by text message.`)
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setComposerError(error instanceof Error ? error.message : 'Failed to send payment link.')
+    } finally {
+      setIsSendingPaymentLink(false)
+    }
+  }
+
   const canCreateDepositLink =
     !!selectedConversation?.inquiry?.puppy?.trim() &&
     !!extractPuppySlug(selectedConversation?.inquiry?.puppyPageUrl)
@@ -438,6 +558,9 @@ export default function InboxClient({
     !!selectedConversation?.inquiry?.puppy?.trim() &&
     !!extractPuppySlug(selectedConversation?.inquiry?.puppyPageUrl) &&
     !!selectedConversation?.inquiry?.email?.trim()
+
+  const canCreatePaymentLink =
+    !!extractPuppySlug(selectedConversation?.inquiry?.puppyPageUrl)
 
   return (
     <main className="wrap">
@@ -827,7 +950,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         Gallery
@@ -844,7 +969,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         Camera
@@ -862,7 +989,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         {isCreatingDepositLink ? 'Creating Link...' : 'Create Deposit Link'}
@@ -880,7 +1009,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         {isSendingDepositLink ? 'Sending Deposit Link...' : 'Send Deposit Link'}
@@ -898,7 +1029,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         {isCreatingInvoice ? 'Creating Invoice...' : 'Create Invoice'}
@@ -916,10 +1049,52 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         {isSendingInvoice ? 'Sending Invoice...' : 'Send Invoice Link'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleCreatePaymentLink}
+                        disabled={
+                          !canCreatePaymentLink ||
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
+                        }
+                      >
+                        {isCreatingPaymentLink ? 'Creating Payment Link...' : 'Create Payment Link'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleSendPaymentLink}
+                        disabled={
+                          !canCreatePaymentLink ||
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
+                        }
+                      >
+                        {isSendingPaymentLink ? 'Sending Payment Link...' : 'Send Payment Link'}
                       </button>
 
                       <button
@@ -933,7 +1108,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
@@ -949,7 +1126,9 @@ export default function InboxClient({
                           isCreatingDepositLink ||
                           isSendingDepositLink ||
                           isCreatingInvoice ||
-                          isSendingInvoice
+                          isSendingInvoice ||
+                          isCreatingPaymentLink ||
+                          isSendingPaymentLink
                         }
                       >
                         {isUploading
