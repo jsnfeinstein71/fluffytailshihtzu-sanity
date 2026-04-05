@@ -275,17 +275,15 @@ export default function InboxClient({
     }
 
     const response = await fetch('/api/stripe/create-invoice', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        puppyName,
-        puppySlug,
-        customerName,
-        customerEmail,
-        customerPhone,
-        amountDue: 1200,
-      }),
-    })
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({
+    puppySlug,
+    customerName,
+    customerEmail,
+    customerPhone,
+  }),
+})
 
     const json = await response.json()
 
