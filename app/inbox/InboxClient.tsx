@@ -1273,36 +1273,42 @@ function toE164(value?: string) {
   return value.startsWith('+') ? value : `+${digits}`
 }
 
-function formatPaymentStatus(paymentRecord?: {
-  paymentType?: string
-  paymentStatus?: string
-  amountPaid?: number
+function formatPaymentSummary(paymentSummary?: {
+  records?: Array<{
+    paymentType?: string
+    amountPaid?: number
+  }>
+  totalPaid?: number
+  remainingBalance?: number
 }) {
-  if (!paymentRecord) return ''
+  if (!paymentSummary) return ''
 
-  const isDeposit = paymentRecord.paymentType === 'deposit'
-  const isPaid = paymentRecord.paymentStatus === 'paid'
+  const records = paymentSummary.records || []
+  const depositTotal = records.reduce((sum, record) => {
+    return sum + (record.paymentType === 'deposit' ? record.amountPaid || 0 : 0)
+  }, 0)
 
-  if (isDeposit && isPaid) {
-    return `Deposit paid${typeof paymentRecord.amountPaid === 'number' ? ` ($${paymentRecord.amountPaid})` : ''}`
+  const extraTotal = records.reduce((sum, record) => {
+    return sum + (record.paymentType === 'manual-payment' ? record.amountPaid || 0 : 0)
+  }, 0)
+
+  const parts: string[] = []
+
+  if (depositTotal > 0) {
+    parts.push(`Deposit paid ($${depositTotal})`)
   }
 
-  if (isDeposit) {
-    return 'Deposit sent'
+  if (extraTotal > 0) {
+    parts.push(`Extra payments ($${extraTotal})`)
   }
 
-  return paymentRecord.paymentStatus || 'Payment activity'
-}
+  if (typeof paymentSummary.remainingBalance === 'number') {
+    parts.push(`Remaining balance $${paymentSummary.remainingBalance}`)
+  } else if (typeof paymentSummary.totalPaid === 'number' && paymentSummary.totalPaid > 0) {
+    parts.push(`Total paid $${paymentSummary.totalPaid}`)
+  }
 
-function formatDateTime(value?: string) {
-  if (!value) return 'Unknown time'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return parts.join(' • ') || 'Payment activity'
 }
 
 function formatShortDate(value?: string) {
