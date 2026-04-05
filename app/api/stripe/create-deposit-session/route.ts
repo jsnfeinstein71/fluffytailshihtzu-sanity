@@ -1,7 +1,17 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {createClient} from '@sanity/client'
 import {stripe} from '@/sanity/lib/stripe'
+import crypto from 'crypto'
 
 export const runtime = 'nodejs'
+
+const sanity = createClient({
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+  apiVersion: '2025-01-01',
+  token: process.env.SANITY_API_WRITE_TOKEN!,
+  useCdn: false,
+})
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,7 +63,32 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    return NextResponse.json({url: session.url})
+    if (!session.url) {
+      return NextResponse.json({error: 'Stripe session missing URL'}, {status: 500})
+    }
+
+    const token = crypto.randomBytes(6).toString('base64url')
+
+    await sanity.create({
+      _type: 'depositLink',
+      createdAt: new Date().toISOString(),
+      token,
+      puppySlug,
+      puppyName,
+      litterTitle,
+      customerName,
+      customerEmail,
+      customerPhone,
+      stripeCheckoutUrl: session.url,
+      stripeCheckoutSessionId: session.id,
+      active: true,
+    })
+
+    return NextResponse.json({
+      url: session.url,
+      shortUrl: `${baseUrl}/pay/${token}`,
+      token,
+    })
   } catch (error) {
     console.error('Failed to create Stripe session', error)
     return NextResponse.json(
