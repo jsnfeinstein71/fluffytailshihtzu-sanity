@@ -20,7 +20,10 @@ export default async function DepositRedirectPage({
 }) {
   const {token} = await params
 
-  const link = await client.fetch<DepositLink | null>(depositLinkQuery, {token})
+  const link = await client.fetch<DepositLink | null>(
+    depositLinkQuery as string,
+    {token} as Record<string, string>
+  )
 
   if (!link || !link.active || !link.stripeCheckoutUrl) {
     notFound()
