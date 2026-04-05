@@ -36,6 +36,7 @@ type Puppy = {
   slug?: string
   sex?: 'female' | 'male'
   status?: 'available' | 'hold' | 'reserved' | 'gone-home'
+  color?: string
   notes?: string
   sortOrder?: number
   litterId?: string
@@ -74,6 +75,7 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   "slug": slug.current,
   sex,
   status,
+  color,
   notes,
   sortOrder,
   "litterId": litter->_id,
@@ -304,9 +306,9 @@ export default async function HomePage() {
                           </span>
                         </div>
                         <p className="puppyMetaLine">
-                          {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-                        </p>
-                        {puppy.notes ? <p className="puppyNotes">{puppy.notes}</p> : null}
+  {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+</p>
+{puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
                       </div>
                     </a>
                   ))
