@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL || 'https://www.fluffytailshihtzu.com'
 
+    const token = createToken()
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
       client_reference_id: puppySlug,
       customer_email: customerEmail || undefined,
       metadata: {
+        token,
         puppySlug,
         puppyName,
         litterTitle,
@@ -70,8 +73,6 @@ export async function POST(req: NextRequest) {
         },
       ],
     })
-
-    const token = createToken()
 
     await sanity.create({
       _type: 'depositLink',
