@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
 
+    const token = session.metadata?.token
     const puppySlug = session.metadata?.puppySlug
     const puppyName = session.metadata?.puppyName
     const litterTitle = session.metadata?.litterTitle
@@ -77,10 +78,18 @@ export async function POST(req: NextRequest) {
       )
 
       if (puppy?._id) {
-        await sanity
-          .patch(puppy._id)
-          .set({status: 'reserved'})
-          .commit()
+        await sanity.patch(puppy._id).set({status: 'reserved'}).commit()
+      }
+
+      if (token) {
+        const depositLink = await sanity.fetch<{_id: string} | null>(
+          `*[_type == "depositLink" && token == $token][0]{_id}`,
+          {token}
+        )
+
+        if (depositLink?._id) {
+          await sanity.patch(depositLink._id).set({active: false}).commit()
+        }
       }
     }
   }
