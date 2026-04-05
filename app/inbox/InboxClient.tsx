@@ -294,8 +294,9 @@ export default function InboxClient({
       const firstName = result.customerName.trim().split(/\s+/)[0] || 'there'
 
       const smsBody =
-        `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}. ` +
-        `Once the deposit is completed, I’ll mark the puppy as reserved for you: ${result.url}`
+  `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}:\n\n` +
+  `${result.url}\n\n` +
+  `Once the deposit is completed, I’ll mark the puppy as reserved for you.`
 
       const response = await fetch('/api/fluffytail/sms/send', {
         method: 'POST',
