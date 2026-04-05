@@ -31,12 +31,23 @@ export type PuppyInquiry = {
   source?: string
 }
 
+export type PaymentRecord = {
+  _id: string
+  puppySlug?: string
+  customerPhone?: string
+  paymentType?: string
+  paymentStatus?: string
+  amountPaid?: number
+  createdAt?: string
+}
+
 export type Conversation = {
   phone: string
   messages: SmsMessage[]
   latestAt?: string
   preview?: string
   inquiry?: PuppyInquiry | null
+  paymentRecord?: PaymentRecord | null
 }
 
 const smsMessagesQuery = `*[_type == "smsMessage"] | order(receivedAt desc){
@@ -66,27 +77,47 @@ const puppyInquiriesQuery = `*[_type == "puppyInquiry"] | order(submittedAt desc
   source
 }`
 
+const paymentRecordsQuery = `*[_type == "paymentRecord"] | order(createdAt desc){
+  _id,
+  puppySlug,
+  customerPhone,
+  paymentType,
+  paymentStatus,
+  amountPaid,
+  createdAt
+}`
+
 export default async function InboxPage() {
-  const [messages, inquiries] = await Promise.all([
+  const [messages, inquiries, paymentRecords] = await Promise.all([
     client.fetch<SmsMessage[]>(smsMessagesQuery),
     client.fetch<PuppyInquiry[]>(puppyInquiriesQuery),
+    client.fetch<PaymentRecord[]>(paymentRecordsQuery),
   ])
 
-  const conversations = buildConversations(messages, inquiries)
+  const conversations = buildConversations(messages, inquiries, paymentRecords)
 
   return <InboxClient conversations={conversations} />
 }
 
 function buildConversations(
   messages: SmsMessage[],
-  inquiries: PuppyInquiry[]
+  inquiries: PuppyInquiry[],
+  paymentRecords: PaymentRecord[]
 ): Conversation[] {
   const inquiryMap = new Map<string, PuppyInquiry>()
+  const paymentMap = new Map<string, PaymentRecord>()
 
   for (const inquiry of inquiries) {
     const phone = normalizePhone(inquiry.phone)
     if (phone && !inquiryMap.has(phone)) {
       inquiryMap.set(phone, inquiry)
+    }
+  }
+
+  for (const payment of paymentRecords) {
+    const phone = normalizePhone(payment.customerPhone)
+    if (phone && !paymentMap.has(phone)) {
+      paymentMap.set(phone, payment)
     }
   }
 
@@ -98,6 +129,11 @@ function buildConversations(
 
   for (const inquiry of inquiries) {
     const phone = normalizePhone(inquiry.phone)
+    if (phone) phoneSet.add(phone)
+  }
+
+  for (const payment of paymentRecords) {
+    const phone = normalizePhone(payment.customerPhone)
     if (phone) phoneSet.add(phone)
   }
 
@@ -127,10 +163,14 @@ function buildConversations(
       })
 
     const inquiry = inquiryMap.get(phone) || null
+    const paymentRecord = paymentMap.get(phone) || null
     const latestMessage = groupedMessages[groupedMessages.length - 1]
 
     const latestAt =
-      latestMessage?.receivedAt || inquiry?.submittedAt || undefined
+      latestMessage?.receivedAt ||
+      paymentRecord?.createdAt ||
+      inquiry?.submittedAt ||
+      undefined
 
     const preview =
       latestMessage?.body ||
@@ -144,6 +184,7 @@ function buildConversations(
       latestAt,
       preview,
       inquiry,
+      paymentRecord,
     }
   })
 
