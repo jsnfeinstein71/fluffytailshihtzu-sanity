@@ -38,14 +38,51 @@ export async function POST(req: NextRequest) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
 
-    console.log('Stripe checkout.session.completed', {
-      id: session.id,
-      payment_status: session.payment_status,
-      metadata: session.metadata,
-    })
+    const puppySlug = session.metadata?.puppySlug
+    const puppyName = session.metadata?.puppyName
+    const litterTitle = session.metadata?.litterTitle
+    const customerName = session.metadata?.customerName
+    const customerEmail = session.metadata?.customerEmail
+    const customerPhone = session.metadata?.customerPhone
+    const paymentType = session.metadata?.paymentType
 
-    // For now, just confirm the event was received.
-    // We will add Sanity updates next.
+    if (paymentType === 'deposit' && puppySlug) {
+      const existing = await sanity.fetch<{_id: string} | null>(
+        `*[_type == "paymentRecord" && stripeCheckoutSessionId == $sessionId][0]{_id}`,
+        {sessionId: session.id}
+      )
+
+      if (!existing) {
+        await sanity.create({
+          _type: 'paymentRecord',
+          stripeCheckoutSessionId: session.id,
+          stripePaymentIntentId:
+            typeof session.payment_intent === 'string' ? session.payment_intent : '',
+          paymentType: 'deposit',
+          amountPaid: 300,
+          puppySlug,
+          puppyName,
+          litterTitle,
+          customerName,
+          customerEmail,
+          customerPhone,
+          paymentStatus: session.payment_status,
+          createdAt: new Date().toISOString(),
+        })
+      }
+
+      const puppy = await sanity.fetch<{_id: string} | null>(
+        `*[_type == "puppy" && slug.current == $slug][0]{_id}`,
+        {slug: puppySlug}
+      )
+
+      if (puppy?._id) {
+        await sanity
+          .patch(puppy._id)
+          .set({status: 'reserved'})
+          .commit()
+      }
+    }
   }
 
   return NextResponse.json({received: true})
