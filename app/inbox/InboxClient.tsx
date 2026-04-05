@@ -1,3 +1,4 @@
+Here is the full app/inbox/InboxClient.tsx file.
 'use client'
 
 import {useEffect, useMemo, useRef, useState} from 'react'
@@ -246,12 +247,12 @@ export default function InboxClient({
 
     const json = await response.json()
 
-    if (!response.ok || !json.shortUrl) {
+    if (!response.ok || !json.url) {
       throw new Error(json.error || 'Failed to create deposit link')
     }
 
     return {
-      url: json.shortUrl as string,
+      url: json.url as string,
       puppyName,
       customerName,
     }
@@ -291,11 +292,11 @@ export default function InboxClient({
     try {
       const result = await createDepositLink()
 
-      const firstName =
-        result.customerName.trim().split(/\s+/)[0] || 'there'
+      const firstName = result.customerName.trim().split(/\s+/)[0] || 'there'
 
       const smsBody =
-        `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}: ${result.url}`
+        `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}. ` +
+        `Once the deposit is completed, I’ll mark the puppy as reserved for you: ${result.url}`
 
       const response = await fetch('/api/fluffytail/sms/send', {
         method: 'POST',
@@ -1046,3 +1047,4 @@ const conversationDateStyle: React.CSSProperties = {
   opacity: 0.65,
   whiteSpace: 'nowrap',
 }
+
