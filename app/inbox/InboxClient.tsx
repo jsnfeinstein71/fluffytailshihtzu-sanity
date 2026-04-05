@@ -27,7 +27,9 @@ export default function InboxClient({
   const [isUploading, setIsUploading] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isCreatingDepositLink, setIsCreatingDepositLink] = useState(false)
   const [composerError, setComposerError] = useState('')
+  const [depositMessage, setDepositMessage] = useState('')
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 900)
@@ -65,6 +67,7 @@ export default function InboxClient({
     setReplyBody('')
     setUploadedImages([])
     setComposerError('')
+    setDepositMessage('')
   }, [selectedPhone])
 
   const openConversation = (phone: string) => {
@@ -80,6 +83,7 @@ export default function InboxClient({
     if (!files || files.length === 0) return
 
     setComposerError('')
+    setDepositMessage('')
     setIsUploading(true)
 
     try {
@@ -134,6 +138,7 @@ export default function InboxClient({
     }
 
     setComposerError('')
+    setDepositMessage('')
     setIsSending(true)
 
     try {
@@ -178,6 +183,7 @@ export default function InboxClient({
     if (!confirmed) return
 
     setComposerError('')
+    setDepositMessage('')
     setIsDeleting(true)
 
     try {
@@ -207,6 +213,70 @@ export default function InboxClient({
       setIsDeleting(false)
     }
   }
+
+  async function handleCreateDepositLink() {
+    if (!selectedConversation?.inquiry) {
+      setComposerError('No inquiry is attached to this conversation.')
+      return
+    }
+
+    const puppyName = selectedConversation.inquiry.puppy?.trim() || ''
+    const puppySlug = extractPuppySlug(selectedConversation.inquiry.puppyPageUrl)
+    const litterTitle = selectedConversation.inquiry.litter?.trim() || ''
+    const customerName = selectedConversation.inquiry.name?.trim() || ''
+    const customerEmail = selectedConversation.inquiry.email?.trim() || ''
+    const customerPhone = toE164(selectedConversation.phone)
+
+    if (!puppyName || !puppySlug) {
+      setComposerError('This conversation is missing puppy info or puppy page URL.')
+      return
+    }
+
+    setComposerError('')
+    setDepositMessage('')
+    setIsCreatingDepositLink(true)
+
+    try {
+      const response = await fetch('/api/stripe/create-deposit-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          puppyName,
+          puppySlug,
+          litterTitle,
+          customerName,
+          customerEmail,
+          customerPhone,
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.url) {
+        throw new Error(json.error || 'Failed to create deposit link')
+      }
+
+      const depositUrl = json.url as string
+
+      try {
+        await navigator.clipboard.writeText(depositUrl)
+        setDepositMessage('Deposit link created, copied to clipboard, and opened in a new tab.')
+      } catch {
+        setDepositMessage('Deposit link created and opened in a new tab.')
+      }
+
+      window.open(depositUrl, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      console.error(error)
+      setComposerError('Failed to create deposit link.')
+    } finally {
+      setIsCreatingDepositLink(false)
+    }
+  }
+
+  const canCreateDepositLink =
+    !!selectedConversation?.inquiry?.puppy?.trim() &&
+    !!extractPuppySlug(selectedConversation?.inquiry?.puppyPageUrl)
 
   return (
     <main className="wrap">
@@ -360,7 +430,7 @@ export default function InboxClient({
                   style={{
                     borderBottom: '1px solid rgba(0,0,0,0.08)',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'space-between',
                     justifyContent: 'space-between',
                     gap: '12px',
                   }}
@@ -584,7 +654,9 @@ export default function InboxClient({
                         type="button"
                         className="btn"
                         onClick={() => galleryInputRef.current?.click()}
-                        disabled={isUploading || isSending || isDeleting}
+                        disabled={
+                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                        }
                       >
                         Gallery
                       </button>
@@ -593,7 +665,9 @@ export default function InboxClient({
                         type="button"
                         className="btn"
                         onClick={() => cameraInputRef.current?.click()}
-                        disabled={isUploading || isSending || isDeleting}
+                        disabled={
+                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                        }
                       >
                         Camera
                       </button>
@@ -601,8 +675,25 @@ export default function InboxClient({
                       <button
                         type="button"
                         className="btn"
+                        onClick={handleCreateDepositLink}
+                        disabled={
+                          !canCreateDepositLink ||
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink
+                        }
+                      >
+                        {isCreatingDepositLink ? 'Creating Link...' : 'Create Deposit Link'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
                         onClick={handleDeleteConversation}
-                        disabled={isUploading || isSending || isDeleting}
+                        disabled={
+                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                        }
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
                       </button>
@@ -610,7 +701,9 @@ export default function InboxClient({
                       <button
                         className="btn btnPrimary"
                         type="submit"
-                        disabled={isUploading || isSending || isDeleting}
+                        disabled={
+                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                        }
                       >
                         {isUploading
                           ? 'Uploading...'
@@ -619,6 +712,15 @@ export default function InboxClient({
                             : 'Send Reply'}
                       </button>
                     </div>
+
+                    {depositMessage ? (
+                      <p
+                        className="lead"
+                        style={{marginTop: '12px', color: '#067647', marginBottom: 0}}
+                      >
+                        {depositMessage}
+                      </p>
+                    ) : null}
 
                     {composerError ? (
                       <p
@@ -713,6 +815,36 @@ function MessageBubble({message}: {message: SmsMessage}) {
       </div>
     </div>
   )
+}
+
+function extractPuppySlug(url?: string) {
+  if (!url) return ''
+
+  try {
+    const parsed = new URL(url)
+    const parts = parsed.pathname.split('/').filter(Boolean)
+    const puppiesIndex = parts.findIndex((part) => part === 'puppies')
+
+    if (puppiesIndex >= 0 && parts[puppiesIndex + 1]) {
+      return parts[puppiesIndex + 1]
+    }
+  } catch {
+    const match = url.match(/\/puppies\/([^/?#]+)/i)
+    if (match?.[1]) {
+      return match[1]
+    }
+  }
+
+  return ''
+}
+
+function toE164(value?: string) {
+  if (!value) return ''
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+  if (digits.length === 10) return `+1${digits}`
+  return value.startsWith('+') ? value : `+${digits}`
 }
 
 function formatDateTime(value?: string) {
