@@ -640,7 +640,7 @@ export default function InboxClient({
                   const subtitleParts = [
                     conversation.inquiry?.puppy ? `Puppy: ${conversation.inquiry.puppy}` : '',
                     conversation.inquiry?.litter ? conversation.inquiry.litter : '',
-                    conversation.paymentRecord ? formatPaymentStatus(conversation.paymentRecord) : '',
+                    conversation.paymentSummary ? formatPaymentSummary(conversation.paymentSummary) : '',
                   ].filter(Boolean)
 
                   return (
