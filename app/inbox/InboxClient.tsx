@@ -31,6 +31,8 @@ export default function InboxClient({
   const [isSendingDepositLink, setIsSendingDepositLink] = useState(false)
   const [composerError, setComposerError] = useState('')
   const [depositMessage, setDepositMessage] = useState('')
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false)
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false)
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 900)
