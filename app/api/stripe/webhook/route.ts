@@ -46,8 +46,9 @@ export async function POST(req: NextRequest) {
     const customerEmail = session.metadata?.customerEmail
     const customerPhone = session.metadata?.customerPhone
     const paymentType = session.metadata?.paymentType
+    const manualAmountPaid = Number(session.metadata?.amountPaid || 0)
 
-    if (paymentType === 'deposit' && puppySlug) {
+    if ((paymentType === 'deposit' || paymentType === 'manual-payment') && puppySlug) {
       const existing = await sanity.fetch<{_id: string} | null>(
         `*[_type == "paymentRecord" && stripeCheckoutSessionId == $sessionId][0]{_id}` as string,
         {sessionId: session.id} as Record<string, string>
@@ -59,8 +60,8 @@ export async function POST(req: NextRequest) {
           stripeCheckoutSessionId: session.id,
           stripePaymentIntentId:
             typeof session.payment_intent === 'string' ? session.payment_intent : '',
-          paymentType: 'deposit',
-          amountPaid: 300,
+          paymentType,
+          amountPaid: paymentType === 'deposit' ? 300 : manualAmountPaid,
           puppySlug,
           puppyName,
           litterTitle,
@@ -77,11 +78,11 @@ export async function POST(req: NextRequest) {
         {slug: puppySlug} as Record<string, string>
       )
 
-      if (puppy?._id) {
+      if (puppy?._id && paymentType === 'deposit') {
         await sanity.patch(puppy._id).set({status: 'reserved'}).commit()
       }
 
-      if (token) {
+      if (token && paymentType === 'deposit') {
         const depositLink = await sanity.fetch<{_id: string} | null>(
           `*[_type == "depositLink" && token == $token][0]{_id}` as string,
           {token} as Record<string, string>
