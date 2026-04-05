@@ -549,6 +549,11 @@ export default function InboxClient({
                             </a>
                           </div>
                         ) : null}
+                        {selectedConversation.paymentRecord ? (
+                          <div>
+                            Payment: {formatPaymentStatus(selectedConversation.paymentRecord)}
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="lead" style={{margin: '6px 0 0 0'}}>
