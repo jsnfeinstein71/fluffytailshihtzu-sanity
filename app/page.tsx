@@ -40,6 +40,7 @@ type Puppy = {
   notes?: string
   sortOrder?: number
   litterId?: string
+  birthDate?: string
   photoUrl?: string
 }
 
@@ -79,6 +80,7 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   notes,
   sortOrder,
   "litterId": litter->_id,
+  "birthDate": litter->birthDate,
   "photoUrl": photo.asset->url
 }`
 
@@ -300,12 +302,15 @@ export default async function HomePage() {
                       </div>
                       <div className="puppyCardBody">
                         <div className="puppyCardTop">
-                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                            {formatPuppyStatus(puppy.status)}
-                          </span>
-                        </div>
-                        <p className="puppyMetaLine">
+  <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+  <span className="statusBadge">
+    {getReadyDate(puppy.birthDate)
+      ? `Ready ${getReadyDate(puppy.birthDate)}`
+      : formatPuppyStatus(puppy.status)}
+  </span>
+</div>
+<p className="puppyMetaLine">
+  {getAgeInWeeks(puppy.birthDate)} week{getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
   {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
 </p>
 {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
@@ -351,6 +356,30 @@ function formatPuppyStatus(status?: string) {
   if (status === 'reserved') return 'Reserved'
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
+}
+
+function getAgeInWeeks(birthDate?: string) {
+  if (!birthDate) return 1
+
+  const born = new Date(birthDate)
+  const now = new Date()
+  const diffMs = now.getTime() - born.getTime()
+  const weeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7))
+
+  return Math.max(1, weeks)
+}
+
+function getReadyDate(birthDate?: string) {
+  if (!birthDate) return ''
+
+  const born = new Date(birthDate)
+  const ready = new Date(born)
+  ready.setDate(ready.getDate() + 56)
+
+  return ready.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 function formatCurrency(value: number) {
