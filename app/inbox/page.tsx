@@ -204,10 +204,14 @@ function buildConversations(
       })
 
     const inquiry = inquiryMap.get(phone) || null
-    const paymentSummary = buildPaymentSummary(
-      paymentMap.get(phone) || [],
-      puppyPriceMap
-    )
+    const inquiryPuppySlug = extractPuppySlugFromInquiry(inquiry)
+
+    const allPhonePayments = paymentMap.get(phone) || []
+    const scopedPayments = inquiryPuppySlug
+      ? allPhonePayments.filter((record) => record.puppySlug === inquiryPuppySlug)
+      : allPhonePayments
+
+    const paymentSummary = buildPaymentSummary(scopedPayments, puppyPriceMap)
 
     const latestMessage = groupedMessages[groupedMessages.length - 1]
 
@@ -285,6 +289,28 @@ function buildPaymentSummary(
     puppyName: primary.puppyName || puppy?.name,
     totalPrice,
   }
+}
+
+function extractPuppySlugFromInquiry(inquiry?: PuppyInquiry | null) {
+  const url = inquiry?.puppyPageUrl
+  if (!url) return ''
+
+  try {
+    const parsed = new URL(url)
+    const parts = parsed.pathname.split('/').filter(Boolean)
+    const puppiesIndex = parts.findIndex((part) => part === 'puppies')
+
+    if (puppiesIndex >= 0 && parts[puppiesIndex + 1]) {
+      return parts[puppiesIndex + 1]
+    }
+  } catch {
+    const match = url.match(/\/puppies\/([^/?#]+)/i)
+    if (match?.[1]) {
+      return match[1]
+    }
+  }
+
+  return ''
 }
 
 function normalizePhone(value?: string) {
