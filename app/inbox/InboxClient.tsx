@@ -29,10 +29,10 @@ export default function InboxClient({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isCreatingDepositLink, setIsCreatingDepositLink] = useState(false)
   const [isSendingDepositLink, setIsSendingDepositLink] = useState(false)
-  const [composerError, setComposerError] = useState('')
-  const [depositMessage, setDepositMessage] = useState('')
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false)
   const [isSendingInvoice, setIsSendingInvoice] = useState(false)
+  const [composerError, setComposerError] = useState('')
+  const [depositMessage, setDepositMessage] = useState('')
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 900)
@@ -259,6 +259,47 @@ export default function InboxClient({
     }
   }
 
+  async function createInvoiceLink() {
+    if (!selectedConversation?.inquiry) {
+      throw new Error('No inquiry is attached to this conversation.')
+    }
+
+    const puppyName = selectedConversation.inquiry.puppy?.trim() || ''
+    const puppySlug = extractPuppySlug(selectedConversation.inquiry.puppyPageUrl)
+    const customerName = selectedConversation.inquiry.name?.trim() || ''
+    const customerEmail = selectedConversation.inquiry.email?.trim() || ''
+    const customerPhone = toE164(selectedConversation.phone)
+
+    if (!puppyName || !puppySlug || !customerEmail) {
+      throw new Error('This conversation is missing puppy info, puppy page URL, or email.')
+    }
+
+    const response = await fetch('/api/stripe/create-invoice', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        puppyName,
+        puppySlug,
+        customerName,
+        customerEmail,
+        customerPhone,
+        amountDue: 1200,
+      }),
+    })
+
+    const json = await response.json()
+
+    if (!response.ok || !json.url) {
+      throw new Error(json.error || 'Failed to create invoice')
+    }
+
+    return {
+      url: json.url as string,
+      puppyName,
+      customerName,
+    }
+  }
+
   async function handleCreateDepositLink() {
     setComposerError('')
     setDepositMessage('')
@@ -292,13 +333,12 @@ export default function InboxClient({
 
     try {
       const result = await createDepositLink()
-
       const firstName = result.customerName.trim().split(/\s+/)[0] || 'there'
 
       const smsBody =
-  `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}:\n\n` +
-  `${result.url}\n\n` +
-  `Once the deposit is completed, I’ll mark the puppy as reserved for you.`
+        `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}:\n\n` +
+        `${result.url}\n\n` +
+        `Once the deposit is completed, I’ll mark the puppy as reserved for you.`
 
       const response = await fetch('/api/fluffytail/sms/send', {
         method: 'POST',
@@ -326,9 +366,80 @@ export default function InboxClient({
     }
   }
 
+  async function handleCreateInvoice() {
+    setComposerError('')
+    setDepositMessage('')
+    setIsCreatingInvoice(true)
+
+    try {
+      const result = await createInvoiceLink()
+
+      try {
+        await navigator.clipboard.writeText(result.url)
+        setDepositMessage('Invoice link created, copied to clipboard, and opened in a new tab.')
+      } catch {
+        setDepositMessage('Invoice link created and opened in a new tab.')
+      }
+
+      window.open(result.url, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      console.error(error)
+      setComposerError(error instanceof Error ? error.message : 'Failed to create invoice.')
+    } finally {
+      setIsCreatingInvoice(false)
+    }
+  }
+
+  async function handleSendInvoiceLink() {
+    if (!selectedConversation) return
+
+    setComposerError('')
+    setDepositMessage('')
+    setIsSendingInvoice(true)
+
+    try {
+      const result = await createInvoiceLink()
+      const firstName = result.customerName.trim().split(/\s+/)[0] || 'there'
+
+      const smsBody =
+        `Hi ${firstName}, here is the secure final payment invoice for ${result.puppyName}:\n\n` +
+        `${result.url}\n\n` +
+        `You can use this link to pay the remaining balance.`
+
+      const response = await fetch('/api/fluffytail/sms/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          to: toE164(selectedConversation.phone),
+          body: smsBody,
+          mediaUrls: [],
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to send invoice link')
+      }
+
+      setDepositMessage('Invoice link created and sent by text message.')
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setComposerError(error instanceof Error ? error.message : 'Failed to send invoice link.')
+    } finally {
+      setIsSendingInvoice(false)
+    }
+  }
+
   const canCreateDepositLink =
     !!selectedConversation?.inquiry?.puppy?.trim() &&
     !!extractPuppySlug(selectedConversation?.inquiry?.puppyPageUrl)
+
+  const canCreateInvoice =
+    !!selectedConversation?.inquiry?.puppy?.trim() &&
+    !!extractPuppySlug(selectedConversation?.inquiry?.puppyPageUrl) &&
+    !!selectedConversation?.inquiry?.email?.trim()
 
   return (
     <main className="wrap">
@@ -716,7 +827,9 @@ export default function InboxClient({
                           isSending ||
                           isDeleting ||
                           isCreatingDepositLink ||
-                          isSendingDepositLink
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
                         }
                       >
                         Gallery
@@ -731,7 +844,9 @@ export default function InboxClient({
                           isSending ||
                           isDeleting ||
                           isCreatingDepositLink ||
-                          isSendingDepositLink
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
                         }
                       >
                         Camera
@@ -747,7 +862,9 @@ export default function InboxClient({
                           isSending ||
                           isDeleting ||
                           isCreatingDepositLink ||
-                          isSendingDepositLink
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
                         }
                       >
                         {isCreatingDepositLink ? 'Creating Link...' : 'Create Deposit Link'}
@@ -763,10 +880,48 @@ export default function InboxClient({
                           isSending ||
                           isDeleting ||
                           isCreatingDepositLink ||
-                          isSendingDepositLink
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
                         }
                       >
                         {isSendingDepositLink ? 'Sending Deposit Link...' : 'Send Deposit Link'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleCreateInvoice}
+                        disabled={
+                          !canCreateInvoice ||
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
+                        }
+                      >
+                        {isCreatingInvoice ? 'Creating Invoice...' : 'Create Invoice'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={handleSendInvoiceLink}
+                        disabled={
+                          !canCreateInvoice ||
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
+                        }
+                      >
+                        {isSendingInvoice ? 'Sending Invoice...' : 'Send Invoice Link'}
                       </button>
 
                       <button
@@ -778,7 +933,9 @@ export default function InboxClient({
                           isSending ||
                           isDeleting ||
                           isCreatingDepositLink ||
-                          isSendingDepositLink
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
                         }
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
@@ -792,7 +949,9 @@ export default function InboxClient({
                           isSending ||
                           isDeleting ||
                           isCreatingDepositLink ||
-                          isSendingDepositLink
+                          isSendingDepositLink ||
+                          isCreatingInvoice ||
+                          isSendingInvoice
                         }
                       >
                         {isUploading
@@ -1076,4 +1235,3 @@ const conversationDateStyle: React.CSSProperties = {
   opacity: 0.65,
   whiteSpace: 'nowrap',
 }
-
