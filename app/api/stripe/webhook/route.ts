@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
 
     if (paymentType === 'deposit' && puppySlug) {
       const existing = await sanity.fetch<{_id: string} | null>(
-        `*[_type == "paymentRecord" && stripeCheckoutSessionId == $sessionId][0]{_id}`,
-        {sessionId: session.id}
+        `*[_type == "paymentRecord" && stripeCheckoutSessionId == $sessionId][0]{_id}` as string,
+        {sessionId: session.id} as Record<string, string>
       )
 
       if (!existing) {
@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
       }
 
       const puppy = await sanity.fetch<{_id: string} | null>(
-        `*[_type == "puppy" && slug.current == $slug][0]{_id}`,
-        {slug: puppySlug}
+        `*[_type == "puppy" && slug.current == $slug][0]{_id}` as string,
+        {slug: puppySlug} as Record<string, string>
       )
 
       if (puppy?._id) {
@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
 
       if (token) {
         const depositLink = await sanity.fetch<{_id: string} | null>(
-          `*[_type == "depositLink" && token == $token][0]{_id}`,
-          {token}
+          `*[_type == "depositLink" && token == $token][0]{_id}` as string,
+          {token} as Record<string, string>
         )
 
         if (depositLink?._id) {
