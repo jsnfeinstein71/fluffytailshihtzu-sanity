@@ -16,28 +16,28 @@ type PuppyPricing = {
   name?: string
   overridePrice?: number
   litterPrice?: number
-  litterDeposit?: number
 }
 
 type PaymentRecord = {
   amountPaid?: number
   paymentStatus?: string
+  paymentType?: string
 }
 
 const puppyPricingQuery = `*[_type == "puppy" && slug.current == $slug][0]{
   name,
   overridePrice,
-  "litterPrice": litter->price,
-  "litterDeposit": litter->deposit
+  "litterPrice": litter->price
 }`
 
 const paidRecordsQuery = `*[
   _type == "paymentRecord" &&
   puppySlug == $slug &&
   paymentStatus == "paid"
-]{
+] | order(createdAt asc){
   amountPaid,
-  paymentStatus
+  paymentStatus,
+  paymentType
 }`
 
 export async function POST(req: NextRequest) {
@@ -103,12 +103,23 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Full puppy price
     await stripe.invoiceItems.create({
       customer: customer.id,
       currency: 'usd',
-      amount: Math.round(amountDue * 100),
-      description: `Remaining balance for ${puppyName}`,
+      amount: Math.round(totalPrice * 100),
+      description: `${puppyName} total price`,
     })
+
+    // Payments already made (deposit and any later payments)
+    if (totalPaid > 0) {
+      await stripe.invoiceItems.create({
+        customer: customer.id,
+        currency: 'usd',
+        amount: -Math.round(totalPaid * 100),
+        description: `Payments already received`,
+      })
+    }
 
     const invoice = await stripe.invoices.create({
       customer: customer.id,
@@ -155,9 +166,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       url: finalized.hosted_invoice_url,
-      amountDue,
       totalPrice,
       totalPaid,
+      amountDue,
     })
   } catch (error) {
     console.error('Failed to create invoice', error)
