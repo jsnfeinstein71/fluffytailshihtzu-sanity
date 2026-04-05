@@ -12,19 +12,84 @@ const sanity = createClient({
   useCdn: false,
 })
 
+type PuppyPricing = {
+  name?: string
+  overridePrice?: number
+  litterPrice?: number
+  litterDeposit?: number
+}
+
+type PaymentRecord = {
+  amountPaid?: number
+  paymentStatus?: string
+}
+
+const puppyPricingQuery = `*[_type == "puppy" && slug.current == $slug][0]{
+  name,
+  overridePrice,
+  "litterPrice": litter->price,
+  "litterDeposit": litter->deposit
+}`
+
+const paidRecordsQuery = `*[
+  _type == "paymentRecord" &&
+  puppySlug == $slug &&
+  paymentStatus == "paid"
+]{
+  amountPaid,
+  paymentStatus
+}`
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    const puppyName = String(body.puppyName || '').trim()
     const puppySlug = String(body.puppySlug || '').trim()
     const customerName = String(body.customerName || '').trim()
     const customerEmail = String(body.customerEmail || '').trim()
     const customerPhone = String(body.customerPhone || '').trim()
-    const amountDue = Number(body.amountDue || 0)
 
-    if (!puppyName || !puppySlug || !customerEmail || amountDue <= 0) {
+    if (!puppySlug || !customerEmail) {
       return NextResponse.json({error: 'Missing invoice info'}, {status: 400})
+    }
+
+    const puppy = await sanity.fetch<PuppyPricing | null>(
+      puppyPricingQuery as string,
+      {slug: puppySlug} as Record<string, string>
+    )
+
+    if (!puppy) {
+      return NextResponse.json({error: 'Puppy not found'}, {status: 404})
+    }
+
+    const puppyName = String(puppy.name || '').trim()
+    const totalPrice =
+      typeof puppy.overridePrice === 'number'
+        ? puppy.overridePrice
+        : typeof puppy.litterPrice === 'number'
+          ? puppy.litterPrice
+          : 0
+
+    if (!puppyName || totalPrice <= 0) {
+      return NextResponse.json({error: 'Missing puppy pricing'}, {status: 400})
+    }
+
+    const paidRecords = await sanity.fetch<PaymentRecord[]>(
+      paidRecordsQuery as string,
+      {slug: puppySlug} as Record<string, string>
+    )
+
+    const totalPaid = paidRecords.reduce((sum, record) => {
+      return sum + (typeof record.amountPaid === 'number' ? record.amountPaid : 0)
+    }, 0)
+
+    const amountDue = Math.max(totalPrice - totalPaid, 0)
+
+    if (amountDue <= 0) {
+      return NextResponse.json(
+        {error: 'This puppy has already been paid in full.'},
+        {status: 400}
+      )
     }
 
     const customer = await stripe.customers.create({
@@ -42,7 +107,7 @@ export async function POST(req: NextRequest) {
       customer: customer.id,
       currency: 'usd',
       amount: Math.round(amountDue * 100),
-      description: `Final balance for ${puppyName}`,
+      description: `Remaining balance for ${puppyName}`,
     })
 
     const invoice = await stripe.invoices.create({
@@ -58,6 +123,9 @@ export async function POST(req: NextRequest) {
         customerEmail,
         customerPhone,
         paymentType: 'invoice',
+        totalPrice: String(totalPrice),
+        totalPaid: String(totalPaid),
+        amountDue: String(amountDue),
       },
     })
 
@@ -87,6 +155,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       url: finalized.hosted_invoice_url,
+      amountDue,
+      totalPrice,
+      totalPaid,
     })
   } catch (error) {
     console.error('Failed to create invoice', error)
