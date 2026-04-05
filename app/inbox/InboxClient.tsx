@@ -1311,6 +1311,17 @@ function formatPaymentSummary(paymentSummary?: {
   return parts.join(' • ') || 'Payment activity'
 }
 
+function formatDateTime(value?: string) {
+  if (!value) return 'Unknown time'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
 function formatShortDate(value?: string) {
   if (!value) return ''
   const date = new Date(value)
