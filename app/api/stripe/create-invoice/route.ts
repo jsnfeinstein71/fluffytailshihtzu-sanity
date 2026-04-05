@@ -22,6 +22,7 @@ type PaymentRecord = {
   amountPaid?: number
   paymentStatus?: string
   paymentType?: string
+  createdAt?: string
 }
 
 const puppyPricingQuery = `*[_type == "puppy" && slug.current == $slug][0]{
@@ -37,7 +38,8 @@ const paidRecordsQuery = `*[
 ] | order(createdAt asc){
   amountPaid,
   paymentStatus,
-  paymentType
+  paymentType,
+  createdAt
 }`
 
 export async function POST(req: NextRequest) {
@@ -103,7 +105,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Full puppy price
     await stripe.invoiceItems.create({
       customer: customer.id,
       currency: 'usd',
@@ -111,13 +112,17 @@ export async function POST(req: NextRequest) {
       description: `${puppyName} total price`,
     })
 
-    // Payments already made (deposit and any later payments)
-    if (totalPaid > 0) {
+    for (const record of paidRecords) {
+      const amountPaid =
+        typeof record.amountPaid === 'number' ? record.amountPaid : 0
+
+      if (amountPaid <= 0) continue
+
       await stripe.invoiceItems.create({
         customer: customer.id,
         currency: 'usd',
-        amount: -Math.round(totalPaid * 100),
-        description: `Payments already received`,
+        amount: -Math.round(amountPaid * 100),
+        description: buildPaymentDescription(record),
       })
     }
 
@@ -174,4 +179,28 @@ export async function POST(req: NextRequest) {
     console.error('Failed to create invoice', error)
     return NextResponse.json({error: 'Failed to create invoice'}, {status: 500})
   }
+}
+
+function buildPaymentDescription(record: PaymentRecord) {
+  const label =
+    record.paymentType === 'deposit'
+      ? 'Deposit received'
+      : record.paymentType === 'invoice'
+        ? 'Invoice payment received'
+        : 'Payment received'
+
+  const dateText = formatShortDate(record.createdAt)
+  return dateText ? `${label} (${dateText})` : label
+}
+
+function formatShortDate(value?: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
 }
