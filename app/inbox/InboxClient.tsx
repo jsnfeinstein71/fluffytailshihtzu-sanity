@@ -28,6 +28,7 @@ export default function InboxClient({
   const [isSending, setIsSending] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isCreatingDepositLink, setIsCreatingDepositLink] = useState(false)
+  const [isSendingDepositLink, setIsSendingDepositLink] = useState(false)
   const [composerError, setComposerError] = useState('')
   const [depositMessage, setDepositMessage] = useState('')
 
@@ -146,7 +147,7 @@ export default function InboxClient({
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          to: selectedConversation.phone,
+          to: toE164(selectedConversation.phone),
           body: trimmedBody,
           mediaUrls: uploadedImages.map((image) => image.url),
         }),
@@ -214,10 +215,9 @@ export default function InboxClient({
     }
   }
 
-  async function handleCreateDepositLink() {
+  async function createDepositLink() {
     if (!selectedConversation?.inquiry) {
-      setComposerError('No inquiry is attached to this conversation.')
-      return
+      throw new Error('No inquiry is attached to this conversation.')
     }
 
     const puppyName = selectedConversation.inquiry.puppy?.trim() || ''
@@ -228,49 +228,99 @@ export default function InboxClient({
     const customerPhone = toE164(selectedConversation.phone)
 
     if (!puppyName || !puppySlug) {
-      setComposerError('This conversation is missing puppy info or puppy page URL.')
-      return
+      throw new Error('This conversation is missing puppy info or puppy page URL.')
     }
 
+    const response = await fetch('/api/stripe/create-deposit-session', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        puppyName,
+        puppySlug,
+        litterTitle,
+        customerName,
+        customerEmail,
+        customerPhone,
+      }),
+    })
+
+    const json = await response.json()
+
+    if (!response.ok || !json.url) {
+      throw new Error(json.error || 'Failed to create deposit link')
+    }
+
+    return {
+      url: json.url as string,
+      puppyName,
+      customerName,
+    }
+  }
+
+  async function handleCreateDepositLink() {
     setComposerError('')
     setDepositMessage('')
     setIsCreatingDepositLink(true)
 
     try {
-      const response = await fetch('/api/stripe/create-deposit-session', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          puppyName,
-          puppySlug,
-          litterTitle,
-          customerName,
-          customerEmail,
-          customerPhone,
-        }),
-      })
-
-      const json = await response.json()
-
-      if (!response.ok || !json.url) {
-        throw new Error(json.error || 'Failed to create deposit link')
-      }
-
-      const depositUrl = json.url as string
+      const result = await createDepositLink()
 
       try {
-        await navigator.clipboard.writeText(depositUrl)
+        await navigator.clipboard.writeText(result.url)
         setDepositMessage('Deposit link created, copied to clipboard, and opened in a new tab.')
       } catch {
         setDepositMessage('Deposit link created and opened in a new tab.')
       }
 
-      window.open(depositUrl, '_blank', 'noopener,noreferrer')
+      window.open(result.url, '_blank', 'noopener,noreferrer')
     } catch (error) {
       console.error(error)
-      setComposerError('Failed to create deposit link.')
+      setComposerError(error instanceof Error ? error.message : 'Failed to create deposit link.')
     } finally {
       setIsCreatingDepositLink(false)
+    }
+  }
+
+  async function handleSendDepositLink() {
+    if (!selectedConversation) return
+
+    setComposerError('')
+    setDepositMessage('')
+    setIsSendingDepositLink(true)
+
+    try {
+      const result = await createDepositLink()
+
+      const firstName =
+        result.customerName.trim().split(/\s+/)[0] || 'there'
+
+      const smsBody =
+        `Hi ${firstName}, here is the secure deposit link for ${result.puppyName}. ` +
+        `Once the deposit is completed, I’ll mark the puppy as reserved for you: ${result.url}`
+
+      const response = await fetch('/api/fluffytail/sms/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          to: toE164(selectedConversation.phone),
+          body: smsBody,
+          mediaUrls: [],
+        }),
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || 'Failed to send deposit link')
+      }
+
+      setDepositMessage('Deposit link created and sent by text message.')
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setComposerError(error instanceof Error ? error.message : 'Failed to send deposit link.')
+    } finally {
+      setIsSendingDepositLink(false)
     }
   }
 
@@ -430,7 +480,6 @@ export default function InboxClient({
                   style={{
                     borderBottom: '1px solid rgba(0,0,0,0.08)',
                     display: 'flex',
-                    alignItems: 'space-between',
                     justifyContent: 'space-between',
                     gap: '12px',
                   }}
@@ -655,7 +704,11 @@ export default function InboxClient({
                         className="btn"
                         onClick={() => galleryInputRef.current?.click()}
                         disabled={
-                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink
                         }
                       >
                         Gallery
@@ -666,7 +719,11 @@ export default function InboxClient({
                         className="btn"
                         onClick={() => cameraInputRef.current?.click()}
                         disabled={
-                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink
                         }
                       >
                         Camera
@@ -681,7 +738,8 @@ export default function InboxClient({
                           isUploading ||
                           isSending ||
                           isDeleting ||
-                          isCreatingDepositLink
+                          isCreatingDepositLink ||
+                          isSendingDepositLink
                         }
                       >
                         {isCreatingDepositLink ? 'Creating Link...' : 'Create Deposit Link'}
@@ -690,9 +748,29 @@ export default function InboxClient({
                       <button
                         type="button"
                         className="btn"
+                        onClick={handleSendDepositLink}
+                        disabled={
+                          !canCreateDepositLink ||
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink
+                        }
+                      >
+                        {isSendingDepositLink ? 'Sending Deposit Link...' : 'Send Deposit Link'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
                         onClick={handleDeleteConversation}
                         disabled={
-                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink
                         }
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
@@ -702,7 +780,11 @@ export default function InboxClient({
                         className="btn btnPrimary"
                         type="submit"
                         disabled={
-                          isUploading || isSending || isDeleting || isCreatingDepositLink
+                          isUploading ||
+                          isSending ||
+                          isDeleting ||
+                          isCreatingDepositLink ||
+                          isSendingDepositLink
                         }
                       >
                         {isUploading
