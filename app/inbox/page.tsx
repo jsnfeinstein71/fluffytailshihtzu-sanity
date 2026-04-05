@@ -34,11 +34,28 @@ export type PuppyInquiry = {
 export type PaymentRecord = {
   _id: string
   puppySlug?: string
+  puppyName?: string
   customerPhone?: string
   paymentType?: string
   paymentStatus?: string
   amountPaid?: number
   createdAt?: string
+}
+
+export type PuppyPrice = {
+  slug?: string
+  name?: string
+  overridePrice?: number
+  litterPrice?: number
+}
+
+export type PaymentSummary = {
+  records: PaymentRecord[]
+  totalPaid: number
+  remainingBalance?: number
+  puppySlug?: string
+  puppyName?: string
+  totalPrice?: number
 }
 
 export type Conversation = {
@@ -47,7 +64,7 @@ export type Conversation = {
   latestAt?: string
   preview?: string
   inquiry?: PuppyInquiry | null
-  paymentRecord?: PaymentRecord | null
+  paymentSummary?: PaymentSummary | null
 }
 
 const smsMessagesQuery = `*[_type == "smsMessage"] | order(receivedAt desc){
@@ -80,6 +97,7 @@ const puppyInquiriesQuery = `*[_type == "puppyInquiry"] | order(submittedAt desc
 const paymentRecordsQuery = `*[_type == "paymentRecord"] | order(createdAt desc){
   _id,
   puppySlug,
+  puppyName,
   customerPhone,
   paymentType,
   paymentStatus,
@@ -87,14 +105,27 @@ const paymentRecordsQuery = `*[_type == "paymentRecord"] | order(createdAt desc)
   createdAt
 }`
 
+const puppyPricesQuery = `*[_type == "puppy"]{
+  "slug": slug.current,
+  name,
+  overridePrice,
+  "litterPrice": litter->price
+}`
+
 export default async function InboxPage() {
-  const [messages, inquiries, paymentRecords] = await Promise.all([
+  const [messages, inquiries, paymentRecords, puppyPrices] = await Promise.all([
     client.fetch<SmsMessage[]>(smsMessagesQuery),
     client.fetch<PuppyInquiry[]>(puppyInquiriesQuery),
     client.fetch<PaymentRecord[]>(paymentRecordsQuery),
+    client.fetch<PuppyPrice[]>(puppyPricesQuery),
   ])
 
-  const conversations = buildConversations(messages, inquiries, paymentRecords)
+  const conversations = buildConversations(
+    messages,
+    inquiries,
+    paymentRecords,
+    puppyPrices
+  )
 
   return <InboxClient conversations={conversations} />
 }
@@ -102,10 +133,11 @@ export default async function InboxPage() {
 function buildConversations(
   messages: SmsMessage[],
   inquiries: PuppyInquiry[],
-  paymentRecords: PaymentRecord[]
+  paymentRecords: PaymentRecord[],
+  puppyPrices: PuppyPrice[]
 ): Conversation[] {
   const inquiryMap = new Map<string, PuppyInquiry>()
-  const paymentMap = new Map<string, PaymentRecord>()
+  const paymentMap = new Map<string, PaymentRecord[]>()
 
   for (const inquiry of inquiries) {
     const phone = normalizePhone(inquiry.phone)
@@ -116,8 +148,17 @@ function buildConversations(
 
   for (const payment of paymentRecords) {
     const phone = normalizePhone(payment.customerPhone)
-    if (phone && !paymentMap.has(phone)) {
-      paymentMap.set(phone, payment)
+    if (!phone) continue
+
+    const existing = paymentMap.get(phone) || []
+    existing.push(payment)
+    paymentMap.set(phone, existing)
+  }
+
+  const puppyPriceMap = new Map<string, PuppyPrice>()
+  for (const puppy of puppyPrices) {
+    if (puppy.slug) {
+      puppyPriceMap.set(puppy.slug, puppy)
     }
   }
 
@@ -163,12 +204,16 @@ function buildConversations(
       })
 
     const inquiry = inquiryMap.get(phone) || null
-    const paymentRecord = paymentMap.get(phone) || null
+    const paymentSummary = buildPaymentSummary(
+      paymentMap.get(phone) || [],
+      puppyPriceMap
+    )
+
     const latestMessage = groupedMessages[groupedMessages.length - 1]
 
     const latestAt =
       latestMessage?.receivedAt ||
-      paymentRecord?.createdAt ||
+      paymentSummary?.records[0]?.createdAt ||
       inquiry?.submittedAt ||
       undefined
 
@@ -184,7 +229,7 @@ function buildConversations(
       latestAt,
       preview,
       inquiry,
-      paymentRecord,
+      paymentSummary,
     }
   })
 
@@ -193,6 +238,53 @@ function buildConversations(
     const bTime = b.latestAt ? new Date(b.latestAt).getTime() : 0
     return bTime - aTime
   })
+}
+
+function buildPaymentSummary(
+  records: PaymentRecord[],
+  puppyPriceMap: Map<string, PuppyPrice>
+): PaymentSummary | null {
+  if (!records.length) return null
+
+  const paidRecords = records
+    .filter((record) => record.paymentStatus === 'paid')
+    .sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return bTime - aTime
+    })
+
+  if (!paidRecords.length) {
+    return {
+      records,
+      totalPaid: 0,
+      puppySlug: records[0]?.puppySlug,
+      puppyName: records[0]?.puppyName,
+    }
+  }
+
+  const primary = paidRecords[0]
+  const totalPaid = paidRecords.reduce((sum, record) => {
+    return sum + (typeof record.amountPaid === 'number' ? record.amountPaid : 0)
+  }, 0)
+
+  const puppy = primary.puppySlug ? puppyPriceMap.get(primary.puppySlug) : undefined
+  const totalPrice =
+    typeof puppy?.overridePrice === 'number'
+      ? puppy.overridePrice
+      : typeof puppy?.litterPrice === 'number'
+        ? puppy.litterPrice
+        : undefined
+
+  return {
+    records: paidRecords,
+    totalPaid,
+    remainingBalance:
+      typeof totalPrice === 'number' ? Math.max(totalPrice - totalPaid, 0) : undefined,
+    puppySlug: primary.puppySlug,
+    puppyName: primary.puppyName || puppy?.name,
+    totalPrice,
+  }
 }
 
 function normalizePhone(value?: string) {
