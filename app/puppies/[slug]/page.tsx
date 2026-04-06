@@ -36,7 +36,7 @@ const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
   status,
   color,
   notes,
-  "photoUrl": photo.asset->url,
+  "photoUrl": mainImage.asset->url,
   "birthDate": litter->birthDate,
   overridePrice,
   "litterTitle": litter->title,
