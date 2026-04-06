@@ -101,6 +101,7 @@ export default async function HomePage() {
     <main className="wrap">
       <div className="nav navPageLinks" style={{marginBottom: '16px'}}>
         <a className="btn" href="/about">About</a>
+        <a className="btn" href="/the-breed">The Breed</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
         <a className="btn" href="/contact">Contact</a>
