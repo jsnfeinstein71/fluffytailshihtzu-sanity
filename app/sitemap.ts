@@ -1,9 +1,19 @@
 import type { MetadataRoute } from 'next'
+import { client } from '@/sanity/lib/client'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+type PuppySlug = {
+  slug?: string
+}
+
+const puppiesQuery = `*[_type == "puppy" && defined(slug.current)]{
+  "slug": slug.current
+}`
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://www.fluffytailshihtzu.com'
+  const puppies = await client.fetch<PuppySlug[]>(puppiesQuery)
 
-  return [
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${base}/`,
       lastModified: new Date(),
@@ -12,6 +22,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${base}/about`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${base}/the-breed`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${base}/puppy-resources`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${base}/pricing`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
@@ -34,12 +62,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
-    {
-      url: `${base}/studio`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.1,
-    },
   ]
+
+  const puppyPages: MetadataRoute.Sitemap = puppies.map((puppy) => ({
+    url: `${base}/puppies/${puppy.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }))
+
+  return [...staticPages, ...puppyPages]
 }
 
