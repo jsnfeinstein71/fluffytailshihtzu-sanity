@@ -1,5 +1,4 @@
 import '../home.css'
-import WaitlistModal from '../components/WaitlistModal'
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
@@ -11,14 +10,15 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function TheBreedPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
+  await client.fetch<SiteSettings>(siteSettingsQuery)
 
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
         <a className="btn" href="/">Home</a>
         <a className="btn" href="/about">About</a>
+        <a className="btn" href="/puppy-resources">Puppy Resources</a>
+        <a className="btn" href="/pricing">Pricing</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
         <a className="btn" href="/contact">Contact</a>
@@ -28,14 +28,6 @@ export default async function TheBreedPage() {
         <div className="pill">
           <span className="dot"></span>
           Learn more about the breed
-        </div>
-
-        <div className="nav">
-          <WaitlistModal
-            waitlistUrl={waitlistUrl}
-            buttonLabel="Join the Waitlist"
-            className="btn btnPrimary"
-          />
         </div>
       </div>
 
@@ -203,7 +195,7 @@ export default async function TheBreedPage() {
           <h2 style={{marginTop: 0}}>Interested in a FluffyTail puppy?</h2>
           <p className="lead">
             If you think a Shih Tzu may be the right fit for your home, browse our available
-            puppies or join the waitlist for future updates.
+            puppies or contact us with questions.
           </p>
 
           <div className="ctaRow">
@@ -213,11 +205,9 @@ export default async function TheBreedPage() {
             <a className="btn" href="/upcoming-litters">
               View Upcoming Litters
             </a>
-            <WaitlistModal
-              waitlistUrl={waitlistUrl}
-              buttonLabel="Join the Waitlist"
-              className="btn btnPrimary"
-            />
+            <a className="btn btnPrimary" href="/contact">
+              Contact
+            </a>
           </div>
         </div>
       </div>
@@ -228,3 +218,4 @@ export default async function TheBreedPage() {
     </main>
   )
 }
+
