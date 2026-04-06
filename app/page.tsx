@@ -2,14 +2,12 @@ export const revalidate = 60
 
 import './home.css'
 import {client} from '@/sanity/lib/client'
-import WaitlistModal from './components/WaitlistModal'
 
 type SiteSettings = {
   title?: string
   homepageHeadline?: string
   homepageIntro?: string
   goodDogUrl?: string
-  waitlistUrl?: string
   serviceArea?: string
   heroImageUrl?: string
   heroThumb1Url?: string
@@ -49,7 +47,6 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   homepageHeadline,
   homepageIntro,
   goodDogUrl,
-  waitlistUrl,
   serviceArea,
   "heroImageUrl": heroImage.asset->url,
   "heroThumb1Url": heroThumb1.asset->url,
@@ -89,11 +86,15 @@ export default async function HomePage() {
   const activeLitters = await client.fetch<Litter[]>(activeLittersQuery)
   const puppies = await client.fetch<Puppy[]>(puppiesQuery)
 
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
   const heroImageUrl = siteSettings?.heroImageUrl || activeLitters[0]?.groupPhotoUrl
   const heroThumb1Url = siteSettings?.heroThumb1Url || activeLitters[0]?.groupPhotoUrl
   const heroThumb2Url = siteSettings?.heroThumb2Url || activeLitters[0]?.groupPhotoUrl
   const heroThumb3Url = siteSettings?.heroThumb3Url || activeLitters[0]?.groupPhotoUrl
+
+  const availablePuppies = puppies.filter((puppy) => puppy.status === 'available')
+  const hasAvailableMale = availablePuppies.some((puppy) => puppy.sex === 'male')
+  const hasAvailableFemale = availablePuppies.some((puppy) => puppy.sex === 'female')
+  const showWaitlistIndicator = !(hasAvailableMale && hasAvailableFemale)
 
   const matchedPuppies = puppies.filter((puppy) => puppy.status === 'reserved')
 
@@ -112,17 +113,11 @@ export default async function HomePage() {
       <div className="topbar">
         <div className="pill">
           <span className="dot"></span>
-          {activeLitters.length > 0
-            ? `${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'} • Waitlist open`
-            : 'Waitlist open'}
-        </div>
-
-        <div className="nav navActions">
-          <WaitlistModal
-            waitlistUrl={waitlistUrl}
-            buttonLabel="Join the Waitlist"
-            className="btn btnPrimary"
-          />
+          {showWaitlistIndicator
+            ? 'Waitlist open'
+            : activeLitters.length > 0
+              ? `${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'} available`
+              : 'Available puppies'}
         </div>
       </div>
 
@@ -139,7 +134,7 @@ export default async function HomePage() {
       <p className="sublead">
         {activeLitters.length > 0
           ? `We currently have ${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'} on the site. Browse the active litters and puppies below.`
-          : 'Join the waitlist for updates and first notice when puppies are expected or available.'}
+          : 'Browse the site for breed information, puppy resources, and future litter updates.'}
       </p>
 
       <div className="grid">
@@ -184,12 +179,13 @@ export default async function HomePage() {
 
           <div className="pad">
             <div className="ctaRow">
-              <WaitlistModal
-                waitlistUrl={waitlistUrl}
-                buttonLabel="Join the Waitlist"
-                className="btn btnPrimary"
-              />
-              <span className="badge">No spam • No pressure</span>
+              <a className="btn btnPrimary" href="/available-puppies">
+                View Available Puppies
+              </a>
+              <a className="btn" href="/contact">
+                Contact
+              </a>
+              <span className="badge">Home-raised • Family environment</span>
             </div>
 
             <div className="divider"></div>
@@ -215,9 +211,9 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div>
-                  <div className="q">How do I hear about new puppies first?</div>
+                  <div className="q">How do I get in touch?</div>
                   <div className="a">
-                    Join the waitlist and we will reach out when puppies are expected or available.
+                    Browse current puppies and use the contact page or puppy inquiry options for questions.
                   </div>
                 </div>
               </div>
@@ -237,11 +233,9 @@ export default async function HomePage() {
             </div>
 
             <div className="ctaRow">
-              <WaitlistModal
-                waitlistUrl={waitlistUrl}
-                buttonLabel="Join the Waitlist"
-                className="btn btnPrimary"
-              />
+              <a className="btn btnPrimary" href="/available-puppies">
+                Browse Puppies
+              </a>
               <a className="btn" href="/contact">
                 Contact
               </a>
@@ -250,7 +244,7 @@ export default async function HomePage() {
             <div className="divider"></div>
 
             <p className="lead" style={{margin: 0}}>
-              Visit the contact page for questions, waitlist info, and next steps.
+              Visit the contact page for questions, inquiry options, and next steps.
             </p>
           </div>
         </div>
@@ -344,7 +338,7 @@ export default async function HomePage() {
           <div className="pad">
             <h2 style={{marginTop: 0}}>No active litters listed</h2>
             <p className="lead" style={{marginBottom: 0}}>
-              Join the waitlist for updates and first notice when puppies are expected or available.
+              Browse the site for breed information, resources, and future litter updates.
             </p>
           </div>
         </div>
@@ -459,4 +453,5 @@ function formatCurrency(value: number) {
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(value)
-      }
+}
+
