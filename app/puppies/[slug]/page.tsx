@@ -103,19 +103,24 @@ export default async function PuppyDetailPage({
             </h1>
 
             <div className="ctaRow" style={{marginTop: 0, marginBottom: '14px'}}>
-              <span className="statusBadge">
-                {getReadyDate(puppy.birthDate)
-                  ? `Ready ${getReadyDate(puppy.birthDate)}`
-                  : formatPuppyStatus(puppy.status)}
+              <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                {formatPuppyStatus(puppy.status)}
               </span>
+
               <span className="badge">
                 {getAgeInWeeks(puppy.birthDate)} week
                 {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old
               </span>
+
               <span className="badge">
                 {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
               </span>
+
               {puppy.color ? <span className="badge">{puppy.color}</span> : null}
+
+              {getReadyDate(puppy.birthDate) ? (
+                <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
+              ) : null}
             </div>
 
             {puppy.litterTitle ? <p className="lead">Litter: {puppy.litterTitle}</p> : null}
