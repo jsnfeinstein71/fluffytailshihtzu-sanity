@@ -1,5 +1,4 @@
 import '../home.css'
-import WaitlistModal from '../components/WaitlistModal'
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
@@ -11,8 +10,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function PricingPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
+  await client.fetch<SiteSettings>(siteSettingsQuery)
 
   return (
     <main className="wrap">
@@ -30,14 +28,6 @@ export default async function PricingPage() {
         <div className="pill">
           <span className="dot"></span>
           Pricing, deposits, and next steps
-        </div>
-
-        <div className="nav">
-          <WaitlistModal
-            waitlistUrl={waitlistUrl}
-            buttonLabel="Join the Waitlist"
-            className="btn btnPrimary"
-          />
         </div>
       </div>
 
@@ -124,7 +114,7 @@ export default async function PricingPage() {
         <div className="pad">
           <h2 style={{marginTop: 0}}>Ready to take the next step?</h2>
           <p className="lead">
-            Browse current puppies, review active litters, or join the waitlist for future updates.
+            Browse current puppies, review active litters, or contact us with questions.
           </p>
 
           <div className="ctaRow">
@@ -134,11 +124,9 @@ export default async function PricingPage() {
             <a className="btn" href="/upcoming-litters">
               View Upcoming Litters
             </a>
-            <WaitlistModal
-              waitlistUrl={waitlistUrl}
-              buttonLabel="Join the Waitlist"
-              className="btn btnPrimary"
-            />
+            <a className="btn btnPrimary" href="/contact">
+              Contact
+            </a>
           </div>
         </div>
       </div>
@@ -149,3 +137,4 @@ export default async function PricingPage() {
     </main>
   )
 }
+
