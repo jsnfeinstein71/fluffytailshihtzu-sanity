@@ -2,7 +2,6 @@ export const revalidate = 60
 
 import '../home.css'
 import {client} from '@/sanity/lib/client'
-import WaitlistModal from '../components/WaitlistModal'
 
 type SiteSettings = {
   goodDogUrl?: string
@@ -73,8 +72,6 @@ export default async function AvailablePuppiesPage() {
   const litters = await client.fetch<Litter[]>(littersQuery)
   const puppies = await client.fetch<Puppy[]>(puppiesQuery)
 
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
-
   const activeLitters = litters.filter(
     (litter) => litter.status === 'current' || litter.status === 'active'
   )
@@ -89,6 +86,9 @@ export default async function AvailablePuppiesPage() {
       <div className="nav" style={{marginBottom: '16px'}}>
         <a className="btn" href="/">Home</a>
         <a className="btn" href="/about">About</a>
+        <a className="btn" href="/the-breed">The Breed</a>
+        <a className="btn" href="/puppy-resources">Puppy Resources</a>
+        <a className="btn" href="/pricing">Pricing</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
         <a className="btn" href="/contact">Contact</a>
       </div>
@@ -98,15 +98,7 @@ export default async function AvailablePuppiesPage() {
           <span className="dot"></span>
           {activeLitters.length > 0
             ? `${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'}`
-            : 'Waitlist open'}
-        </div>
-
-        <div className="nav">
-          <WaitlistModal
-            waitlistUrl={waitlistUrl}
-            buttonLabel="Join the Waitlist"
-            className="btn btnPrimary"
-          />
+            : 'No active litters listed'}
         </div>
       </div>
 
@@ -147,13 +139,8 @@ export default async function AvailablePuppiesPage() {
 
               <div className="pad">
                 <div className="ctaRow" style={{marginTop: 0}}>
-                  <WaitlistModal
-                    waitlistUrl={waitlistUrl}
-                    buttonLabel="Join the Waitlist"
-                    className="btn btnPrimary"
-                  />
-                  <a className="btn" href="/contact">
-                    Contact
+                  <a className="btn btnPrimary" href="/contact">
+                    Contact About This Litter
                   </a>
                   <span className="badge">Active litter</span>
                 </div>
@@ -228,7 +215,7 @@ export default async function AvailablePuppiesPage() {
           <div className="pad">
             <h2 style={{marginTop: 0}}>No active litters listed</h2>
             <p className="lead" style={{marginBottom: 0}}>
-              Join the waitlist for updates and first notice when puppies are expected or available.
+              Check back soon or use the contact page if you have questions.
             </p>
           </div>
         </div>
@@ -380,3 +367,4 @@ function formatCurrency(value: number) {
     maximumFractionDigits: 0,
   }).format(value)
 }
+
