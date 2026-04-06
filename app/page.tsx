@@ -258,6 +258,7 @@ export default async function HomePage() {
       {activeLitters.length > 0 ? (
         activeLitters.map((litter) => {
           const litterPuppies = puppies.filter((puppy) => puppy.litterId === litter._id)
+          const availableLitterPuppies = litterPuppies.filter((puppy) => puppy.status !== 'reserved')
 
           return (
             <div className="card section" style={{marginTop: '18px'}} key={litter._id}>
@@ -284,8 +285,8 @@ export default async function HomePage() {
               </div>
 
               <div className="puppyGrid">
-                {litterPuppies.length > 0 ? (
-                  litterPuppies.map((puppy) => (
+                {availableLitterPuppies.length > 0 ? (
+                  availableLitterPuppies.map((puppy) => (
                     <a
                       className="puppyCard puppyCardLink"
                       key={puppy._id}
@@ -326,7 +327,7 @@ export default async function HomePage() {
                   ))
                 ) : (
                   <div style={{padding: '12px', color: '#5a6472'}}>
-                    No puppies listed yet for this litter.
+                    No available puppies listed yet for this litter.
                   </div>
                 )}
               </div>
