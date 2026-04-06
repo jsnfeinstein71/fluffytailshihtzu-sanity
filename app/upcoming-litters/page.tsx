@@ -2,7 +2,6 @@ export const revalidate = 60
 
 import '../home.css'
 import {client} from '@/sanity/lib/client'
-import WaitlistModal from '../components/WaitlistModal'
 
 type SiteSettings = {
   goodDogUrl?: string
@@ -41,20 +40,17 @@ const upcomingLittersQuery = `*[_type == "litter" && status in ["planned", "upco
 }`
 
 export default async function UpcomingLittersPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
+  await client.fetch<SiteSettings>(siteSettingsQuery)
   const litters = await client.fetch<Litter[]>(upcomingLittersQuery)
-
-  const goodDogUrl =
-    siteSettings?.goodDogUrl ||
-    'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama'
-
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
 
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
         <a className="btn" href="/">Home</a>
         <a className="btn" href="/about">About</a>
+        <a className="btn" href="/the-breed">The Breed</a>
+        <a className="btn" href="/puppy-resources">Puppy Resources</a>
+        <a className="btn" href="/pricing">Pricing</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/contact">Contact</a>
       </div>
@@ -64,38 +60,26 @@ export default async function UpcomingLittersPage() {
           <span className="dot"></span>
           Future updates and active litters
         </div>
-
-        <div className="nav">
-          <WaitlistModal
-            waitlistUrl={waitlistUrl}
-            buttonLabel="Join the Waitlist"
-            className="btn btnPrimary"
-          />
-          <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-            View on GoodDog
-          </a>
-        </div>
       </div>
 
       <h1 className="h1">Upcoming Litters</h1>
 
       <p className="lead">
-        This is where FluffyTail shares active and upcoming litter information. Families on the
-        waitlist hear first when timing is known and puppies become available.
+        This is where FluffyTail shares active and upcoming litter information. Families can check here
+        for timing, updates, and litter details as information becomes available.
       </p>
 
       <div className="grid">
         <div className="card">
           <div className="pad">
             <div className="section" style={{marginTop: 0}}>
-              <h2>How the waitlist works</h2>
+              <h2>How updates work</h2>
               <p className="lead">
-                The waitlist is the easiest way to hear about future litters and new puppy
-                availability directly from FluffyTail.
+                We share litter information here as it becomes available. Active litters and upcoming
+                litters may both appear on this page.
               </p>
               <p className="lead" style={{marginBottom: 0}}>
-                We use it to share updates when timing is known and when puppies are ready to be
-                shown.
+                As details become clearer, puppy pages and active litter sections across the site are updated.
               </p>
             </div>
 
@@ -105,22 +89,21 @@ export default async function UpcomingLittersPage() {
               <h2>What to expect</h2>
               <div className="qa">
                 <div>
-                  <div className="q">Early notice</div>
-                  <div className="a">
-                    Families on the waitlist can hear about new litters before browsing casually.
-                  </div>
-                </div>
-                <div>
                   <div className="q">Clear updates</div>
                   <div className="a">
-                    As photos and details become available, we update the site and share more
-                    information.
+                    As photos and details become available, we update the site and share more information.
                   </div>
                 </div>
                 <div>
                   <div className="q">Simple process</div>
                   <div className="a">
                     The goal is to keep everything straightforward, personal, and easy to follow.
+                  </div>
+                </div>
+                <div>
+                  <div className="q">Questions welcome</div>
+                  <div className="a">
+                    If you are trying to plan ahead, the contact page is the best place to reach out.
                   </div>
                 </div>
               </div>
@@ -133,27 +116,24 @@ export default async function UpcomingLittersPage() {
             <h2 className="panelTitle">At a glance</h2>
             <div className="meta">
               <span>📍 Mobile, Alabama area</span>
-              <span>📬 Waitlist updates available</span>
               <span>🐶 Active and future litters</span>
+              <span>📬 Questions welcome</span>
               <span>🌎 Primarily Southeast, with broader reach</span>
             </div>
 
             <div className="ctaRow">
-              <WaitlistModal
-                waitlistUrl={waitlistUrl}
-                buttonLabel="Join the Waitlist"
-                className="btn btnPrimary"
-              />
-              <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-                GoodDog profile
+              <a className="btn btnPrimary" href="/available-puppies">
+                View Available Puppies
+              </a>
+              <a className="btn" href="/contact">
+                Contact
               </a>
             </div>
 
             <div className="divider"></div>
 
             <p className="lead" style={{margin: 0}}>
-              Check back here for updates on active and future litters as information becomes
-              available.
+              Check back here for updates on active and future litters as information becomes available.
             </p>
           </div>
         </div>
@@ -226,3 +206,4 @@ function formatCurrency(value: number) {
     maximumFractionDigits: 0,
   }).format(value)
 }
+
