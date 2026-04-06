@@ -1,5 +1,4 @@
 import '../home.css'
-import WaitlistModal from '../components/WaitlistModal'
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
@@ -11,8 +10,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function PuppyResourcesPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
+  await client.fetch<SiteSettings>(siteSettingsQuery)
 
   return (
     <main className="wrap">
@@ -20,6 +18,7 @@ export default async function PuppyResourcesPage() {
         <a className="btn" href="/">Home</a>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/the-breed">The Breed</a>
+        <a className="btn" href="/pricing">Pricing</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
         <a className="btn" href="/contact">Contact</a>
@@ -29,14 +28,6 @@ export default async function PuppyResourcesPage() {
         <div className="pill">
           <span className="dot"></span>
           Helpful puppy information
-        </div>
-
-        <div className="nav">
-          <WaitlistModal
-            waitlistUrl={waitlistUrl}
-            buttonLabel="Join the Waitlist"
-            className="btn btnPrimary"
-          />
         </div>
       </div>
 
@@ -144,8 +135,8 @@ export default async function PuppyResourcesPage() {
         <div className="pad">
           <h2 style={{marginTop: 0}}>Questions before bringing a puppy home?</h2>
           <p className="lead">
-            If you’re still deciding or want to ask about availability, you can browse current puppies,
-            review upcoming litters, or join the waitlist.
+            If you’re still deciding or want to ask about availability, you can browse current puppies
+            or review upcoming litters.
           </p>
 
           <div className="ctaRow">
@@ -155,11 +146,9 @@ export default async function PuppyResourcesPage() {
             <a className="btn" href="/upcoming-litters">
               View Upcoming Litters
             </a>
-            <WaitlistModal
-              waitlistUrl={waitlistUrl}
-              buttonLabel="Join the Waitlist"
-              className="btn btnPrimary"
-            />
+            <a className="btn btnPrimary" href="/contact">
+              Contact
+            </a>
           </div>
         </div>
       </div>
@@ -170,3 +159,4 @@ export default async function PuppyResourcesPage() {
     </main>
   )
 }
+
