@@ -2,7 +2,6 @@ export const revalidate = 60
 
 import '../../home.css'
 import {client} from '@/sanity/lib/client'
-import WaitlistModal from '../../components/WaitlistModal'
 
 type PuppyPageData = {
   name?: string
@@ -52,8 +51,6 @@ export default async function PuppyDetailPage({
   const {slug} = await params
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
   const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
-
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
 
   if (!puppy) {
     return (
@@ -238,12 +235,6 @@ export default async function PuppyDetailPage({
                   Contact About This Puppy
                 </a>
               )}
-
-              <WaitlistModal
-                waitlistUrl={waitlistUrl}
-                buttonLabel="Join the Waitlist"
-                className="btn"
-              />
             </div>
           </div>
         </div>
@@ -331,3 +322,4 @@ function formatCurrencyWithCents(value: number) {
     maximumFractionDigits: 2,
   }).format(value)
 }
+
