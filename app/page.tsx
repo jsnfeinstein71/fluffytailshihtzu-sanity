@@ -302,18 +302,25 @@ export default async function HomePage() {
                       </div>
                       <div className="puppyCardBody">
                         <div className="puppyCardTop">
-  <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-  <span className="statusBadge">
-    {getReadyDate(puppy.birthDate)
-      ? `Ready ${getReadyDate(puppy.birthDate)}`
-      : formatPuppyStatus(puppy.status)}
-  </span>
-</div>
-<p className="puppyMetaLine">
-  {getAgeInWeeks(puppy.birthDate)} week{getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
-  {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-</p>
-{puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
+                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                            {formatPuppyStatus(puppy.status)}
+                          </span>
+                        </div>
+
+                        <p className="puppyMetaLine">
+                          {getAgeInWeeks(puppy.birthDate)} week
+                          {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
+                          {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                        </p>
+
+                        {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
+
+                        {getReadyDate(puppy.birthDate) ? (
+                          <div style={{marginTop: '10px'}}>
+                            <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
+                          </div>
+                        ) : null}
                       </div>
                     </a>
                   ))
