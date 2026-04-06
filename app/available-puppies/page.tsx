@@ -82,6 +82,8 @@ export default async function AvailablePuppiesPage() {
     (litter) => litter.status !== 'current' && litter.status !== 'active'
   )
 
+  const matchedPuppies = puppies.filter((puppy) => puppy.status === 'reserved')
+
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
@@ -118,6 +120,7 @@ export default async function AvailablePuppiesPage() {
       {activeLitters.length > 0 ? (
         activeLitters.map((litter) => {
           const litterPuppies = puppies.filter((puppy) => puppy.litterId === litter._id)
+          const availableLitterPuppies = litterPuppies.filter((puppy) => puppy.status !== 'reserved')
 
           return (
             <div className="card section" style={{marginTop: '18px'}} key={litter._id}>
@@ -159,15 +162,15 @@ export default async function AvailablePuppiesPage() {
               <div className="pad" style={{paddingBottom: 0}}>
                 <h3 style={{margin: '0 0 6px'}}>Puppies in this litter</h3>
                 <p className="lead" style={{margin: 0}}>
-                  {litterPuppies.length > 0
-                    ? `Browse the puppies from ${litter.title || 'this litter'} below.`
-                    : 'No puppies listed yet for this litter.'}
+                  {availableLitterPuppies.length > 0
+                    ? `Browse the available puppies from ${litter.title || 'this litter'} below.`
+                    : 'No available puppies are listed right now for this litter.'}
                 </p>
               </div>
 
               <div className="puppyGrid">
-                {litterPuppies.length > 0 ? (
-                  litterPuppies.map((puppy) => (
+                {availableLitterPuppies.length > 0 ? (
+                  availableLitterPuppies.map((puppy) => (
                     <a
                       className="puppyCard puppyCardLink"
                       key={puppy._id}
@@ -213,7 +216,7 @@ export default async function AvailablePuppiesPage() {
                   ))
                 ) : (
                   <div style={{padding: '12px', color: '#5a6472'}}>
-                    No puppies listed yet for this litter.
+                    No available puppies listed yet for this litter.
                   </div>
                 )}
               </div>
@@ -230,6 +233,68 @@ export default async function AvailablePuppiesPage() {
           </div>
         </div>
       )}
+
+      <div className="card section" style={{marginTop: '18px'}}>
+        <div className="pad" style={{paddingBottom: 0}}>
+          <h2 style={{margin: '0 0 6px'}}>Matched Puppies</h2>
+          <p className="lead" style={{margin: 0}}>
+            These puppies have been matched with their families.
+          </p>
+        </div>
+
+        <div className="puppyGrid">
+          {matchedPuppies.length > 0 ? (
+            matchedPuppies.map((puppy) => (
+              <a
+                className="puppyCard puppyCardLink"
+                key={puppy._id}
+                href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+              >
+                <div className="puppyImageWrap">
+                  {puppy.photoUrl ? (
+                    <img
+                      className="puppyImage"
+                      src={puppy.photoUrl}
+                      alt={puppy.name || 'Puppy'}
+                    />
+                  ) : null}
+                </div>
+
+                <div className="puppyCardBody">
+                  <div className="puppyCardTop">
+                    <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                    <span className={`statusBadge status-${puppy.status || 'reserved'}`}>
+                      {formatPuppyStatus(puppy.status)}
+                    </span>
+                  </div>
+
+                  <p className="puppyMetaLine">
+                    {getAgeInWeeks(puppy.birthDate)} week
+                    {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
+                    {puppy.sex === 'female'
+                      ? 'Female'
+                      : puppy.sex === 'male'
+                        ? 'Male'
+                        : 'Puppy'}
+                  </p>
+
+                  {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
+
+                  {getReadyDate(puppy.birthDate) ? (
+                    <div style={{marginTop: '10px'}}>
+                      <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </a>
+            ))
+          ) : (
+            <div style={{padding: '12px', color: '#5a6472'}}>
+              No matched puppies listed yet.
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="card section" style={{marginTop: '18px'}}>
         <div className="pad" style={{paddingBottom: 0}}>
@@ -279,7 +344,7 @@ function formatStatus(status?: string) {
 function formatPuppyStatus(status?: string) {
   if (status === 'available') return 'Available'
   if (status === 'hold') return 'Hold'
-  if (status === 'reserved') return 'Reserved'
+  if (status === 'reserved') return 'Matched'
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
 }
