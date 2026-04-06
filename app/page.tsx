@@ -103,6 +103,7 @@ export default async function HomePage() {
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/the-breed">The Breed</a>
         <a className="btn" href="/puppy-resources">Puppy Resources</a>
+        <a className="btn" href="/pricing">Pricing</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
         <a className="btn" href="/contact">Contact</a>
