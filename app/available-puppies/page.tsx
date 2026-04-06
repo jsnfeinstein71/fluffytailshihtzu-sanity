@@ -182,13 +182,12 @@ export default async function AvailablePuppiesPage() {
                           />
                         ) : null}
                       </div>
+
                       <div className="puppyCardBody">
                         <div className="puppyCardTop">
                           <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                          <span className="statusBadge">
-                            {getReadyDate(puppy.birthDate)
-                              ? `Ready ${getReadyDate(puppy.birthDate)}`
-                              : formatPuppyStatus(puppy.status)}
+                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
+                            {formatPuppyStatus(puppy.status)}
                           </span>
                         </div>
 
@@ -203,6 +202,12 @@ export default async function AvailablePuppiesPage() {
                         </p>
 
                         {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
+
+                        {getReadyDate(puppy.birthDate) ? (
+                          <div style={{marginTop: '10px'}}>
+                            <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
+                          </div>
+                        ) : null}
                       </div>
                     </a>
                   ))
