@@ -65,7 +65,7 @@ const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
   sortOrder,
   "litterId": litter->_id,
   "birthDate": litter->birthDate,
-  "photoUrl": photo.asset->url
+  "photoUrl": mainImage.asset->url
 }`
 
 export default async function AvailablePuppiesPage() {
