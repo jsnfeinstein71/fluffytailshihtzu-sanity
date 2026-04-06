@@ -1,17 +1,12 @@
 import '../home.css'
 import {client} from '@/sanity/lib/client'
-import WaitlistModal from '../components/WaitlistModal'
 
 type SiteSettings = {
-  goodDogUrl?: string
-  waitlistUrl?: string
   homepageIntro?: string
   serviceArea?: string
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  goodDogUrl,
-  waitlistUrl,
   homepageIntro,
   serviceArea
 }`
@@ -19,16 +14,13 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 export default async function AboutPage() {
   const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
 
-  const goodDogUrl =
-    siteSettings?.goodDogUrl ||
-    'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama'
-
-  const waitlistUrl = siteSettings?.waitlistUrl || '#'
-
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
         <a className="btn" href="/">Home</a>
+        <a className="btn" href="/the-breed">The Breed</a>
+        <a className="btn" href="/puppy-resources">Puppy Resources</a>
+        <a className="btn" href="/pricing">Pricing</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
         <a className="btn" href="/contact">Contact</a>
@@ -38,17 +30,6 @@ export default async function AboutPage() {
         <div className="pill">
           <span className="dot"></span>
           Small home-based breeder
-        </div>
-
-        <div className="nav">
-          <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
-          <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-            View on GoodDog
-          </a>
         </div>
       </div>
 
@@ -77,6 +58,26 @@ export default async function AboutPage() {
               <p className="lead" style={{marginBottom: 0}}>
                 We are intentionally small. That lets us stay hands-on and keep the process direct
                 and personal.
+              </p>
+            </div>
+
+            <div className="divider"></div>
+
+            <div className="section">
+              <h2>About Jeanne</h2>
+              <p className="lead">
+                Jeanne is at the heart of FluffyTail Shih Tzu. She cares deeply about the dogs,
+                keeps them in the home as part of daily family life, and wants families to feel like
+                they are working with a real person, not a system.
+              </p>
+              <p className="lead">
+                Her goal is to keep the process straightforward, personal, and comfortable. That
+                means clear communication, honest answers, and a home environment where the dogs are
+                raised with daily attention and care.
+              </p>
+              <p className="lead" style={{marginBottom: 0}}>
+                For Jeanne, this is not about volume. It is about raising well-loved Shih Tzus and
+                placing them with families who truly value them.
               </p>
             </div>
 
@@ -121,13 +122,11 @@ export default async function AboutPage() {
             </div>
 
             <div className="ctaRow">
-              <WaitlistModal
-  waitlistUrl={waitlistUrl}
-  buttonLabel="Join the Waitlist"
-  className="btn btnPrimary"
-/>
-              <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
-                GoodDog profile
+              <a className="btn btnPrimary" href="/available-puppies">
+                View Available Puppies
+              </a>
+              <a className="btn" href="/contact">
+                Contact
               </a>
             </div>
 
@@ -145,12 +144,15 @@ export default async function AboutPage() {
         <div className="pad">
           <h2 style={{marginTop: 0}}>Next step</h2>
           <p className="lead">
-            The best way to hear about future puppies is to join the waitlist or check the
-            Available Puppies page for updates.
+            Browse current puppies, learn more about the breed, or use the contact page if you have
+            questions.
           </p>
           <div className="ctaRow">
             <a className="btn btnPrimary" href="/available-puppies">
               View Available Puppies
+            </a>
+            <a className="btn" href="/the-breed">
+              About the Breed
             </a>
             <a className="btn" href="/contact">
               Contact FluffyTail
