@@ -95,6 +95,8 @@ export default async function HomePage() {
   const heroThumb2Url = siteSettings?.heroThumb2Url || activeLitters[0]?.groupPhotoUrl
   const heroThumb3Url = siteSettings?.heroThumb3Url || activeLitters[0]?.groupPhotoUrl
 
+  const matchedPuppies = puppies.filter((puppy) => puppy.status === 'reserved')
+
   return (
     <main className="wrap">
       <div className="nav navPageLinks" style={{marginBottom: '16px'}}>
@@ -345,6 +347,64 @@ export default async function HomePage() {
         </div>
       )}
 
+      <div className="card section" style={{marginTop: '18px'}}>
+        <div className="pad" style={{paddingBottom: 0}}>
+          <h2 style={{margin: '0 0 6px'}}>Matched Puppies</h2>
+          <p className="lead" style={{margin: 0}}>
+            These puppies have been matched with their families.
+          </p>
+        </div>
+
+        <div className="puppyGrid">
+          {matchedPuppies.length > 0 ? (
+            matchedPuppies.map((puppy) => (
+              <a
+                className="puppyCard puppyCardLink"
+                key={puppy._id}
+                href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
+              >
+                <div className="puppyImageWrap">
+                  {puppy.photoUrl ? (
+                    <img
+                      className="puppyImage"
+                      src={puppy.photoUrl}
+                      alt={puppy.name || 'Puppy'}
+                    />
+                  ) : null}
+                </div>
+
+                <div className="puppyCardBody">
+                  <div className="puppyCardTop">
+                    <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+                    <span className={`statusBadge status-${puppy.status || 'reserved'}`}>
+                      Matched
+                    </span>
+                  </div>
+
+                  <p className="puppyMetaLine">
+                    {getAgeInWeeks(puppy.birthDate)} week
+                    {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
+                    {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
+                  </p>
+
+                  {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
+
+                  {getReadyDate(puppy.birthDate) ? (
+                    <div style={{marginTop: '10px'}}>
+                      <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </a>
+            ))
+          ) : (
+            <div style={{padding: '12px', color: '#5a6472'}}>
+              No matched puppies listed yet.
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="footer">
         © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
       </div>
@@ -396,4 +456,4 @@ function formatCurrency(value: number) {
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(value)
-}
+      }
