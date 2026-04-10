@@ -18,7 +18,7 @@ export default async function ContactPage() {
 
   const goodDogUrl =
     siteSettings?.goodDogUrl ||
-    'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama'
+    'https://my.gooddog.com/fluffytail-shih-tzu-alabama'
 
   const waitlistUrl = siteSettings?.waitlistUrl || ''
   const puppyInquiryUrl = siteSettings?.puppyInquiryUrl || ''
