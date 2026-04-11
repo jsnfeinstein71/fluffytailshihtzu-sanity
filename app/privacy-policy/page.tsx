@@ -94,17 +94,18 @@ export default function PrivacyPolicyPage() {
           <div className="divider"></div>
 
           <section className="section">
-            <h2>SMS communications</h2>
-            <p className="lead">
-              If you provide your mobile number through our website or directly to us, you consent
-              to receive conversational and customer-care text messages related to your inquiry,
-              including puppy availability, follow-up information, and next steps.
-            </p>
-            <p className="lead">
-              Message frequency varies. Message and data rates may apply. You can reply
-              <strong> STOP</strong> to opt out at any time or <strong>HELP</strong> for help.
-            </p>
-          </section>
+  <h2>SMS communications</h2>
+  <p className="lead">
+    If you submit our puppy inquiry form and select Text or Either as your preferred contact
+    method, you consent to receive conversational and customer-care text messages from FluffyTail
+    Shih Tzu related to your inquiry, including puppy availability, follow-up information,
+    scheduling, and next steps.
+  </p>
+  <p className="lead">
+    Message frequency varies. Message and data rates may apply. You can reply
+    <strong> STOP</strong> to opt out at any time or <strong>HELP</strong> for help.
+  </p>
+</section>
 
           <div className="divider"></div>
 
@@ -120,12 +121,17 @@ export default function PrivacyPolicyPage() {
           <div className="divider"></div>
 
           <section className="section">
-            <h2>Data retention</h2>
-            <p className="lead">
-              We retain inquiry and communication information for as long as reasonably necessary to
-              respond to your inquiry, maintain business records, and support customer service.
-            </p>
-          </section>
+  <h2>Sharing of information</h2>
+  <p className="lead">
+    We do not sell your personal information. We may use trusted service providers to help us
+    operate our website, forms, email notifications, and communications.
+  </p>
+  <p className="lead">
+    Mobile information will not be shared with third parties or affiliates for marketing or
+    promotional purposes. Text messaging opt-in data and consent will not be shared with any
+    third parties, except as necessary to provide messaging services.
+  </p>
+</section>
 
           <div className="divider"></div>
 
