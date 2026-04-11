@@ -55,38 +55,38 @@ export default function TermsAndConditionsPage() {
           <div className="divider"></div>
 
           <section className="section">
-            <h2>SMS program terms</h2>
-            <p className="lead">
-              Program name: <strong>FluffyTail Shih Tzu Customer Messaging</strong>
-            </p>
-            <p className="lead">
-              By providing your mobile number through our website or directly to us, you agree to
-              receive conversational and customer-care text messages related to your puppy inquiry,
-              litter availability, and next steps.
-            </p>
-            <div className="qa">
-              <div>
-                <div className="q">Message frequency</div>
-                <div className="a">Message frequency varies based on your inquiry and follow-up needs.</div>
-              </div>
-              <div>
-                <div className="q">Message and data rates</div>
-                <div className="a">Message and data rates may apply.</div>
-              </div>
-              <div>
-                <div className="q">Opt out</div>
-                <div className="a">
-                  Reply <strong>STOP</strong> to unsubscribe from SMS messages at any time.
-                </div>
-              </div>
-              <div>
-                <div className="q">Help</div>
-                <div className="a">
-                  Reply <strong>HELP</strong> for help or use our contact page for support.
-                </div>
-              </div>
-            </div>
-          </section>
+  <h2>SMS program terms</h2>
+  <p className="lead">
+    Program name: <strong>FluffyTail Shih Tzu Customer Messaging</strong>
+  </p>
+  <p className="lead">
+    By submitting our puppy inquiry form and selecting Text or Either as your preferred contact
+    method, you agree to receive conversational and customer-care text messages from FluffyTail
+    Shih Tzu regarding your puppy inquiry, puppy availability, scheduling, and related next steps.
+  </p>
+  <div className="qa">
+    <div>
+      <div className="q">Message frequency</div>
+      <div className="a">Message frequency varies based on your inquiry and follow-up needs.</div>
+    </div>
+    <div>
+      <div className="q">Message and data rates</div>
+      <div className="a">Message and data rates may apply.</div>
+    </div>
+    <div>
+      <div className="q">Opt out</div>
+      <div className="a">
+        Reply <strong>STOP</strong> to unsubscribe from SMS messages at any time.
+      </div>
+    </div>
+    <div>
+      <div className="q">Help</div>
+      <div className="a">
+        Reply <strong>HELP</strong> for help or use our contact page for support.
+      </div>
+    </div>
+  </div>
+</section>
 
           <div className="divider"></div>
 
