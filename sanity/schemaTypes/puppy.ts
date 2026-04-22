@@ -26,6 +26,12 @@ export const puppyType = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'sortOrder',
+      title: 'Sort Order',
+      type: 'number',
+      description: 'Lower numbers appear first in public puppy listings.',
+    }),
+    defineField({
       name: 'status',
       title: 'Status',
       type: 'string',
@@ -61,6 +67,12 @@ export const puppyType = defineType({
       title: 'Summary',
       type: 'text',
       rows: 3,
+    }),
+    defineField({
+      name: 'notes',
+      title: 'Notes',
+      type: 'text',
+      rows: 4,
     }),
     defineField({
       name: 'mainImage',

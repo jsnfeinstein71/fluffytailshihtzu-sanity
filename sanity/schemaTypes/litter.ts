@@ -24,6 +24,12 @@ export const litterType = defineType({
       type: 'date',
     }),
     defineField({
+      name: 'sortOrder',
+      title: 'Sort Order',
+      type: 'number',
+      description: 'Lower numbers appear first in public litter listings.',
+    }),
+    defineField({
       name: 'status',
       title: 'Status',
       type: 'string',
@@ -44,6 +50,24 @@ export const litterType = defineType({
       rows: 4,
     }),
     defineField({
+      name: 'summary',
+      title: 'Summary',
+      type: 'text',
+      rows: 4,
+    }),
+    defineField({
+      name: 'girlsCount',
+      title: 'Girls Count',
+      type: 'number',
+      validation: (Rule) => Rule.min(0).integer(),
+    }),
+    defineField({
+      name: 'boysCount',
+      title: 'Boys Count',
+      type: 'number',
+      validation: (Rule) => Rule.min(0).integer(),
+    }),
+    defineField({
       name: 'price',
       title: 'Litter Price',
       type: 'number',
@@ -59,6 +83,12 @@ export const litterType = defineType({
     defineField({
       name: 'heroImage',
       title: 'Hero Image',
+      type: 'image',
+      options: {hotspot: true},
+    }),
+    defineField({
+      name: 'groupPhoto',
+      title: 'Group Photo',
       type: 'image',
       options: {hotspot: true},
     }),
