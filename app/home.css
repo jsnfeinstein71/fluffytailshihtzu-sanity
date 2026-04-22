@@ -423,6 +423,18 @@ a{
   border-color:#b2ddff;
 }
 
+.status-sold{
+  background:#f2f4f7;
+  color:#344054;
+  border-color:#d0d5dd;
+}
+
+.status-holdback{
+  background:#fdf2fa;
+  color:#c11574;
+  border-color:#fcceee;
+}
+
 .status-gone-home{
   background:#f2f4f7;
   color:#344054;

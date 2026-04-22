@@ -8,7 +8,7 @@ type PuppyPageData = {
   name?: string
   slug?: string
   sex?: 'female' | 'male'
-  status?: 'available' | 'hold' | 'reserved' | 'gone-home'
+  status?: 'available' | 'hold' | 'reserved' | 'sold' | 'holdback' | 'gone-home'
   color?: string
   notes?: string
   photoUrl?: string
@@ -238,6 +238,8 @@ function formatPuppyStatus(status?: string) {
   if (status === 'available') return 'Available'
   if (status === 'hold') return 'Hold'
   if (status === 'reserved') return 'Reserved'
+  if (status === 'sold') return 'Sold'
+  if (status === 'holdback') return 'Holdback'
   if (status === 'gone-home') return 'Gone Home'
   return 'Available'
 }
