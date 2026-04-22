@@ -33,7 +33,6 @@ Static and content-backed routes observed in the repo and live sitemap:
 - `/pay/[token]`
 - `/studio`
 - `/inbox`
-- `/test-stripe`
 
 The live sitemap on 2026-04-22 included the static marketing/legal routes plus current puppy detail URLs such as `/puppies/female-1`, `/puppies/female-3`, `/puppies/boy-5`, `/puppies/girl-2`, `/puppies/boy-1`, `/puppies/boy-2`, `/puppies/male-1`, `/puppies/boy-4`, `/puppies/boy-3`, `/puppies/girl-1`, and `/puppies/female-2`.
 
@@ -139,7 +138,7 @@ Lead capture paths:
 - The repo has customer-facing mojibake in several files, likely from encoded apostrophes, bullets, and emoji. Fixing this touches visible copy and should be handled separately with careful visual review.
 - Sanity schema status values and frontend status checks do not fully match. Examples: schemas use `sold` and `holdback`, while pages check `hold`, `reserved`, `gone-home`, `active`, and `upcoming` in places.
 - Several page queries reference fields that are not present in the current schema files, such as `girlsCount`, `boysCount`, `summary`, `groupPhoto`, `sortOrder`, and `notes`. These may exist in Sanity data or previous schemas, but the mismatch should be verified before schema work.
-- `/test-stripe` exists in the production route tree. Confirm whether it should remain accessible outside local/test environments.
+- `/test-stripe` was removed from the route tree because it publicly exposed a test checkout trigger.
 - `/inbox` is protected by Basic Auth, but its API routes create payment links, send Twilio messages, upload Sanity images, and delete conversations. Treat any auth or route changes here as production-sensitive.
 - Tally webhook handling maps field labels/keys manually. Renaming fields in Tally can silently reduce lead quality unless the webhook parser is updated.
 - Stripe deposit amount is hard-coded to $300 in the API, while Sanity litters also have a `deposit` field. Verify intended source of truth before changing pricing.
