@@ -1,0 +1,27 @@
+# Project-scoped Codex defaults for FluffyTail.
+# Do not store secrets or environment-specific deployment metadata here.
+
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[project]
+name = "FluffyTail Shih Tzu"
+root = "."
+source_of_truth = "github"
+deployment_target = "vercel"
+production_domain = "https://www.fluffytailshihtzu.com"
+
+[guardrails]
+production_aware = true
+prefer_read_only_mapping_first = true
+avoid_live_payment_changes = true
+avoid_live_messaging_changes = true
+avoid_site_redesign = true
+
+[commands]
+install = "npm install"
+dev = "npm run dev"
+build = "npm run build"
+lint = "npm run lint"
