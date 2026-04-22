@@ -1,4 +1,5 @@
 import '../home.css'
+import Link from 'next/link'
 
 export const metadata = {
   title: 'Terms and Conditions | FluffyTail Shih Tzu',
@@ -9,9 +10,9 @@ export default function TermsAndConditionsPage() {
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
-        <a className="btn" href="/available-puppies">Available Puppies</a>
-        <a className="btn" href="/contact">Contact</a>
+        <Link className="btn" href="/">Home</Link>
+        <Link className="btn" href="/available-puppies">Available Puppies</Link>
+        <Link className="btn" href="/contact">Contact</Link>
       </div>
 
       <div className="card">
@@ -26,7 +27,8 @@ export default function TermsAndConditionsPage() {
 
           <p className="lead">
             These Terms and Conditions govern use of the FluffyTail Shih Tzu website and related
-            communications, including puppy inquiries, waitlist requests, and text messaging.
+            communications, including puppy inquiries, waitlist requests, SMS consent, and text
+            messaging.
           </p>
 
           <div className="divider"></div>
@@ -60,9 +62,12 @@ export default function TermsAndConditionsPage() {
     Program name: <strong>FluffyTail Shih Tzu Customer Messaging</strong>
   </p>
   <p className="lead">
-    By submitting our puppy inquiry form and selecting Text or Either as your preferred contact
-    method, you agree to receive conversational and customer-care text messages from FluffyTail
-    Shih Tzu regarding your puppy inquiry, puppy availability, scheduling, and related next steps.
+    SMS consent is collected only through the puppy inquiry form at{' '}
+    <Link href="/puppy-inquiry">https://www.fluffytailshihtzu.com/puppy-inquiry</Link>. By entering
+    your phone number, reviewing the SMS disclosure, checking the required SMS consent box, and
+    submitting that form, you agree to receive conversational and customer-care text messages from
+    FluffyTail Shih Tzu regarding your puppy inquiry, puppy availability, scheduling, and related
+    next steps.
   </p>
   <div className="qa">
     <div>

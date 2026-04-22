@@ -1,4 +1,5 @@
 import '../home.css'
+import Link from 'next/link'
 
 export const metadata = {
   title: 'Privacy Policy | FluffyTail Shih Tzu',
@@ -9,9 +10,9 @@ export default function PrivacyPolicyPage() {
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
-        <a className="btn" href="/available-puppies">Available Puppies</a>
-        <a className="btn" href="/contact">Contact</a>
+        <Link className="btn" href="/">Home</Link>
+        <Link className="btn" href="/available-puppies">Available Puppies</Link>
+        <Link className="btn" href="/contact">Contact</Link>
       </div>
 
       <div className="card">
@@ -27,7 +28,7 @@ export default function PrivacyPolicyPage() {
           <p className="lead">
             FluffyTail Shih Tzu respects your privacy. This Privacy Policy explains what
             information we collect, how we use it, and how we handle communications related to
-            puppy inquiries, waitlist requests, and customer support.
+            puppy inquiries, waitlist requests, SMS consent, and customer support.
           </p>
 
           <div className="divider"></div>
@@ -47,8 +48,8 @@ export default function PrivacyPolicyPage() {
               <div>
                 <div className="q">Inquiry details</div>
                 <div className="a">
-                  Information you provide about a puppy inquiry, waitlist request, message, or
-                  follow-up communication.
+                  Information you provide about a puppy inquiry, waitlist request, message, SMS
+                  consent, or follow-up communication.
                 </div>
               </div>
               <div>
@@ -77,8 +78,9 @@ export default function PrivacyPolicyPage() {
               <div>
                 <div className="q">Provide customer support</div>
                 <div className="a">
-                  We may contact you by email or text regarding a puppy inquiry, waitlist request,
-                  or related customer service matter.
+                  We may contact you by email regarding a puppy inquiry, waitlist request, or
+                  related customer service matter. We may contact you by text only if you consent
+                  through the puppy inquiry form.
                 </div>
               </div>
               <div>
@@ -96,27 +98,21 @@ export default function PrivacyPolicyPage() {
           <section className="section">
   <h2>SMS communications</h2>
   <p className="lead">
-    If you submit our puppy inquiry form and select Text or Either as your preferred contact
-    method, you consent to receive conversational and customer-care text messages from FluffyTail
-    Shih Tzu related to your inquiry, including puppy availability, follow-up information,
-    scheduling, and next steps.
+    SMS consent is collected only through the puppy inquiry form at{' '}
+    <Link href="/puppy-inquiry">https://www.fluffytailshihtzu.com/puppy-inquiry</Link>. To opt in,
+    you enter your phone number, review the SMS disclosure, check the required SMS consent box, and
+    submit the form.
+  </p>
+  <p className="lead">
+    If you opt in, you consent to receive conversational and customer-care text messages from
+    FluffyTail Shih Tzu related to your puppy inquiry, including puppy availability, follow-up
+    information, scheduling, and next steps.
   </p>
   <p className="lead">
     Message frequency varies. Message and data rates may apply. You can reply
     <strong> STOP</strong> to opt out at any time or <strong>HELP</strong> for help.
   </p>
 </section>
-
-          <div className="divider"></div>
-
-          <section className="section">
-            <h2>Sharing of information</h2>
-            <p className="lead">
-              We do not sell your personal information. We may use trusted service providers to help
-              us operate our website, forms, email notifications, and communications. We do not
-              share your personal information with third parties for their own marketing purposes.
-            </p>
-          </section>
 
           <div className="divider"></div>
 

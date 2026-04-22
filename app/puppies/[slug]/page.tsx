@@ -1,6 +1,7 @@
 export const revalidate = 60
 
 import '../../home.css'
+import Link from 'next/link'
 import {client} from '@/sanity/lib/client'
 
 type PuppyPageData = {
@@ -17,16 +18,6 @@ type PuppyPageData = {
   litterPrice?: number
   litterDeposit?: number
 }
-
-type SiteSettings = {
-  waitlistUrl?: string
-  puppyInquiryUrl?: string
-}
-
-const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  waitlistUrl,
-  puppyInquiryUrl
-}`
 
 const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
   name,
@@ -49,7 +40,6 @@ export default async function PuppyDetailPage({
   params: Promise<{slug: string}>
 }) {
   const {slug} = await params
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
   const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
 
   if (!puppy) {
@@ -63,7 +53,6 @@ export default async function PuppyDetailPage({
   }
 
   const puppyInquiryUrl = buildPuppyInquiryUrl({
-    baseUrl: siteSettings?.puppyInquiryUrl,
     puppyName: puppy.name,
     litterTitle: puppy.litterTitle,
     slug: puppy.slug,
@@ -79,9 +68,9 @@ export default async function PuppyDetailPage({
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
-        <a className="btn" href="/available-puppies">Available Puppies</a>
-        <a className="btn" href="/contact">Contact</a>
+        <Link className="btn" href="/">Home</Link>
+        <Link className="btn" href="/available-puppies">Available Puppies</Link>
+        <Link className="btn" href="/contact">Contact</Link>
       </div>
 
       <div className="grid">
@@ -222,18 +211,16 @@ export default async function PuppyDetailPage({
 
             <div className="ctaRow">
               {puppyInquiryUrl ? (
-                <a
+                <Link
                   className="btn btnPrimary"
                   href={puppyInquiryUrl}
-                  target="_blank"
-                  rel="noreferrer"
                 >
                   Request Info About This Puppy
-                </a>
+                </Link>
               ) : (
-                <a className="btn btnPrimary" href="/contact">
+                <Link className="btn btnPrimary" href="/contact">
                   Contact About This Puppy
-                </a>
+                </Link>
               )}
             </div>
           </div>
@@ -280,27 +267,22 @@ function getReadyDate(birthDate?: string) {
 }
 
 function buildPuppyInquiryUrl({
-  baseUrl,
   puppyName,
   litterTitle,
   slug,
 }: {
-  baseUrl?: string
   puppyName?: string
   litterTitle?: string
   slug?: string
 }) {
-  if (!baseUrl) return ''
-
+  const baseUrl = '/puppy-inquiry'
   const message = buildPrefilledMessage(puppyName, litterTitle)
   const puppyPageUrl = slug
     ? `https://www.fluffytailshihtzu.com/puppies/${encodeURIComponent(slug)}`
     : 'https://www.fluffytailshihtzu.com/available-puppies'
 
-  const separator = baseUrl.includes('?') ? '&' : '?'
-
   return (
-    `${baseUrl}${separator}` +
+    `${baseUrl}?` +
     `puppy=${encodeURIComponent(puppyName || '')}` +
     `&litter=${encodeURIComponent(litterTitle || '')}` +
     `&puppyPageUrl=${encodeURIComponent(puppyPageUrl)}` +
