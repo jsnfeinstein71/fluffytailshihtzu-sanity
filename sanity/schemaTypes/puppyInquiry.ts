@@ -18,6 +18,7 @@ export const puppyInquiryType = defineType({
     defineField({name: 'puppy', title: 'Puppy', type: 'string'}),
     defineField({name: 'litter', title: 'Litter', type: 'string'}),
     defineField({name: 'puppyPageUrl', title: 'Puppy Page URL', type: 'url'}),
+    defineField({name: 'smsConsent', title: 'SMS Consent', type: 'boolean'}),
     defineField({name: 'source', title: 'Source', type: 'string'}),
   ],
   preview: {

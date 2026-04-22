@@ -17,6 +17,9 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
+const SMS_CONSENT_QUESTION_ID = '0MkQkZ'
+const SMS_CONSENT_QUESTION_KEY = `question_${SMS_CONSENT_QUESTION_ID}`
+
 type TallyField = {
   key?: string
   label?: string
@@ -99,6 +102,40 @@ export async function POST(req: NextRequest) {
     const firstNonEmpty = (...values: string[]) =>
       values.find((value) => value && value.trim())?.trim() || ''
 
+    const isSelectedCheckboxValue = (value: unknown) => {
+      if (Array.isArray(value)) return value.length > 0
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value !== 0
+
+      if (typeof value === 'string') {
+        return ['true', 'yes', '1', 'on', 'checked'].includes(value.trim().toLowerCase())
+      }
+
+      return false
+    }
+
+    const getSmsConsent = () => {
+      for (const field of fields) {
+        const fieldKey = String(field.key || '').trim()
+        const fieldLabel = String(field.label || '').trim()
+        const fieldType = String(field.type || '').trim().toUpperCase()
+        const matchesSmsConsentQuestion =
+          fieldKey === SMS_CONSENT_QUESTION_KEY ||
+          fieldKey.startsWith(`${SMS_CONSENT_QUESTION_KEY}_`)
+
+        const matchesSmsConsentStructure =
+          fieldType === 'CHECKBOXES' && fieldLabel === ''
+
+        if (!matchesSmsConsentQuestion && !matchesSmsConsentStructure) continue
+
+        if (isSelectedCheckboxValue(field.value)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
     const name = firstNonEmpty(
       getFieldValue(['Name', 'Full name', 'full name', 'name'])
     )
@@ -139,6 +176,8 @@ export async function POST(req: NextRequest) {
       getHiddenValue(['puppypageurl'])
     )
 
+    const smsConsent = getSmsConsent()
+
     await sanity.create({
       _type: 'puppyInquiry',
       submittedAt: new Date().toISOString(),
@@ -150,6 +189,7 @@ export async function POST(req: NextRequest) {
       puppy,
       litter,
       puppyPageUrl,
+      smsConsent,
       source: 'fluffytail',
     })
 
