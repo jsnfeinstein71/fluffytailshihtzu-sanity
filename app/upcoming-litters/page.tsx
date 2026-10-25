@@ -1,52 +1,21 @@
 export const revalidate = 60
 
 import '../home.css'
-import {client} from '@/sanity/lib/client'
+import Link from 'next/link'
+import {getInventory} from '@/sanity/lib/inventory'
+import {normalizeLitterStatus, sortLitters} from '@/lib/inventory'
+import LitterTile from '../components/LitterTile'
 
-type SiteSettings = {
-  goodDogUrl?: string
-  waitlistUrl?: string
-}
-
-type Litter = {
-  _id: string
-  title?: string
-  birthDate?: string
-  girlsCount?: number
-  boysCount?: number
-  summary?: string
-  status?: string
-  price?: number
-  deposit?: number
-  groupPhotoUrl?: string
-}
-
-const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  goodDogUrl,
-  waitlistUrl
-}`
-
-const upcomingLittersQuery = `*[_type == "litter" && status in ["planned", "upcoming", "current", "active"]] | order(sortOrder asc, birthDate asc){
-  _id,
-  title,
-  birthDate,
-  girlsCount,
-  boysCount,
-  summary,
-  status,
-  price,
-  deposit,
-  "groupPhotoUrl": groupPhoto.asset->url
-}`
+export const metadata = {title: 'Upcoming Litters', alternates: {canonical: '/upcoming-litters'}}
 
 export default async function UpcomingLittersPage() {
-  await client.fetch<SiteSettings>(siteSettingsQuery)
-  const litters = await client.fetch<Litter[]>(upcomingLittersQuery)
+  const inventory = await getInventory()
+  const litters = sortLitters(inventory.litters.filter((litter) => ['planned', 'current'].includes(normalizeLitterStatus(litter.status))))
 
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
+        <Link className="btn" href="/">Home</Link>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/the-breed">The Breed</a>
         <a className="btn" href="/puppy-resources">Puppy Resources</a>
@@ -149,28 +118,7 @@ export default async function UpcomingLittersPage() {
 
         <div className="strip" aria-label="Active and upcoming litters">
           {litters.length > 0 ? (
-            litters.map((litter) => (
-              <div className="tile" key={litter._id}>
-                <div className="tileImg">
-                  {litter.groupPhotoUrl ? (
-                    <img src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} />
-                  ) : null}
-                </div>
-                <div className="tileMeta">
-                  <p className="tileName">{litter.title || 'Untitled litter'}</p>
-                  <p className="tileSub">
-                    {formatStatus(litter.status)}
-                    {litter.birthDate ? ` • ${formatShortDate(litter.birthDate)}` : ''}
-                  </p>
-                  {litter.price ? (
-                    <p className="tileSub" style={{marginTop: '4px'}}>
-                      {formatCurrency(litter.price)}
-                      {litter.deposit ? ` • ${formatCurrency(litter.deposit)} deposit included` : ''}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ))
+            litters.map((litter) => <LitterTile key={litter._id} litter={litter} />)
           ) : (
             <div style={{padding: '16px 0 18px 16px', color: '#5a6472'}}>
               No active or upcoming litters listed yet.
@@ -184,26 +132,5 @@ export default async function UpcomingLittersPage() {
       </div>
     </main>
   )
-}
-
-function formatStatus(status?: string) {
-  if (status === 'active' || status === 'current') return 'Active'
-  if (status === 'upcoming' || status === 'planned') return 'Upcoming'
-  if (status === 'past') return 'Past'
-  return 'Litter'
-}
-
-function formatShortDate(date?: string) {
-  if (!date) return ''
-  const d = new Date(date)
-  return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value)
 }
 

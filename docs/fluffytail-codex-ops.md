@@ -53,6 +53,15 @@ Do not assume direct access to connected services. Call out when work needs app/
 - API routes live under `app/api` and `app/inbox/api`.
 - `proxy.ts` protects `/inbox/:path*` with Basic Auth.
 
+## Pricing And Payment Maintenance
+
+- Read docs/fluffytail-phase-1-release.md before payment/operator changes.
+- Keep integer-cent calculations in lib/pricing.ts; use fresh Sanity prices server-side, never arbitrary defaults or browser total/deposit fields.
+- Preserve actual historical payments. New metadata captures server-selected puppy/litter IDs; recording requires signed paid Stripe events.
+- Operator actions belong under /inbox/api and must call requireOperator before provider calls. No public aliases for removed operator routes.
+- Preview needs Stripe test credentials and an isolated synthetic Sanity dataset. Messaging/provider callbacks are disabled. No live financial/operational writes are needed for regression tests.
+- A repo patch cannot revoke direct Stripe links. Review obsolete/pending unpaid quotes before approval; verify production dataset ACLs and Tally/Twilio callback signatures separately.
+
 ## Verification Checklist
 
 For docs-only changes:
@@ -62,10 +71,22 @@ For docs-only changes:
 
 For code changes:
 
+- Run `npm test` for the inventory/query/rendering and mocked payment/auth suites (Node 22.15+; verified on Node 24).
+- Run `npm run typecheck`.
 - Run `npm run lint`.
 - Run `npm run build` for route, API, schema, Stripe, Twilio, or Next config changes.
 - Manually inspect affected pages locally when UI changes are made.
 - Use test-mode Stripe/Twilio or mocks unless live behavior is explicitly authorized.
+
+## Inventory Maintenance
+
+- Read `docs/fluffytail-reliability-audit.md` before changing inventory behavior.
+- Keep public queries in `sanity/lib/inventory-queries.ts` and their published/revalidation options in `sanity/lib/inventory.ts`.
+- Keep statuses, grouping, sorting, date formatting, waitlist rules, and inquiry URLs in `lib/inventory.ts`.
+- Render puppy cards and litter sections through the shared components; never remove reserved puppies from a litter to create a matched section.
+- `planned/current/past` remain the stored canonical litter values. Keep legacy `upcoming/active` read compatibility. Do not equate `sold` with `gone-home`, or `hold` with `holdback`, without business confirmation.
+- New parent records and optional expected-date/visibility fields require no content migration. Publishing a parent/litter/puppy remains an operator action.
+- Production build verification needs access to Google Fonts and the configured Sanity dataset. Stripe initializes lazily; no Stripe key is needed merely to build inventory pages. Never use live credentials for compilation or regression tests.
 
 ## Handoff Format
 

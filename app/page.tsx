@@ -2,12 +2,16 @@ export const revalidate = 60
 
 import './home.css'
 import {client} from '@/sanity/lib/client'
+import {getInventory} from '@/sanity/lib/inventory'
+import {getLittersByStatus, shouldShowWaitlist} from '@/lib/inventory'
+import LitterSection from './components/LitterSection'
+
+export const metadata = {alternates: {canonical: '/'}}
 
 type SiteSettings = {
   title?: string
   homepageHeadline?: string
   homepageIntro?: string
-  goodDogUrl?: string
   serviceArea?: string
   heroImageUrl?: string
   heroThumb1Url?: string
@@ -15,38 +19,10 @@ type SiteSettings = {
   heroThumb3Url?: string
 }
 
-type Litter = {
-  _id: string
-  title?: string
-  birthDate?: string
-  girlsCount?: number
-  boysCount?: number
-  summary?: string
-  status?: string
-  price?: number
-  deposit?: number
-  groupPhotoUrl?: string
-}
-
-type Puppy = {
-  _id: string
-  name?: string
-  slug?: string
-  sex?: 'female' | 'male'
-  status?: 'available' | 'hold' | 'reserved' | 'sold' | 'holdback' | 'gone-home'
-  color?: string
-  notes?: string
-  sortOrder?: number
-  litterId?: string
-  birthDate?: string
-  photoUrl?: string
-}
-
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   title,
   homepageHeadline,
   homepageIntro,
-  goodDogUrl,
   serviceArea,
   "heroImageUrl": heroImage.asset->url,
   "heroThumb1Url": heroThumb1.asset->url,
@@ -54,49 +30,19 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
   "heroThumb3Url": heroThumb3.asset->url
 }`
 
-const activeLittersQuery = `*[_type == "litter" && status in ["active", "current"]] | order(sortOrder asc, birthDate asc){
-  _id,
-  title,
-  birthDate,
-  girlsCount,
-  boysCount,
-  summary,
-  status,
-  price,
-  deposit,
-  "groupPhotoUrl": groupPhoto.asset->url
-}`
-
-const puppiesQuery = `*[_type == "puppy"] | order(sortOrder asc, name asc){
-  _id,
-  name,
-  "slug": slug.current,
-  sex,
-  status,
-  color,
-  notes,
-  sortOrder,
-  "litterId": litter->_id,
-  "birthDate": litter->birthDate,
-  "photoUrl": mainImage.asset->url
-}`
-
 export default async function HomePage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
-  const activeLitters = await client.fetch<Litter[]>(activeLittersQuery)
-  const puppies = await client.fetch<Puppy[]>(puppiesQuery)
+  const [siteSettings, {litters, puppies}] = await Promise.all([
+    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}),
+    getInventory(),
+  ])
+  const activeLitters = getLittersByStatus(litters, 'current')
 
   const heroImageUrl = siteSettings?.heroImageUrl || activeLitters[0]?.groupPhotoUrl
   const heroThumb1Url = siteSettings?.heroThumb1Url || activeLitters[0]?.groupPhotoUrl
   const heroThumb2Url = siteSettings?.heroThumb2Url || activeLitters[0]?.groupPhotoUrl
   const heroThumb3Url = siteSettings?.heroThumb3Url || activeLitters[0]?.groupPhotoUrl
 
-  const availablePuppies = puppies.filter((puppy) => puppy.status === 'available')
-  const hasAvailableMale = availablePuppies.some((puppy) => puppy.sex === 'male')
-  const hasAvailableFemale = availablePuppies.some((puppy) => puppy.sex === 'female')
-  const showWaitlistIndicator = !(hasAvailableMale && hasAvailableFemale)
-
-  const matchedPuppies = puppies.filter((puppy) => puppy.status === 'reserved')
+  const showWaitlistIndicator = shouldShowWaitlist(litters, puppies)
 
   return (
     <main className="wrap">
@@ -255,205 +201,20 @@ export default async function HomePage() {
       </div>
 
       {activeLitters.length > 0 ? (
-        activeLitters.map((litter) => {
-          const litterPuppies = puppies.filter((puppy) => puppy.litterId === litter._id)
-          const availableLitterPuppies = litterPuppies.filter((puppy) => puppy.status !== 'reserved')
-
-          return (
-            <div className="card section" style={{marginTop: '18px'}} key={litter._id}>
-              <div className="pad" style={{paddingBottom: 0}}>
-                <h2 style={{margin: '0 0 6px'}}>
-                  {litter.title || 'Active litter'}
-                </h2>
-                <p className="lead" style={{margin: 0}}>
-                  Born {formatLongDate(litter.birthDate)} • {litter.girlsCount ?? 0} girls • {litter.boysCount ?? 0} boys
-                </p>
-
-                {litter.price ? (
-                  <p className="lead" style={{marginTop: '10px', marginBottom: 0, fontWeight: 700}}>
-                    {formatCurrency(litter.price)}
-                    {litter.deposit ? `, including a ${formatCurrency(litter.deposit)} deposit` : ''}
-                  </p>
-                ) : null}
-
-                {litter.summary ? (
-                  <p className="lead" style={{marginTop: '10px', marginBottom: 0}}>
-                    {litter.summary}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="puppyGrid">
-                {availableLitterPuppies.length > 0 ? (
-                  availableLitterPuppies.map((puppy) => (
-                    <a
-                      className="puppyCard puppyCardLink"
-                      key={puppy._id}
-                      href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
-                    >
-                      <div className="puppyImageWrap">
-                        {puppy.photoUrl ? (
-                          <img
-                            className="puppyImage"
-                            src={puppy.photoUrl}
-                            alt={puppy.name || 'Puppy'}
-                          />
-                        ) : null}
-                      </div>
-                      <div className="puppyCardBody">
-                        <div className="puppyCardTop">
-                          <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                          <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                            {formatPuppyStatus(puppy.status)}
-                          </span>
-                        </div>
-
-                        <p className="puppyMetaLine">
-                          {getAgeInWeeks(puppy.birthDate)} week
-                          {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
-                          {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-                        </p>
-
-                        {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
-
-                        {getReadyDate(puppy.birthDate) ? (
-                          <div style={{marginTop: '10px'}}>
-                            <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
-                          </div>
-                        ) : null}
-                      </div>
-                    </a>
-                  ))
-                ) : (
-                  <div style={{padding: '12px', color: '#5a6472'}}>
-                    No available puppies listed yet for this litter.
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })
+        activeLitters.map((litter) => <LitterSection key={litter._id} litter={litter} puppies={puppies} />)
       ) : (
         <div className="card section" style={{marginTop: '18px'}}>
           <div className="pad">
             <h2 style={{marginTop: 0}}>No active litters listed</h2>
-            <p className="lead" style={{marginBottom: 0}}>
-              Browse the site for breed information, resources, and future litter updates.
-            </p>
+            <p className="lead" style={{marginBottom: 0}}>Browse the site for breed information, resources, and future litter updates.</p>
           </div>
         </div>
       )}
-
-      <div className="card section" style={{marginTop: '18px'}}>
-        <div className="pad" style={{paddingBottom: 0}}>
-          <h2 style={{margin: '0 0 6px'}}>Matched Puppies</h2>
-          <p className="lead" style={{margin: 0}}>
-            These puppies have been matched with their families.
-          </p>
-        </div>
-
-        <div className="puppyGrid">
-          {matchedPuppies.length > 0 ? (
-            matchedPuppies.map((puppy) => (
-              <a
-                className="puppyCard puppyCardLink"
-                key={puppy._id}
-                href={puppy.slug ? `/puppies/${puppy.slug}` : '/available-puppies'}
-              >
-                <div className="puppyImageWrap">
-                  {puppy.photoUrl ? (
-                    <img
-                      className="puppyImage"
-                      src={puppy.photoUrl}
-                      alt={puppy.name || 'Puppy'}
-                    />
-                  ) : null}
-                </div>
-
-                <div className="puppyCardBody">
-                  <div className="puppyCardTop">
-                    <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
-                    <span className={`statusBadge status-${puppy.status || 'reserved'}`}>
-                      Matched
-                    </span>
-                  </div>
-
-                  <p className="puppyMetaLine">
-                    {getAgeInWeeks(puppy.birthDate)} week
-                    {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old •{' '}
-                    {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-                  </p>
-
-                  {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
-
-                  {getReadyDate(puppy.birthDate) ? (
-                    <div style={{marginTop: '10px'}}>
-                      <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
-                    </div>
-                  ) : null}
-                </div>
-              </a>
-            ))
-          ) : (
-            <div style={{padding: '12px', color: '#5a6472'}}>
-              No matched puppies listed yet.
-            </div>
-          )}
-        </div>
-      </div>
 
       <div className="footer">
         © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
       </div>
     </main>
   )
-}
-
-function formatLongDate(date?: string) {
-  if (!date) return 'Unknown'
-  const d = new Date(date)
-  return d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})
-}
-
-function formatPuppyStatus(status?: string) {
-  if (status === 'available') return 'Available'
-  if (status === 'hold') return 'Hold'
-  if (status === 'reserved') return 'Reserved'
-  if (status === 'sold') return 'Sold'
-  if (status === 'holdback') return 'Holdback'
-  if (status === 'gone-home') return 'Gone Home'
-  return 'Available'
-}
-
-function getAgeInWeeks(birthDate?: string) {
-  if (!birthDate) return 1
-
-  const born = new Date(birthDate)
-  const now = new Date()
-  const diffMs = now.getTime() - born.getTime()
-  const weeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7))
-
-  return Math.max(1, weeks)
-}
-
-function getReadyDate(birthDate?: string) {
-  if (!birthDate) return ''
-
-  const born = new Date(birthDate)
-  const ready = new Date(born)
-  ready.setDate(ready.getDate() + 56)
-
-  return ready.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value)
 }
 

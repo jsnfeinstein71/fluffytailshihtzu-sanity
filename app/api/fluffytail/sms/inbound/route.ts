@@ -12,6 +12,9 @@ const sanity = createClient({
 })
 
 export async function POST(req: NextRequest) {
+  if (process.env.VERCEL_ENV === 'preview') {
+    return NextResponse.json({error: 'Provider callbacks are disabled in preview.'}, {status: 503})
+  }
   const formData = await req.formData()
 
   const messageSid = String(formData.get('MessageSid') || '')

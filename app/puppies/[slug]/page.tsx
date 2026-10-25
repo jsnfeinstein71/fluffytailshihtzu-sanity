@@ -2,37 +2,19 @@ export const revalidate = 60
 
 import '../../home.css'
 import Link from 'next/link'
-import {client} from '@/sanity/lib/client'
+import {tryPricing} from '@/lib/pricing'
+import {notFound} from 'next/navigation'
+import {getPuppy} from '@/sanity/lib/inventory'
+import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass} from '@/lib/inventory'
 
-type PuppyPageData = {
-  name?: string
-  slug?: string
-  sex?: 'female' | 'male'
-  status?: 'available' | 'hold' | 'reserved' | 'sold' | 'holdback' | 'gone-home'
-  color?: string
-  notes?: string
-  photoUrl?: string
-  litterTitle?: string
-  birthDate?: string
-  overridePrice?: number
-  litterPrice?: number
-  litterDeposit?: number
+type Props = {params: Promise<{slug: string}>}
+
+export async function generateMetadata({params}: Props) {
+  const {slug} = await params
+  const puppy = await getPuppy(slug)
+  if (!puppy) notFound()
+  return {title: puppy.name || 'Puppy', alternates: {canonical: puppyPath(slug)}}
 }
-
-const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
-  name,
-  "slug": slug.current,
-  sex,
-  status,
-  color,
-  notes,
-  "photoUrl": mainImage.asset->url,
-  "birthDate": litter->birthDate,
-  overridePrice,
-  "litterTitle": litter->title,
-  "litterPrice": litter->price,
-  "litterDeposit": litter->deposit
-}`
 
 export default async function PuppyDetailPage({
   params,
@@ -40,30 +22,18 @@ export default async function PuppyDetailPage({
   params: Promise<{slug: string}>
 }) {
   const {slug} = await params
-  const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
+  const puppy = await getPuppy(slug)
 
-  if (!puppy) {
-    return (
-      <main className="wrap">
-        <h1 className="h1">Puppy not found</h1>
-        <p className="lead">This puppy page could not be found.</p>
-        <a className="btn" href="/available-puppies">Back to Available Puppies</a>
-      </main>
-    )
-  }
+  if (!puppy) notFound()
 
-  const puppyInquiryUrl = buildPuppyInquiryUrl({
-    puppyName: puppy.name,
-    litterTitle: puppy.litterTitle,
-    slug: puppy.slug,
-  })
+  const canInquire = canInquireAboutPuppy(puppy)
+  const puppyInquiryUrl = buildPuppyInquiryUrl(puppy)
+  const age = getAgeInWeeks(puppy.birthDate)
 
-  const totalPrice = puppy.overridePrice ?? puppy.litterPrice
-  const deposit = puppy.litterDeposit
-  const finalPayment =
-    typeof totalPrice === 'number' && typeof deposit === 'number'
-      ? Math.max(totalPrice - deposit, 0)
-      : undefined
+  const pricing = tryPricing(puppy)
+  const totalPrice = pricing ? pricing.totalCents / 100 : undefined
+  const deposit = pricing ? pricing.depositCents / 100 : undefined
+  const finalPayment = pricing ? pricing.remainingCents / 100 : undefined
 
   return (
     <main className="wrap">
@@ -89,14 +59,11 @@ export default async function PuppyDetailPage({
             </h1>
 
             <div className="ctaRow" style={{marginTop: 0, marginBottom: '14px'}}>
-              <span className={`statusBadge status-${puppy.status || 'available'}`}>
+              <span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>
                 {formatPuppyStatus(puppy.status)}
               </span>
 
-              <span className="badge">
-                {getAgeInWeeks(puppy.birthDate)} week
-                {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old
-              </span>
+              {age !== null ? <span className="badge">{age} week{age === 1 ? '' : 's'} old</span> : null}
 
               <span className="badge">
                 {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
@@ -104,7 +71,7 @@ export default async function PuppyDetailPage({
 
               {puppy.color ? <span className="badge">{puppy.color}</span> : null}
 
-              {getReadyDate(puppy.birthDate) ? (
+              {canInquire && getReadyDate(puppy.birthDate) ? (
                 <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
               ) : null}
             </div>
@@ -136,7 +103,7 @@ export default async function PuppyDetailPage({
                       <span className="lead" style={{margin: 0}}>
                         Deposit
                       </span>
-                      <span style={{fontWeight: 700}}>{formatCurrencyWithCents(deposit)}</span>
+                      <span style={{fontWeight: 700}}>{formatCurrency(deposit, true)}</span>
                     </div>
 
                     <div
@@ -151,7 +118,7 @@ export default async function PuppyDetailPage({
                         Final payment
                       </span>
                       <span style={{fontWeight: 700}}>
-                        {formatCurrencyWithCents(finalPayment ?? 0)}
+                        {formatCurrency(finalPayment!, true)}
                       </span>
                     </div>
 
@@ -171,7 +138,7 @@ export default async function PuppyDetailPage({
                     >
                       <span style={{fontWeight: 800}}>Total</span>
                       <span style={{fontWeight: 800}}>
-                        {formatCurrencyWithCents(totalPrice)}
+                        {formatCurrency(totalPrice, true)}
                       </span>
                     </div>
                   </>
@@ -185,12 +152,14 @@ export default async function PuppyDetailPage({
                   >
                     <span style={{fontWeight: 800}}>Total</span>
                     <span style={{fontWeight: 800}}>
-                      {formatCurrencyWithCents(totalPrice)}
+                      {formatCurrency(totalPrice, true)}
                     </span>
                   </div>
                 )}
               </div>
             ) : null}
+
+            <p className="lead">{pricing ? 'The deposit is applied toward the total puppy price, not added on top.' : 'Please contact FluffyTail to confirm pricing before payment.'}</p>
 
             {puppy.notes ? (
               <p className="lead" style={{marginBottom: 0}}>
@@ -202,15 +171,17 @@ export default async function PuppyDetailPage({
 
         <div className="card">
           <div className="pad">
-            <h2 className="panelTitle">Interested in this puppy?</h2>
+            <h2 className="panelTitle">{canInquire ? 'Interested in this puppy?' : formatPuppyStatus(puppy.status)}</h2>
 
             <p className="lead">
-              If you would like to ask about {puppy.name || 'this puppy'}, use the inquiry button
-              below and your message will already include the puppy and litter details.
+              {canInquire ? <>
+                If you would like to ask about {puppy.name || 'this puppy'}, use the inquiry button below
+                and your message will already include the puppy and litter details.
+              </> : 'This puppy is not currently available for a new reservation. Contact us about other availability.'}
             </p>
 
             <div className="ctaRow">
-              {puppyInquiryUrl ? (
+              {canInquire ? (
                 <Link
                   className="btn btnPrimary"
                   href={puppyInquiryUrl}
@@ -219,7 +190,7 @@ export default async function PuppyDetailPage({
                 </Link>
               ) : (
                 <Link className="btn btnPrimary" href="/contact">
-                  Contact About This Puppy
+                  Contact FluffyTail
                 </Link>
               )}
             </div>
@@ -232,78 +203,5 @@ export default async function PuppyDetailPage({
       </div>
     </main>
   )
-}
-
-function formatPuppyStatus(status?: string) {
-  if (status === 'available') return 'Available'
-  if (status === 'hold') return 'Hold'
-  if (status === 'reserved') return 'Reserved'
-  if (status === 'sold') return 'Sold'
-  if (status === 'holdback') return 'Holdback'
-  if (status === 'gone-home') return 'Gone Home'
-  return 'Available'
-}
-
-function getAgeInWeeks(birthDate?: string) {
-  if (!birthDate) return 1
-
-  const born = new Date(birthDate)
-  const now = new Date()
-  const diffMs = now.getTime() - born.getTime()
-  const weeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7))
-
-  return Math.max(1, weeks)
-}
-
-function getReadyDate(birthDate?: string) {
-  if (!birthDate) return ''
-
-  const born = new Date(birthDate)
-  const ready = new Date(born)
-  ready.setDate(ready.getDate() + 56)
-
-  return ready.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function buildPuppyInquiryUrl({
-  puppyName,
-  litterTitle,
-  slug,
-}: {
-  puppyName?: string
-  litterTitle?: string
-  slug?: string
-}) {
-  const baseUrl = '/puppy-inquiry'
-  const message = buildPrefilledMessage(puppyName, litterTitle)
-  const puppyPageUrl = slug
-    ? `https://www.fluffytailshihtzu.com/puppies/${encodeURIComponent(slug)}`
-    : 'https://www.fluffytailshihtzu.com/available-puppies'
-
-  return (
-    `${baseUrl}?` +
-    `puppy=${encodeURIComponent(puppyName || '')}` +
-    `&litter=${encodeURIComponent(litterTitle || '')}` +
-    `&puppyPageUrl=${encodeURIComponent(puppyPageUrl)}` +
-    `&message=${encodeURIComponent(message)}`
-  )
-}
-
-function buildPrefilledMessage(puppyName?: string, litterTitle?: string) {
-  const puppyText = puppyName || 'this puppy'
-  const litterText = litterTitle ? ` from the ${litterTitle} litter` : ''
-  return `Hi, I’m interested in ${puppyText}${litterText}. Please send me more information.`
-}
-
-function formatCurrencyWithCents(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
 }
 

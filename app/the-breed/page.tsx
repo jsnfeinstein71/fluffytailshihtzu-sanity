@@ -1,21 +1,13 @@
 import '../home.css'
-import {client} from '@/sanity/lib/client'
+import Link from 'next/link'
 
-type SiteSettings = {
-  waitlistUrl?: string
-}
+export const metadata = {title: 'The Breed', alternates: {canonical: '/the-breed'}}
 
-const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  waitlistUrl
-}`
-
-export default async function TheBreedPage() {
-  await client.fetch<SiteSettings>(siteSettingsQuery)
-
+export default function TheBreedPage() {
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
+        <Link className="btn" href="/">Home</Link>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/puppy-resources">Puppy Resources</a>
         <a className="btn" href="/pricing">Pricing</a>

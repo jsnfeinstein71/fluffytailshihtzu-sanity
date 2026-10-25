@@ -1,17 +1,17 @@
 import type { MetadataRoute } from 'next'
 import { client } from '@/sanity/lib/client'
+import {puppySitemapQuery} from '@/sanity/lib/inventory-queries'
+
+export const revalidate = 60
 
 type PuppySlug = {
-  slug?: string
+  slug: string
+  _updatedAt?: string
 }
-
-const puppiesQuery = `*[_type == "puppy" && defined(slug.current)]{
-  "slug": slug.current
-}`
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://www.fluffytailshihtzu.com'
-  const puppies = await client.fetch<PuppySlug[]>(puppiesQuery)
+  const puppies = await client.fetch<PuppySlug[]>(puppySitemapQuery, {}, {perspective: 'published', next: {revalidate: 60}})
 
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -83,8 +83,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   const puppyPages: MetadataRoute.Sitemap = puppies.map((puppy) => ({
-    url: `${base}/puppies/${puppy.slug}`,
-    lastModified: new Date(),
+    url: `${base}/puppies/${encodeURIComponent(puppy.slug)}`,
+    lastModified: puppy._updatedAt ? new Date(puppy._updatedAt) : undefined,
     changeFrequency: 'weekly',
     priority: 0.7,
   }))

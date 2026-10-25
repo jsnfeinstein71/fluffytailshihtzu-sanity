@@ -7,9 +7,11 @@ import {puppyInquiryType} from './puppyInquiry'
 import {paymentRecordType} from './paymentRecord'
 import {depositLinkType} from './depositLink'
 import {invoiceRecordType} from './invoiceRecord'
+import {dogType} from './dog'
 
 export const schemaTypes = [
   siteSettingsType,
+  dogType,
   litterType,
   puppyType,
   faqType,

@@ -2,6 +2,7 @@ import '../home.css'
 import Link from 'next/link'
 
 export const metadata = {
+  alternates: {canonical: '/terms-and-conditions'},
   title: 'Terms and Conditions | FluffyTail Shih Tzu',
   description: 'Terms and Conditions for FluffyTail Shih Tzu.',
 }

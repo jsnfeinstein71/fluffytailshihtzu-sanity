@@ -1,15 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server'
-import {createClient} from '@sanity/client'
+import {getOperatorClient} from '@/sanity/lib/operator-client'
+import {requireOperator} from '@/lib/operator-auth'
 
 export const runtime = 'nodejs'
-
-const sanity = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
-  apiVersion: '2025-01-01',
-  token: process.env.SANITY_API_WRITE_TOKEN!,
-  useCdn: false,
-})
 
 type SmsMessageRecord = {
   _id: string
@@ -25,7 +18,10 @@ type PuppyInquiryRecord = {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req)
+  if (denied) return denied
   try {
+    const sanity = getOperatorClient()
     const {phone} = await req.json()
 
     const normalizedTarget = normalizePhone(String(phone || ''))
@@ -92,8 +88,8 @@ export async function POST(req: NextRequest) {
       deletedMessages: messageIdsToDelete.length,
       deletedInquiries: inquiryIdsToDelete.length,
     })
-  } catch (error) {
-    console.error('Failed to delete conversation', error)
+  } catch {
+    console.error('Failed to delete conversation')
     return NextResponse.json({error: 'Failed to delete conversation'}, {status: 500})
   }
 }

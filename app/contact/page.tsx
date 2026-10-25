@@ -1,4 +1,8 @@
 import '../home.css'
+import Link from 'next/link'
+
+export const revalidate = 60
+export const metadata = {title: 'Contact', alternates: {canonical: '/contact'}}
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
@@ -14,7 +18,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function ContactPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}})
 
   const goodDogUrl =
     siteSettings?.goodDogUrl ||
@@ -26,7 +30,7 @@ export default async function ContactPage() {
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
+        <Link className="btn" href="/">Home</Link>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/available-puppies">Available Puppies</a>
         <a className="btn" href="/upcoming-litters">Upcoming Litters</a>

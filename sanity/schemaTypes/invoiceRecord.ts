@@ -5,6 +5,8 @@ export const invoiceRecordType = defineType({
   title: 'Invoice Record',
   type: 'document',
   fields: [
+    defineField({name: 'puppyId', title: 'Puppy ID', type: 'string', readOnly: true}),
+    defineField({name: 'litterId', title: 'Litter ID', type: 'string', readOnly: true}),
     defineField({name: 'createdAt', title: 'Created At', type: 'datetime'}),
     defineField({name: 'stripeInvoiceId', title: 'Stripe Invoice ID', type: 'string'}),
     defineField({name: 'stripeCustomerId', title: 'Stripe Customer ID', type: 'string'}),

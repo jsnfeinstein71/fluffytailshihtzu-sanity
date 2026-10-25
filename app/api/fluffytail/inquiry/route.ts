@@ -36,6 +36,9 @@ type TallyPayload = {
 }
 
 export async function POST(req: NextRequest) {
+  if (process.env.VERCEL_ENV === 'preview') {
+    return NextResponse.json({error: 'Provider callbacks are disabled in preview.'}, {status: 503})
+  }
   try {
     const payload = (await req.json()) as TallyPayload
     const fields: TallyField[] = payload?.data?.fields || []

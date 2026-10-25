@@ -1,4 +1,8 @@
 import '../home.css'
+import Link from 'next/link'
+
+export const revalidate = 60
+export const metadata = {title: 'About', alternates: {canonical: '/about'}}
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
@@ -12,12 +16,12 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function AboutPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}})
 
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
+        <Link className="btn" href="/">Home</Link>
         <a className="btn" href="/the-breed">The Breed</a>
         <a className="btn" href="/puppy-resources">Puppy Resources</a>
         <a className="btn" href="/pricing">Pricing</a>

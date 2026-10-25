@@ -1,8 +1,9 @@
 import '../home.css'
-import {client} from '@/sanity/lib/client'
+import {getOperatorClient} from '@/sanity/lib/operator-client'
+import {getBalance, getPricing} from '@/lib/pricing'
 import InboxClient from './InboxClient'
 
-export const revalidate = 10
+export const revalidate = 0
 
 export type SmsMessage = {
   _id: string
@@ -47,6 +48,7 @@ export type PuppyPrice = {
   name?: string
   overridePrice?: number
   litterPrice?: number
+  litterDeposit?: number
 }
 
 export type PaymentSummary = {
@@ -109,15 +111,17 @@ const puppyPricesQuery = `*[_type == "puppy"]{
   "slug": slug.current,
   name,
   overridePrice,
-  "litterPrice": litter->price
+  "litterPrice": litter->price,
+  "litterDeposit": litter->deposit
 }`
 
 export default async function InboxPage() {
+  const client = getOperatorClient()
   const [messages, inquiries, paymentRecords, puppyPrices] = await Promise.all([
-    client.fetch<SmsMessage[]>(smsMessagesQuery),
-    client.fetch<PuppyInquiry[]>(puppyInquiriesQuery),
-    client.fetch<PaymentRecord[]>(paymentRecordsQuery),
-    client.fetch<PuppyPrice[]>(puppyPricesQuery),
+    client.fetch<SmsMessage[]>(smsMessagesQuery, {}, {cache: 'no-store'}),
+    client.fetch<PuppyInquiry[]>(puppyInquiriesQuery, {}, {cache: 'no-store'}),
+    client.fetch<PaymentRecord[]>(paymentRecordsQuery, {}, {cache: 'no-store'}),
+    client.fetch<PuppyPrice[]>(puppyPricesQuery, {}, {cache: 'no-store'}),
   ])
 
   const conversations = buildConversations(
@@ -273,18 +277,20 @@ function buildPaymentSummary(
   }, 0)
 
   const puppy = primary.puppySlug ? puppyPriceMap.get(primary.puppySlug) : undefined
-  const totalPrice =
-    typeof puppy?.overridePrice === 'number'
-      ? puppy.overridePrice
-      : typeof puppy?.litterPrice === 'number'
-        ? puppy.litterPrice
-        : undefined
+  let totalPrice: number | undefined
+  let remainingBalance: number | undefined
+  try {
+    const pricing = getPricing(puppy || {})
+    totalPrice = pricing.totalCents / 100
+    remainingBalance = getBalance(pricing.totalCents, paidRecords).remainingCents / 100
+  } catch {
+    // Do not hide inconsistent pricing or overpayments behind a zero balance.
+  }
 
   return {
     records: paidRecords,
     totalPaid,
-    remainingBalance:
-      typeof totalPrice === 'number' ? Math.max(totalPrice - totalPaid, 0) : undefined,
+    remainingBalance,
     puppySlug: primary.puppySlug,
     puppyName: primary.puppyName || puppy?.name,
     totalPrice,

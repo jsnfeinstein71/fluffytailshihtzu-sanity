@@ -21,9 +21,6 @@ export const metadata: Metadata = {
   },
   description:
     'FluffyTail Shih Tzu is a small, home-based Shih Tzu breeder in Alabama. Our dogs live with us as family pets, and we work with families across the Southeast and beyond.',
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     type: 'website',
     url: 'https://www.fluffytailshihtzu.com',

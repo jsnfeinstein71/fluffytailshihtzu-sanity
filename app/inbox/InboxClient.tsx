@@ -2,6 +2,7 @@
 
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useRouter} from 'next/navigation'
+import Link from 'next/link'
 import type {Conversation, SmsMessage} from './page'
 
 type UploadedImage = {
@@ -98,7 +99,7 @@ export default function InboxClient({
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await fetch('/api/fluffytail/upload-image', {
+        const response = await fetch('/inbox/api/upload-image', {
           method: 'POST',
           body: formData,
         })
@@ -147,7 +148,7 @@ export default function InboxClient({
     setIsSending(true)
 
     try {
-      const response = await fetch('/api/fluffytail/sms/send', {
+      const response = await fetch('/inbox/api/sms-send', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -235,7 +236,7 @@ export default function InboxClient({
       throw new Error('This conversation is missing puppy info or puppy page URL.')
     }
 
-    const response = await fetch('/api/stripe/create-deposit-session', {
+    const response = await fetch('/inbox/api/create-deposit-session', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -276,7 +277,7 @@ export default function InboxClient({
       throw new Error('This conversation is missing puppy info, puppy page URL, or email.')
     }
 
-    const response = await fetch('/api/stripe/create-invoice', {
+    const response = await fetch('/inbox/api/create-invoice', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -318,7 +319,7 @@ export default function InboxClient({
       throw new Error('Amount must be greater than zero.')
     }
 
-    const response = await fetch('/api/stripe/create-payment-link', {
+    const response = await fetch('/inbox/api/create-payment-link', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -382,7 +383,7 @@ export default function InboxClient({
         `${result.url}\n\n` +
         `Once the deposit is completed, I’ll mark the puppy as reserved for you.`
 
-      const response = await fetch('/api/fluffytail/sms/send', {
+      const response = await fetch('/inbox/api/sms-send', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -448,7 +449,7 @@ export default function InboxClient({
         `${result.url}\n\n` +
         `You can use this link to pay the remaining balance.`
 
-      const response = await fetch('/api/fluffytail/sms/send', {
+      const response = await fetch('/inbox/api/sms-send', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -475,7 +476,7 @@ export default function InboxClient({
   }
 
   async function handleCreatePaymentLink() {
-    const input = window.prompt('Payment amount in dollars', '100')
+    const input = window.prompt('Payment amount in dollars')
     if (!input) return
 
     const amount = Number(input)
@@ -506,7 +507,7 @@ export default function InboxClient({
   async function handleSendPaymentLink() {
     if (!selectedConversation) return
 
-    const input = window.prompt('Payment amount in dollars', '100')
+    const input = window.prompt('Payment amount in dollars')
     if (!input) return
 
     const amount = Number(input)
@@ -524,7 +525,7 @@ export default function InboxClient({
         `Hi ${firstName}, here is your secure payment link for $${amount} toward your puppy balance:\n\n` +
         `${result.url}`
 
-      const response = await fetch('/api/fluffytail/sms/send', {
+      const response = await fetch('/inbox/api/sms-send', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -565,9 +566,9 @@ export default function InboxClient({
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">
+        <Link className="btn" href="/">
           Home
-        </a>
+        </Link>
         <a className="btn" href="/available-puppies">
           Available Puppies
         </a>

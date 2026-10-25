@@ -2,6 +2,7 @@ import '../home.css'
 import Link from 'next/link'
 
 export const metadata = {
+  alternates: {canonical: '/puppy-inquiry'},
   title: 'Puppy Inquiry | FluffyTail Shih Tzu',
   description: 'Submit a puppy inquiry to FluffyTail Shih Tzu.',
 }

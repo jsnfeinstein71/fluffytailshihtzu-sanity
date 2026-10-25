@@ -1,23 +1,23 @@
 import {NextRequest, NextResponse} from 'next/server'
-import {createClient} from '@sanity/client'
+import {getOperatorClient} from '@/sanity/lib/operator-client'
+import {requireOperator} from '@/lib/operator-auth'
 
 export const runtime = 'nodejs'
 
-const sanity = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
-  apiVersion: '2025-01-01',
-  token: process.env.SANITY_API_WRITE_TOKEN!,
-  useCdn: false,
-})
-
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req)
+  if (denied) return denied
   try {
+    const sanity = getOperatorClient()
     const formData = await req.formData()
     const file = formData.get('file')
 
     if (!(file instanceof File)) {
       return NextResponse.json({error: 'No file uploaded'}, {status: 400})
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({error: 'Use a JPEG, PNG, WebP, or GIF image up to 10 MB.'}, {status: 400})
     }
 
     const bytes = await file.arrayBuffer()
@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
       assetId: asset._id,
       url,
     })
-  } catch (error) {
-    console.error('Failed to upload image', error)
+  } catch {
+    console.error('Failed to upload image')
     return NextResponse.json({error: 'Failed to upload image'}, {status: 500})
   }
 }

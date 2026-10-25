@@ -1,21 +1,25 @@
 import '../home.css'
-import {client} from '@/sanity/lib/client'
+import Link from 'next/link'
+import {getInventory} from '@/sanity/lib/inventory'
+import {formatCurrency, normalizeLitterStatus} from '@/lib/inventory'
+import {tryPricing} from '@/lib/pricing'
 
-type SiteSettings = {
-  waitlistUrl?: string
-}
+export const revalidate = 60
 
-const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  waitlistUrl
-}`
+export const metadata = {title: 'Pricing & Process', alternates: {canonical: '/pricing'}}
 
 export default async function PricingPage() {
-  await client.fetch<SiteSettings>(siteSettingsQuery)
-
+  const {litters, puppies} = await getInventory()
+  const offered = litters.filter(litter => ['current', 'planned'].includes(normalizeLitterStatus(litter.status) || ''))
+  const quotes = offered.map(litter => tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit}))
+  quotes.push(...puppies.filter(puppy => offered.some(litter => litter._id === puppy.litterId)).map(tryPricing))
+  const prices = quotes.flatMap(quote => quote ? [quote.totalCents / 100] : [])
+  const range = prices.length ? [Math.min(...prices), Math.max(...prices)] : []
+  const priceText = range.length ? range[0] === range[1] ? formatCurrency(range[0], true) : range.map(value => formatCurrency(value, true)).join(' to ') : 'Please contact FluffyTail to confirm pricing'
   return (
     <main className="wrap">
       <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
+        <Link className="btn" href="/">Home</Link>
         <a className="btn" href="/about">About</a>
         <a className="btn" href="/the-breed">The Breed</a>
         <a className="btn" href="/puppy-resources">Puppy Resources</a>
@@ -44,7 +48,7 @@ export default async function PricingPage() {
             <div className="section" style={{marginTop: 0}}>
               <h2>General pricing</h2>
               <p className="lead">
-                FluffyTail Shih Tzu puppies are generally priced between <strong>$1,500 and $2,500</strong>.
+                Current and upcoming litter pricing: <strong>{priceText}</strong>.
               </p>
               <p className="lead" style={{marginBottom: 0}}>
                 Final pricing may vary by litter, timing, and individual puppy details.
@@ -56,7 +60,7 @@ export default async function PricingPage() {
             <div className="section">
               <h2>Deposit</h2>
               <p className="lead">
-                A <strong>$300 deposit</strong> is included as part of the overall puppy price.
+                The <strong>deposit shown on each puppy page</strong> is included as part of the overall puppy price.
               </p>
               <p className="lead" style={{marginBottom: 0}}>
                 Once a puppy is marked reserved, that means a deposit has typically been placed for that puppy.
@@ -95,8 +99,8 @@ export default async function PricingPage() {
           <div className="pad">
             <h2 className="panelTitle">At a glance</h2>
             <div className="meta">
-              <span>💲 General range: $1,500–$2,500</span>
-              <span>📌 Deposit: $300</span>
+              <span>Current prices: {priceText}</span>
+              <span>📌 Deposit: See the individual puppy page</span>
               <span>🐶 Reserved status shown on puppy listings</span>
               <span>📬 Questions welcome before committing</span>
             </div>
