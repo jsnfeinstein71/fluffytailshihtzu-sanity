@@ -2,7 +2,7 @@
 
 Date: 2026-10-25 (America/Chicago). Local branch: `codex/historical-sanity-privacy`.
 Base: freshly fetched `main`, `96958dc2540afb6d17e3a0028ce091d2d514e96e`.
-Status: prepared for review; NOT deployed, NOT permission to migrate. PR #2 remains draft at `9f71a693955eb1af68dfd4a57667b820eee49bd6`; none of its native form, layout, inventory, pricing, legal-copy or route-move changes are included.
+Status: publication and a separate draft PR are authorized for commit `2a590363c81b03087409eccf718363855711fcc0`, pending safe branch-specific preview isolation. NOT deployed, NOT permission to migrate. PR #2 remains draft at `9f71a693955eb1af68dfd4a57667b820eee49bd6`; none of its native form, layout, inventory, pricing, legal-copy or route-move changes are included.
 
 ## Exact Behavior Changes
 
@@ -28,15 +28,21 @@ The actual Inbox and invoice/webhook handlers are tested against root and privat
 
 ## Verification Results
 
-- `npm test`: **33 passing tests**, comprising 19 hotfix compatibility tests and 14 migration/backup tests. No PR #2 runtime code is needed to run them. Independent review identified template-less Studio publishing and migration recheck draft/reference drift; both were reproduced, corrected and regression-tested.
+- Commit `2a59036`: **33 passing tests**, comprising 19 hotfix compatibility tests and 14 migration/backup tests. The review-verification follow-up adds one test (34 total): valid synthetic Stripe and Twilio callbacks return 503, never a success acknowledgement, without reads/writes/provider calls while frozen; explicit local redelivery after unfreeze succeeds. This does not prove provider retry settings. No PR #2 runtime code is needed. Independent review identified template-less Studio publishing and migration recheck draft/reference drift; both were reproduced, corrected and regression-tested.
 - `npx next typegen` and `npm run typecheck`: pass.
 - Scoped ESLint covering every changed runtime file, migration helper and all tests: pass with no warnings/errors.
-- Full `npm run lint`: **eight pre-existing errors and fourteen warnings** on untouched `main` views (mostly old Home anchors and image recommendations). No unrelated navigation/layout fix or rule suppression is included. This is not a clean full-lint claim; a repository-wide lint gate remains red until separately resolved/accepted.
+- Full `npm run lint`: **eight pre-existing errors and fourteen warnings** on untouched `main` views (mostly old Home anchors and image recommendations). `node scripts/check-privacy-lint.mjs` compares each current diagnostic to ESLint results for its original source at the exact base above: **zero new diagnostics**. No unrelated navigation/layout fix or rule suppression is included. This is not a clean full-lint claim; the differential CI gate accepts only the inherited baseline, while repository-wide lint remains red until separately resolved/accepted.
 - `npm ci --ignore-scripts --no-audit --no-fund`: clean install passes. `npm run build`: production build passes, including all routes and embedded Studio. Inbox and Pay are dynamic. Build used public Sanity configuration and explicitly fake Stripe/Twilio values needed by existing module-level SDK initialization; no live secrets or provider requests were used. Dependency lifecycle scripts were not executed by the clean-install check.
 - `main`'s lockfile originally failed `npm ci` because declared Stripe/Twilio/Analytics and peers were absent/inconsistent. The minimal repair uses the already-CI-verified lockfile for the identical dependency declarations from commit `9f71a69`, not a branch merge. Package dependency declarations remain unchanged. A fresh resolver's broader peer upgrades were discarded; no app feature code was copied with the lockfile.
 - The 54-record synthetic rehearsal preserves every business field/timestamp, rewrites only mapped internal references, preserves public query results, resolves historical payments and models anonymous count zero. Collision/revision/new-root/draft/outside-reference/size gates fail closed.
 - AES-256-GCM backup rehearsal covers wrong-key/tamper rejection and encrypted exclusive-create file output followed by restoration in a separate Node process. Only synthetic data and an ephemeral test key were used; no plaintext backup was written. Temporary synthetic files were removed. No real encrypted customer backup/key escrow or Sanity-hosted mutation rehearsal exists yet.
-- No browser access/permission workarounds, deployment, main push, migration, provider-setting changes, account changes or Phase 2 work occurred. This branch has not been pushed; pushing a connected branch can trigger a Vercel preview, so publishing/deploying awaits explicit approval too.
+- No browser access/permission workarounds, deployment, main push, migration, provider-setting changes, account changes or Phase 2 work occurred. The owner authorized Vercel access, and a metadata retry succeeded. The owner explicitly confirmed isolated preview settings are **not ready** and directed that publication remain blocked. The branch-specific environment metadata query returned no configured entries; no values were decrypted. No branch push, draft PR creation, remote CI or hotfix preview build has occurred. Do not infer isolation from missing branch overrides, since shared configuration may still apply.
+
+### Review Verification Follow-Up Scope
+
+No runtime changes beyond `2a59036`. Additional verification files are `.github/workflows/privacy-hotfix-verification.yml` and `scripts/check-privacy-lint.mjs`; the existing callback test file and this runbook are updated. The workflow uses Node 24, the existing lockfile, synthetic mocked operational tests, baseline-aware lint, type generation, TypeScript and a production build. It has read-only GitHub permissions, no deploy step and no provider or Sanity write credentials. Build-time public puppy/litter reads use the existing public content configuration; operational tests replace it with synthetic fixtures. It does not change PR #2's workflow or branch.
+
+The real execution manifest is **not ready for authorization yet**: the committed 54-row inventory is redacted, not an executable ID/revision manifest. The offline planner and encrypted-backup/restore rehearsal are ready, but a reviewed execution/storage adapter, owner-only backup location, separately escrowed key, real encrypted backup/restore proof and freshly frozen revisions/digests remain required. Nothing in review publication authorizes those production actions.
 
 ## Exact Approval And Cutover Sequence
 
@@ -44,11 +50,11 @@ These are future steps, not actions performed. Preserve PR #2 as draft throughou
 
 ### A. Review And Isolated Rehearsal
 
-1. **Approval required:** publish this independent branch for review and, if desired, allow its GitHub/Vercel preview. Confirm the Vercel target is the correct project/team and non-production. A branch push can deploy automatically; do not push under the current no-deploy instruction.
-   Before a permitted preview push, set Preview `FLUFFYTAIL_WRITE_FREEZE=1` and remove any inherited production write/provider credentials or replace them with explicitly approved isolated settings. This legacy-based hotfix does not inherit PR #2's preview guards. Do not submit the embedded Tally form: it can notify through the real Tally account even when the preview server is frozen. Public-content layout inspection does not authorize operational tests against production.
+1. **Publication/isolation authorized; configuration pending:** publish `2a59036` and the bounded verification follow-up as a separate draft PR against `main` only after confirming the correct Vercel project/team and non-production target. No production merge/promotion is authorized. A branch push can deploy automatically.
+   Before the preview push, set branch-specific Preview `FLUFFYTAIL_WRITE_FREEZE=1` for `codex/historical-sanity-privacy`, use an approved synthetic-only dataset/token and remove inherited live provider credentials. Do not change shared Preview settings used by PR #2 or Production settings. This legacy-based hotfix does not inherit PR #2's preview guards. Do not submit the embedded Tally form: it can notify through the real Tally account even when the preview server is frozen. Public-content inspection does not authorize operational tests against production. An unfrozen hosted rehearsal requires confirmed isolated credentials and mocked provider effects first; a passing local test is not proof of hosted isolation.
 2. Confirm the actual production Git SHA matches the intended base or reconcile drift before deployment. Confirm the production server token can read/create/patch/delete the required private IDs, without exposing the token. Confirm all known writers, Studio editors/direct API clients and callback recovery owners. Do not change Stripe settings or subscription.
 3. **Approval/configuration required:** use an existing approved isolated Sanity dataset with synthetic data for a hosted API rehearsal. Configure only test-mode providers/stubs and no real alert recipients; do not invoke real/test payment creation or customer messaging as part of this task. Validate the private namespace, create timestamps, `_system` handling, strict atomic/revision/reference behavior and authenticated reads. Local mocks and a build cannot establish these provider permissions/semantics on their own.
-4. Run the documented checks for the published commit in an approved clean environment or existing CI, and resolve/explicitly accept the inherited lint gate. No new CI workflow is imported from PR #2, and no remote green check is claimed. Verify synthetic Inbox/Pay HTTP/RSC no-store headers and exact redirect behavior. No browser automation is authorized in this session; owner-supplied checks are acceptable. The synthetic tests cover callbacks without real provider sends.
+4. Run the documented checks for the published commit in CI, and explicitly acknowledge the inherited full-lint baseline. The small privacy verification workflow is independent of PR #2 and does not deploy. No remote green check is claimed before it runs. Verify synthetic Inbox/Pay HTTP/RSC no-store headers and exact redirect behavior. No browser automation or permission workaround is authorized in this session; owner-supplied checks are acceptable. The synthetic tests cover callbacks without real provider sends.
 
 ### B. Authorize Hotfix Deployment And The Write Freeze
 
@@ -87,6 +93,8 @@ These are future steps, not actions performed. Preserve PR #2 as draft throughou
 Current public exposure is not fixed by these un-deployed changes. This focused release can resolve it independently of PR #2 once the owner authorizes and verifies the staged sequence. Keep Phase 2 on hold.
 
 ## Exact Hotfix Manifest
+
+The following 26-file manifest was verified exactly against commit `2a59036`. The four-file review-verification follow-up is listed separately above; it adds no runtime behavior.
 
 Modified existing files:
 

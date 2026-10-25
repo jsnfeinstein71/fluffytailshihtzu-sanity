@@ -249,6 +249,26 @@ async function event(type, object, valid = true) {
   return webhook(new Request('https://fixture.example/api/stripe/webhook', {method: 'POST', headers: {'stripe-signature': signature}, body: payload}))
 }
 
+test('frozen valid provider callbacks return 503 without acknowledgement and can be delivered after resume', async () => {
+  const session = {id: 'cs_test_deferred', payment_status: 'paid', metadata: {...customer, ...puppyInfo, paymentType: 'manual-payment', amountPaid: '125'}}
+  const sms = () => new Request('https://fixture.example/api/fluffytail/sms/inbound', {method: 'POST', body: new URLSearchParams({
+    MessageSid: 'SM_fixture_deferred', From: customer.customerPhone, To: '+15555550102', Body: 'Synthetic deferred callback',
+  })})
+  process.env.FLUFFYTAIL_WRITE_FREEZE = '1'
+  for (const response of [await event('checkout.session.completed', session), await inbound(sms())]) {
+    assert.equal(response.status, 503)
+    assert.equal(response.headers.get('retry-after'), '60')
+    assert.deepEqual(await response.json(), {error: 'Operational writes are temporarily paused.'})
+  }
+  assert.equal(reads.length, 0); assert.equal(calls.length, 0); assert.equal(docs.length, 2)
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE
+  assert.equal((await event('checkout.session.completed', session)).status, 200)
+  assert.equal((await inbound(sms())).status, 200)
+  assert.equal(created('paymentRecord')[0].stripeCheckoutSessionId, session.id)
+  assert.equal(created('smsMessage')[0].messageSid, 'SM_fixture_deferred')
+  assert.equal(calls.length, 0)
+})
+
 test('signed Checkout callback preserves metadata lookup, reservation and token deactivation for migrated records', async () => {
   docs.push({_id: 'private.legacy-depositLink.a', _type: 'depositLink', token: 'legacy-token', active: true})
   const session = {id: 'cs_test_existing', payment_status: 'paid', payment_intent: 'pi_fixture', metadata: {...customer, ...puppyInfo, paymentType: 'deposit', token: 'legacy-token'}}
