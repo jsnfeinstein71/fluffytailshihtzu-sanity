@@ -6,6 +6,10 @@ import ts from 'typescript'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(import.meta.url)
+// Resolve before installing hooks: newer Node releases hook require.resolve too.
+const nextModules = new Map(['next/link', 'next/navigation', 'next/server'].map(specifier =>
+  [specifier, pathToFileURL(require.resolve(specifier)).href]
+))
 
 // Test-only loader: execute actual TSX pages with a read-only in-memory Sanity client.
 registerHooks({
@@ -22,7 +26,7 @@ registerHooks({
         }
       }
     }
-    if (specifier.startsWith('next/')) return {url: pathToFileURL(require.resolve(specifier)).href, shortCircuit: true}
+    if (nextModules.has(specifier)) return {url: nextModules.get(specifier), shortCircuit: true}
     return nextResolve(specifier, context)
   },
   load(url, context, nextLoad) {

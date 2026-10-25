@@ -1,6 +1,6 @@
 # FluffyTail Phase 1 Pricing And Release
 
-Status: implementation prepared for review; NOT approved for production.
+Status: published release candidate; NOT approved for production. Browser preview verification is pending permission.
 Branch: codex/phase-1-pricing-reliability.
 This supersedes the earlier inventory audit's pricing/auth findings for this branch only. Production parity must be verified after an approved deployment.
 
@@ -168,9 +168,21 @@ Includes the preceding authorized inventory work and this pricing/security follo
 - app/api/stripe/create-invoice/route.ts
 - app/api/stripe/create-payment-link/route.ts
 
-## Publishing Blocker And Commands
+## Release Unblocking Results (2026-10-25)
 
-GitHub create-tree was refused because the tool requires approval and this session has approval_policy=never. Local .git is read-only. No remote tree, commit, branch, PR or Vercel preview was created. The Vercel plugin installation was confirmed, but deployment tools were not exposed in this running session. The workflow above has not run remotely.
+- The Windows ACL grants the current user modify access. Git branch/commit/push succeeded after the Codex filesystem sandbox restriction was removed; no Windows ACL change was necessary.
+- The accepted candidate was committed as 6713b6e22313ef7002b82ef647f56c7fa09ac8da on codex/phase-1-pricing-reliability and pushed. Exactly the 63 manifest paths were staged; Git reports 61 changed files after detecting two renames. Credential-pattern and whitespace checks passed.
+- Draft review: https://github.com/jsnfeinstein71/fluffytailshihtzu-sanity/pull/2. main remains at 96958dc2540afb6d17e3a0028ce091d2d514e96e; no merge or production deployment was requested.
+- The full local production build passed with public Sanity project/dataset variables and no payment/messaging secrets. No font or application workaround was needed.
+- GitHub-to-Vercel integration built the preview successfully: https://fluffytailshihtzu-sanity-git-c-a62872-jason-feinsteins-projects.vercel.app. Initial deployment: 8QGWMhJsTHo2bVToDVeDGi4PMXmy. GitHub Vercel status and bot comment report Ready.
+- Clean Linux CI installation succeeded. The first CI test run exposed require.resolve recursion in the test-only loader on Node 24.21. The follow-up resolves Next entry points before registering the hook; no runtime application code is changed.
+- All 34 tests still pass locally after the loader correction. The follow-up CI run must complete before approval.
+- Browser automation was denied by the preview origin approval gate. No alternate HTTP/browser route was used to bypass that denial. Puppy/litter/inquiry/mobile visual and interactive verification remains unclaimed until access is authorized or manual evidence is supplied.
+- Vercel project inspection returned team-scope 403, including once after reported authorization. No protection settings, environment variables or production settings were changed. Existing GitHub preview integration works independently.
+
+## Original Publishing Blocker And Manual Fallback
+
+Historical, now resolved: in the earlier sandboxed session GitHub create-tree required unavailable approval and local .git was read-only. No publication occurred in that earlier session. The release-unblocking results above record the later successful publication. The fallback commands below are retained for reference; do not rerun branch creation after the branch already exists.
 
 After reviewing the files, run these in a normal authorized terminal with GitHub push access. The list is scoped to this prepared release, rather than staging every unrelated future change.
 
