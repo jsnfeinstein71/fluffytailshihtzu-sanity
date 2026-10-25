@@ -283,6 +283,37 @@ test('signed Checkout callback preserves metadata lookup, reservation and token 
   assert.ok(reads.filter(read => /_type == "(paymentRecord|depositLink)"/.test(read.query)).every(read => read.options.cache === 'no-store'))
 })
 
+test('Stripe recovery after freeze records one payment across repeated signed deliveries without provider calls', async () => {
+  const session = {id: 'cs_test_recovery', payment_status: 'paid', metadata: {...customer, ...puppyInfo, paymentType: 'manual-payment', amountPaid: '125'}}
+  process.env.FLUFFYTAIL_WRITE_FREEZE = '1'
+  assert.equal((await event('checkout.session.completed', session)).status, 503)
+  assert.equal(created('paymentRecord').length, 0)
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE // Local mocked handler only; never a Vercel setting.
+  assert.equal((await event('checkout.session.completed', session)).status, 200)
+  assert.equal((await event('checkout.session.completed', session)).status, 200)
+  assert.equal(created('paymentRecord').length, 1)
+  assert.equal(created('paymentRecord')[0].amountPaid, 125)
+  assert.equal(calls.length, 0)
+})
+
+test('baseline inbound replay is not idempotent, so recovery must not blindly replay customer TwiML', async () => {
+  const message = () => new Request('https://fixture.example/api/fluffytail/sms/inbound', {method: 'POST', body: new URLSearchParams({
+    MessageSid: 'SM_fixture_recovery', From: customer.customerPhone, To: '+15555550102', Body: 'Synthetic recovery message',
+  })})
+  process.env.FLUFFYTAIL_WRITE_FREEZE = '1'
+  assert.equal((await inbound(message())).status, 503)
+  assert.equal(created('smsMessage').length, 0)
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE // Local mocked handler only; never a Vercel setting.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await inbound(message())
+    assert.equal(response.status, 200)
+    assert.match(await response.text(), /<Message>/)
+  }
+  assert.equal(created('smsMessage').length, 2)
+  assert.equal(new Set(created('smsMessage').map(message => message.messageSid)).size, 1)
+  assert.equal(calls.length, 0)
+})
+
 test('Checkout duplicate lookup recognizes an existing root payment without changing its amount', async () => {
   docs.push({_id: 'old-payment', _type: 'paymentRecord', stripeCheckoutSessionId: 'cs_test_existing', amountPaid: 400})
   assert.equal((await event('checkout.session.completed', {id: 'cs_test_existing', metadata: {...puppyInfo, paymentType: 'manual-payment', amountPaid: '100'}})).status, 200)

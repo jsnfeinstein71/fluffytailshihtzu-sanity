@@ -1,7 +1,7 @@
 # Historical Sanity Privacy Migration Plan
 
 Date: 2026-10-25 (America/Chicago). Scope: existing operational documents in project `3glz6dkx`, dataset `production`.
-Independent implementation update: the local `codex/historical-sanity-privacy` branch now prepares the compatibility hotfix without deploying it. See [hotfix readiness and exact cutover sequence](fluffytail-privacy-hotfix.md). This document's initial planning results below are historical; current hotfix validation is recorded in that readiness document.
+Independent implementation update: draft PR #3 has a frozen isolated Preview; a hosted 54-record migration, encrypted restoration and fresh re-migration were completed only in `gu1xkpsg/synthetic`. See [hotfix readiness and exact cutover sequence](fluffytail-privacy-hotfix.md) and the [redacted hosted receipt](fluffytail-privacy-rehearsal.json). This document's inventory and initial planning results below are historical, not new production access; the current backup/manifest procedure and outstanding production approvals are in that readiness document.
 The prepared hotfix blocks Studio publishing of root-level operational records until they are migrated, including template-less create intents. Private operational records retain publishing. The default-off write-freeze switch and guarded raw-state rechecks are documented in the current runbook; none is active in production.
 Decision: **GO for this bounded migration design; NO-GO for production execution now.** Production writes need a separate explicit authorization after the gates below. No subscription, database, production code, data, provider settings or PR state has changed.
 
@@ -92,7 +92,7 @@ For the current 54-record set, the planner constructs **162 mutations**:
 
 All three groups are part of **the same transaction**, so no guard field or intermediate duplicate state is committed separately. Sanity commits the group atomically. The real payload must remain under **4,000,000 bytes**; if not, stop and redesign the batch plan rather than automatically split the cutover. Use `visibility=sync` and retain the returned transaction receipt in the encrypted execution record. Do not rely solely on an eventually consistent GROQ result for revision assertions. [Transactions and optimistic locking](https://www.sanity.io/docs/content-lake/transactions), [mutation request limit](https://www.sanity.io/docs/content-lake/technical-limits).
 
-The offline module intentionally has **no Sanity client, network call, token/env access, filesystem writer, `--apply` option or production executor**. Implement/review an execution adapter only after approval for that stage. Do not manually paste customer-bearing mutation JSON into a console or tool transcript.
+The offline planner intentionally has **no Sanity client, network call, token/env access, filesystem writer, `--apply` option or production executor**. The separate read-only capture and offline encrypted-copy helpers are now tested with synthetic data; use the exact approved SDK mutation invocation and current-state rechecks in the canonical runbook only after real backup/manifest and data-move approval. Do not manually paste customer-bearing mutation JSON into a console or tool transcript.
 
 ### 4. Verify Before Resuming Writers
 
