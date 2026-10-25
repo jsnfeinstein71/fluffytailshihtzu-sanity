@@ -63,8 +63,9 @@ export default function TermsAndConditionsPage() {
     Program name: <strong>FluffyTail Shih Tzu Customer Messaging</strong>
   </p>
   <p className="lead">
-    SMS consent is collected only through the puppy inquiry form at{' '}
-    <Link href="/puppy-inquiry">https://www.fluffytailshihtzu.com/puppy-inquiry</Link>. By entering
+    SMS consent is collected through our website inquiry forms at{' '}
+    <Link href="/puppy-inquiry">/puppy-inquiry</Link> and <Link href="/contact">/contact</Link>.
+    Consent is required only when you select Text or Either, not for email-only inquiries. By entering
     your phone number, reviewing the SMS disclosure, checking the required SMS consent box, and
     submitting that form, you agree to receive conversational and customer-care text messages from
     FluffyTail Shih Tzu regarding your puppy inquiry, puppy availability, scheduling, and related

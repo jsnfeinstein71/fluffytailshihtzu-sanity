@@ -17,7 +17,7 @@ Ask for explicit confirmation before changing:
 
 - Stripe session, invoice, webhook, payment amount, or payment metadata behavior.
 - Twilio inbound/outbound messaging, STOP/HELP wording, alert recipients, or media handling.
-- Tally field names, webhook payload mapping, or SMS consent collection.
+- Native inquiry submission, contact preference or SMS consent collection. Tally is retired on the release branch; do not improve its old integration or delete its historical records.
 - Sanity schema changes that affect live content, operational records, or Studio editing.
 - Vercel deployment settings, domains, redirects, environment variables, or production build behavior.
 - Legal page copy, especially SMS consent, privacy, and terms language.
@@ -41,7 +41,7 @@ Do not assume direct access to connected services. Call out when work needs app/
 - Vercel: project linkage, production/preview environment variables, domains, logs, and deploy settings.
 - Sanity: project ID/dataset verification, content documents, Studio permissions, API tokens, webhook config.
 - Stripe: test/live mode confirmation, webhook endpoint config, Checkout/Invoice records, event delivery logs.
-- Tally: form field IDs/labels, webhook URL, hidden fields, SMS consent checkbox, submission logs.
+- Tally: historical submissions/account only; after approved native-form release, owner can retire obsolete external webhook/form configuration. No ongoing development dependency.
 - Twilio: messaging service/phone number config, inbound webhook URL, A2P/10DLC status, STOP/HELP behavior, logs.
 
 ## Route Orientation
@@ -60,7 +60,19 @@ Do not assume direct access to connected services. Call out when work needs app/
 - Preserve actual historical payments. New metadata captures server-selected puppy/litter IDs; recording requires signed paid Stripe events.
 - Operator actions belong under /inbox/api and must call requireOperator before provider calls. No public aliases for removed operator routes.
 - Preview needs Stripe test credentials and an isolated synthetic Sanity dataset. Messaging/provider callbacks are disabled. No live financial/operational writes are needed for regression tests.
-- A repo patch cannot revoke direct Stripe links. Review obsolete/pending unpaid quotes before approval; verify production dataset ACLs and Tally/Twilio callback signatures separately.
+- A repo patch cannot revoke direct Stripe links. Review obsolete/pending unpaid quotes before approval; verify production dataset privacy and exact Twilio callback configuration separately.
+
+## Native Inquiry And Privacy Maintenance
+
+- Read `docs/fluffytail-native-inquiry-release.md` before inquiry/messaging/privacy changes. Keep PR #2 draft until revised QA and explicit production approval.
+- Keep `/puppy-inquiry` and old puppy-context URLs working. Resolve puppy/litter context from Sanity on the server; never trust display names or contact preferences without validation.
+- Email requires no phone/SMS consent; Text/Either require both. New native requests have recorded consent evidence. Do not enable customer texts for Email-only requests; preserve phone-less Inbox visibility and separate conversation IDs.
+- Reuse Sanity, operator SMS alerts and Inbox. No email delivery service exists in this codebase. Do not add a provider/database/queue without authorization.
+- New operational writes must use `privateRecordId` from `sanity/lib/private-records.ts`, not random public root IDs. Keep Stripe/SID deduplication deterministic and preserve lookup compatibility with historical records.
+- Authenticated-only new IDs do not hide old records. Confirmed anonymous production count: 54 published operational documents on 2026-10-25. No content migration/dataset visibility change is authorized. Approval and isolated verification are required to resolve this release blocker.
+- Keep server secrets server-only; Preview requires a synthetic isolated dataset and a separate `INQUIRY_FORM_SECRET`. Never point live callbacks at Preview or send test customer messages. Do not bypass Preview's production-dataset guard.
+- Verify Twilio signatures against the exact configured external URL and all parameters before persistence. SID retries must not generate duplicate records or acknowledgements. Ambiguous outbound alert outcomes require operator log review rather than automatic resend.
+- Monitor pending/needs-review inquiry notifications. Rate-limit records expire logically, not automatically on disk; any cleanup must be explicitly scoped and reviewed.
 
 ## Verification Checklist
 

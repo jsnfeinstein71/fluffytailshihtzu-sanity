@@ -11,6 +11,9 @@ export const smsMessageType = defineType({
     defineField({name: 'body', title: 'Body', type: 'text', rows: 4}),
     defineField({name: 'direction', title: 'Direction', type: 'string'}),
     defineField({name: 'source', title: 'Source', type: 'string'}),
+    defineField({name: 'status', title: 'Delivery Status', type: 'string', readOnly: true}),
+    defineField({name: 'signatureVerified', title: 'Signature Verified', type: 'boolean', readOnly: true}),
+    defineField({name: 'receipt', title: 'Event Claim', type: 'string', readOnly: true, hidden: true}),
     defineField({name: 'receivedAt', title: 'Received At', type: 'datetime'}),
     defineField({name: 'numMedia', title: 'Number of Media Items', type: 'number'}),
     defineField({

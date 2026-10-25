@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {requireOperator} from '@/lib/operator-auth'
+import {privateRecordId} from '@/sanity/lib/private-records'
 import {toCents} from '@/lib/pricing'
 import {getStripe} from '@/sanity/lib/stripe'
 import {getPaymentContext, paymentMetadata, paymentFailure, PaymentError} from '@/sanity/lib/payment-context'
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     if (!invoice.id) throw new Error('Invoice ID unavailable.')
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id)
     if (finalized.amount_due !== balance.remainingCents || finalized.currency !== 'usd') throw new Error('Stripe invoice amount does not match the server balance.')
-    await sanity.create({_type: 'invoiceRecord', createdAt: new Date().toISOString(), stripeInvoiceId: finalized.id, stripeCustomerId: customer.id,
+    await sanity.create({_id: privateRecordId('invoice'), _type: 'invoiceRecord', createdAt: new Date().toISOString(), stripeInvoiceId: finalized.id, stripeCustomerId: customer.id,
       hostedInvoiceUrl: finalized.hosted_invoice_url || '', status: finalized.status || '',
       puppySlug: puppy.slug, puppyName: puppy.name, puppyId: puppy._id, litterId: puppy.litterId,
       customerName: metadata.customerName, customerEmail, customerPhone: metadata.customerPhone,

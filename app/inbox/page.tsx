@@ -1,6 +1,7 @@
 import '../home.css'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {getBalance, getPricing} from '@/lib/pricing'
+import {normalizePhone as normalizeContactPhone} from '@/lib/inquiry'
 import InboxClient from './InboxClient'
 
 export const revalidate = 0
@@ -30,6 +31,8 @@ export type PuppyInquiry = {
   litter?: string
   puppyPageUrl?: string
   source?: string
+  smsConsent?: boolean
+  notificationStatus?: string
 }
 
 export type PaymentRecord = {
@@ -61,6 +64,7 @@ export type PaymentSummary = {
 }
 
 export type Conversation = {
+  id: string
   phone: string
   messages: SmsMessage[]
   latestAt?: string
@@ -93,7 +97,9 @@ const puppyInquiriesQuery = `*[_type == "puppyInquiry"] | order(submittedAt desc
   puppy,
   litter,
   puppyPageUrl,
-  source
+  source,
+  smsConsent,
+  notificationStatus
 }`
 
 const paymentRecordsQuery = `*[_type == "paymentRecord"] | order(createdAt desc){
@@ -144,9 +150,9 @@ function buildConversations(
   const paymentMap = new Map<string, PaymentRecord[]>()
 
   for (const inquiry of inquiries) {
-    const phone = normalizePhone(inquiry.phone)
-    if (phone && !inquiryMap.has(phone)) {
-      inquiryMap.set(phone, inquiry)
+    const id = normalizePhone(inquiry.phone) || `inquiry:${inquiry._id}`
+    if (!inquiryMap.has(id)) {
+      inquiryMap.set(id, inquiry)
     }
   }
 
@@ -173,8 +179,7 @@ function buildConversations(
   const phoneSet = new Set<string>()
 
   for (const inquiry of inquiries) {
-    const phone = normalizePhone(inquiry.phone)
-    if (phone) phoneSet.add(phone)
+    phoneSet.add(normalizePhone(inquiry.phone) || `inquiry:${inquiry._id}`)
   }
 
   for (const payment of paymentRecords) {
@@ -191,7 +196,8 @@ function buildConversations(
     if (phone) phoneSet.add(phone)
   }
 
-  const conversations: Conversation[] = Array.from(phoneSet).map((phone) => {
+  const conversations: Conversation[] = Array.from(phoneSet).map((id) => {
+    const phone = id.startsWith('inquiry:') ? '' : id
     const groupedMessages = customerMessages
       .filter((message) => {
         const messagePhone =
@@ -199,7 +205,7 @@ function buildConversations(
             ? normalizePhone(message.to)
             : normalizePhone(message.from)
 
-        return messagePhone === phone
+        return !!phone && messagePhone === phone
       })
       .sort((a, b) => {
         const aTime = a.receivedAt ? new Date(a.receivedAt).getTime() : 0
@@ -207,7 +213,7 @@ function buildConversations(
         return aTime - bTime
       })
 
-    const inquiry = inquiryMap.get(phone) || null
+    const inquiry = inquiryMap.get(id) || null
     const inquiryPuppySlug = extractPuppySlugFromInquiry(inquiry)
 
     const allPhonePayments = paymentMap.get(phone) || []
@@ -232,6 +238,7 @@ function buildConversations(
         : inquiry?.message || 'New inquiry')
 
     return {
+      id,
       phone,
       messages: groupedMessages,
       latestAt,
@@ -320,17 +327,6 @@ function extractPuppySlugFromInquiry(inquiry?: PuppyInquiry | null) {
 }
 
 function normalizePhone(value?: string) {
-  if (!value) return ''
-
-  const digits = value.replace(/\D/g, '')
-
-  if (digits.length === 11 && digits.startsWith('1')) {
-    return digits.slice(1)
-  }
-
-  if (digits.length === 10) {
-    return digits
-  }
-
-  return digits
+  try { return normalizeContactPhone(value || '') }
+  catch { return value?.trim() || '' }
 }

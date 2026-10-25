@@ -99,8 +99,9 @@ export default function PrivacyPolicyPage() {
           <section className="section">
   <h2>SMS communications</h2>
   <p className="lead">
-    SMS consent is collected only through the puppy inquiry form at{' '}
-    <Link href="/puppy-inquiry">https://www.fluffytailshihtzu.com/puppy-inquiry</Link>. To opt in,
+    SMS consent is collected through our website inquiry forms at{' '}
+    <Link href="/puppy-inquiry">/puppy-inquiry</Link> and <Link href="/contact">/contact</Link>.
+    Consent is required only when you select Text or Either, not for email-only inquiries. To opt in,
     you enter your phone number, review the SMS disclosure, check the required SMS consent box, and
     submit the form.
   </p>

@@ -19,6 +19,13 @@ export const puppyInquiryType = defineType({
     defineField({name: 'litter', title: 'Litter', type: 'string'}),
     defineField({name: 'puppyPageUrl', title: 'Puppy Page URL', type: 'url'}),
     defineField({name: 'smsConsent', title: 'SMS Consent', type: 'boolean'}),
+    defineField({name: 'consentAt', title: 'SMS Consent At', type: 'datetime', readOnly: true}),
+    defineField({name: 'consentVersion', title: 'Consent Version', type: 'string', readOnly: true}),
+    defineField({name: 'interest', title: 'Interest', type: 'string', readOnly: true}),
+    defineField({name: 'puppyId', title: 'Puppy ID', type: 'string', readOnly: true}),
+    defineField({name: 'litterId', title: 'Litter ID', type: 'string', readOnly: true}),
+    defineField({name: 'notificationStatus', title: 'Operator Notification Status', type: 'string', readOnly: true}),
+    defineField({name: 'receipt', title: 'Submission Claim', type: 'string', readOnly: true, hidden: true}),
     defineField({name: 'source', title: 'Source', type: 'string'}),
   ],
   preview: {

@@ -19,7 +19,8 @@ FluffyTail Shih Tzu is a production Next.js and Sanity site for a small breeder.
 - Vercel deployment target with `www.fluffytailshihtzu.com` as the public production domain.
 - Stripe for deposit, payment, invoice, and webhook handling.
 - Twilio for SMS/MMS inbound and outbound customer messaging.
-- Tally for puppy inquiry and waitlist lead capture.
+- Native Next.js puppy inquiry and waitlist forms, Sanity storage and existing Twilio operator alerts. Tally is retired on the Phase 1 release branch; preserve historical submissions.
+- New operational records must use authenticated-only `private.<kind>.<hash>` document IDs via `sanity/lib/private-records.ts`. Do not migrate historical records or change dataset visibility without explicit approval.
 
 ## Commands
 

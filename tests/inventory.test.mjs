@@ -133,20 +133,20 @@ test('public routes render and only Contact offers waitlist and GoodDog actions'
   }]
   for (const path of ['about', 'the-breed', 'puppy-resources', 'pricing', 'available-puppies', 'upcoming-litters', 'contact', 'privacy-policy', 'terms-and-conditions', 'puppy-inquiry', 'payment-success']) {
     const {default: Page} = await import(`../app/${path}/page.tsx`)
-    const html = await render(Page, path === 'puppy-inquiry' ? {searchParams: Promise.resolve({puppy: 'Pup', litter: 'Litter', puppyPageUrl: 'https://www.fluffytailshihtzu.com/puppies/pup'})} : {})
+    const html = await render(Page, path === 'puppy-inquiry' ? {searchParams: Promise.resolve({puppy: 'available', litter: 'current', puppyPageUrl: 'https://www.fluffytailshihtzu.com/puppies/available'})} : {})
     assert.match(html, /<main/)
     if (path === 'contact') {
-      assert.match(html, /https:\/\/tally.so\/embed\/waitlist-fixture/)
+      assert.match(html, /\/puppy-inquiry\?interest=waitlist/)
+      assert.doesNotMatch(html, /<iframe|tally.so/)
       assert.match(html, /https:\/\/www.gooddog.com\/breeders\/fixture/)
     } else {
       assert.doesNotMatch(html, /href="https:\/\/www.gooddog.com|src="https:\/\/tally.so\/embed\/waitlist-fixture/)
     }
     if (path === 'puppy-inquiry') {
-      assert.match(html, /tally.so\/embed\/1Av6Dl/)
-      assert.match(html, /puppy=Pup/)
-      assert.match(html, /litter=Litter/)
-      assert.match(html, /privacy-policy/)
-      assert.match(html, /terms-and-conditions/)
+      assert.match(html, /aria-label="Puppy inquiry"/)
+      assert.match(html, /Litter: current/)
+      assert.match(html, /name="email"/)
+      assert.doesNotMatch(html, /<iframe|tally.so/)
     }
   }
 })

@@ -2,6 +2,7 @@ import './register-typescript.mjs'
 import test, {beforeEach} from 'node:test'
 import assert from 'node:assert/strict'
 import {existsSync} from 'node:fs'
+import {createHash} from 'node:crypto'
 import {parse, evaluate} from 'groq-js'
 import {renderToStaticMarkup} from 'react-dom/server'
 import Stripe from 'stripe'
@@ -69,6 +70,7 @@ beforeEach(() => {
   globalThis.fixtureSanityFetch = fetch
   globalThis.fixtureOperatorClient = {
     fetch, patch,
+    async getDocument(id) {return clone(docs.find(doc => doc._id === id))},
     async createIfNotExists(doc) {
       const existing = docs.find(item => item._id === doc._id)
       if (existing) return clone(existing)
@@ -76,7 +78,7 @@ beforeEach(() => {
       docs.push(saved)
       return clone(saved)
     },
-    async create(doc) {const saved = {...clone(doc), _id: 'created-' + docs.length, _rev: 'new'}; docs.push(saved); return clone(saved)},
+    async create(doc) {const saved = {...clone(doc), _id: doc._id || 'created-' + docs.length, _rev: 'new'}; docs.push(saved); return clone(saved)},
     transaction() {
       const creates = [], patches = []
       return {
@@ -165,6 +167,7 @@ test('deposit ignores forged browser prices/names and binds the Sanity puppy and
   assert.equal(params.metadata.totalPriceCents, '160000')
   assert.match(params.line_items[0].price_data.product_data.description, /applied to the total/)
   assert.equal(links().length, 1)
+  assert.match(links()[0]._id, /^private\.deposit\./)
 })
 
 test('override flows through Checkout and the actual puppy page; litter defaults remain labeled', async () => {
@@ -275,6 +278,7 @@ test('invoice credits actual historical payments and uses puppy override, not ha
   assert.equal((await response.json()).amountDue, 1500)
   assert.deepEqual(items.map(item => item.amount), [200000, -40000, -10000])
   assert.equal(docs.find(doc => doc._type === 'invoiceRecord').puppyId, 'puppy-id')
+  assert.match(docs.find(doc => doc._type === 'invoiceRecord')._id, /^private\.invoice\./)
 })
 
 test('signed Stripe paid amount is recorded exactly once and the puppy remains in its litter', async () => {
@@ -283,6 +287,7 @@ test('signed Stripe paid amount is recorded exactly once and the puppy remains i
   const event = await signedEvent('checkout.session.completed', session)
   assert.equal(event.status, 200)
   assert.equal(records()[0].amountPaid, 400)
+  assert.match(records()[0]._id, /^private\.paymentCheckout\./)
   assert.equal(records()[0].litterId, 'litter')
   assert.equal(docs[1].status, 'reserved')
   assert.equal(docs[1].litter._ref, 'litter')
@@ -333,6 +338,15 @@ test('invoice paid events record the actual remaining payment once', async () =>
   assert.equal((await signedEvent('invoice.paid', payment)).status, 200)
   assert.equal(records().length, 2)
   assert.equal(getBalance(160000, records()).remainingCents, 0)
+  assert.match(records().find(record => record.stripeInvoiceId === 'in_fixture')._id, /^private\.paymentInvoice\./)
+})
+
+test('an unexpired legacy public deposit claim blocks a competing private replacement', async () => {
+  docs.push({_id: 'deposit-active-' + createHash('sha256').update('puppy-id').digest('hex'), _type: 'depositLink', active: true, expiresAt: new Date(Date.now() + 60_000).toISOString()})
+  const response = await deposit(request('/inbox/api/create-deposit-session', body()))
+  assert.equal(response.status, 409)
+  assert.equal(calls.length, 0)
+  assert.equal(links().length, 1)
 })
 
 test('operator routes fail closed before parsing or invoking any provider; old public actions are removed', async () => {
@@ -400,7 +414,7 @@ test('preview disables provider callbacks and outbound messaging before operatio
   process.env.NEXT_PUBLIC_SANITY_DATASET = 'production'
   for (const path of ['inquiry', 'sms/inbound']) {
     const {POST} = await import('../app/api/fluffytail/' + path + '/route.ts')
-    assert.equal((await POST(request('/api/fluffytail/' + path, {}))).status, 503)
+    assert.equal((await POST(request('/api/fluffytail/' + path, {}))).status, path === 'inquiry' ? 410 : 503)
   }
   const {POST} = await import('../app/inbox/api/sms-send/route.ts')
   assert.equal((await POST(request('/inbox/api/sms-send', {to: '+15555550101', body: 'fixture'}))).status, 503)

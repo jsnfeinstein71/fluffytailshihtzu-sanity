@@ -16,6 +16,7 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === '@/sanity/lib/operator-client' || specifier === './operator-client') return {url: 'fixture:operator-client', shortCircuit: true}
     if (specifier === '@/sanity/lib/stripe') return {url: 'fixture:stripe', shortCircuit: true}
+    if (specifier === '@/sanity/lib/twilio' || specifier === './twilio') return {url: 'fixture:twilio', shortCircuit: true}
     if (specifier === '@/sanity/lib/client') return {url: 'fixture:sanity-client', shortCircuit: true}
     if (specifier.startsWith('@/') || specifier.startsWith('.')) {
       const target = specifier.startsWith('@/') ? path.join(root, specifier.slice(2)) : fileURLToPath(new URL(specifier, context.parentURL))
@@ -32,6 +33,7 @@ registerHooks({
   load(url, context, nextLoad) {
     if (url === 'fixture:operator-client') return {format: 'module', source: 'export const getOperatorClient = () => globalThis.fixtureOperatorClient', shortCircuit: true}
     if (url === 'fixture:stripe') return {format: 'module', source: 'export const getStripe = () => globalThis.fixtureStripe', shortCircuit: true}
+    if (url === 'fixture:twilio') return {format: 'module', source: 'export const getTwilio = () => globalThis.fixtureTwilio', shortCircuit: true}
     if (url === 'fixture:sanity-client') return {format: 'module', source: 'export const client = {fetch: (...args) => globalThis.fixtureSanityFetch(...args)}', shortCircuit: true}
     if (url.endsWith('.css')) return {format: 'module', source: '', shortCircuit: true}
     if (url.startsWith('file:') && /\.tsx?$/.test(url) && fileURLToPath(url).startsWith(root)) {

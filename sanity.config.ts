@@ -18,6 +18,9 @@ export default defineConfig({
   dataset,
   schema: {
     types: schemaTypes,
+    templates: templates => templates.filter(template =>
+      !['puppyInquiry', 'smsMessage', 'paymentRecord', 'depositLink', 'invoiceRecord', 'inquiryRate'].includes(template.schemaType)
+    ),
   },
   plugins: [
     structureTool({structure}),

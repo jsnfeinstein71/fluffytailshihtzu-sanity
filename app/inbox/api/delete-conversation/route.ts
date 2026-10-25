@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {requireOperator} from '@/lib/operator-auth'
+import {normalizePhone as normalizeContactPhone} from '@/lib/inquiry'
 
 export const runtime = 'nodejs'
 
@@ -22,11 +23,18 @@ export async function POST(req: NextRequest) {
   if (denied) return denied
   try {
     const sanity = getOperatorClient()
-    const {phone} = await req.json()
+    const {phone, inquiryId} = await req.json()
 
     const normalizedTarget = normalizePhone(String(phone || ''))
 
     if (!normalizedTarget) {
+      if (typeof inquiryId === 'string') {
+        const inquiry = await sanity.getDocument<PuppyInquiryRecord & {_type: string}>(inquiryId)
+        if (inquiry?._type === 'puppyInquiry' && !normalizePhone(inquiry.phone)) {
+          await sanity.delete(inquiry._id)
+          return NextResponse.json({ok: true, deleted: 1, deletedInquiries: 1, deletedMessages: 0})
+        }
+      }
       return NextResponse.json({error: 'Missing phone'}, {status: 400})
     }
 
@@ -95,17 +103,6 @@ export async function POST(req: NextRequest) {
 }
 
 function normalizePhone(value?: string) {
-  if (!value) return ''
-
-  const digits = value.replace(/\D/g, '')
-
-  if (digits.length === 11 && digits.startsWith('1')) {
-    return digits.slice(1)
-  }
-
-  if (digits.length === 10) {
-    return digits
-  }
-
-  return digits
+  try { return normalizeContactPhone(value || '') }
+  catch { return value?.trim() || '' }
 }

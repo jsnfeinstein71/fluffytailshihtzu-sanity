@@ -4,6 +4,7 @@ import {useEffect, useMemo, useRef, useState} from 'react'
 import {useRouter} from 'next/navigation'
 import Link from 'next/link'
 import type {Conversation, SmsMessage} from './page'
+import {normalizePhone} from '@/lib/inquiry'
 
 type UploadedImage = {
   url: string
@@ -19,7 +20,7 @@ export default function InboxClient({
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
-  const [selectedPhone, setSelectedPhone] = useState(conversations[0]?.phone || '')
+  const [selectedId, setSelectedId] = useState(conversations[0]?.id || '')
   const [search, setSearch] = useState('')
   const [isMobile, setIsMobile] = useState(false)
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
@@ -61,11 +62,13 @@ export default function InboxClient({
   }, [conversations, search])
 
   const selectedConversation =
-    filtered.find((c) => c.phone === selectedPhone) || filtered[0] || null
+    filtered.find((c) => c.id === selectedId) || filtered[0] || null
+  const canText = !!selectedConversation?.phone && !(selectedConversation.inquiry?.source === 'fluffytail-native' &&
+    (selectedConversation.inquiry.smsConsent !== true || selectedConversation.inquiry.preferredContactMethod === 'Email'))
 
   useEffect(() => {
     if (!selectedConversation && filtered[0]) {
-      setSelectedPhone(filtered[0].phone)
+      setSelectedId(filtered[0].id)
     }
   }, [filtered, selectedConversation])
 
@@ -74,10 +77,10 @@ export default function InboxClient({
     setUploadedImages([])
     setComposerError('')
     setDepositMessage('')
-  }, [selectedPhone])
+  }, [selectedId])
 
-  const openConversation = (phone: string) => {
-    setSelectedPhone(phone)
+  const openConversation = (id: string) => {
+    setSelectedId(id)
     if (isMobile) setMobileView('thread')
   }
 
@@ -134,7 +137,7 @@ export default function InboxClient({
   async function handleSend(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!selectedConversation) return
+    if (!selectedConversation || !canText) return
 
     const trimmedBody = replyBody.trim()
 
@@ -198,6 +201,7 @@ export default function InboxClient({
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           phone: selectedConversation.phone,
+          inquiryId: selectedConversation.inquiry?._id,
         }),
       })
 
@@ -207,7 +211,7 @@ export default function InboxClient({
         throw new Error(json.error || 'Failed to delete conversation')
       }
 
-      setSelectedPhone('')
+      setSelectedId('')
       if (isMobile) {
         setMobileView('list')
       }
@@ -633,7 +637,7 @@ export default function InboxClient({
                 </div>
               ) : (
                 filtered.map((conversation) => {
-                  const isActive = selectedConversation?.phone === conversation.phone
+                  const isActive = selectedConversation?.id === conversation.id
                   const title =
                     conversation.inquiry?.name?.trim() ||
                     formatDisplayPhone(conversation.phone)
@@ -646,8 +650,8 @@ export default function InboxClient({
 
                   return (
                     <button
-                      key={conversation.phone}
-                      onClick={() => openConversation(conversation.phone)}
+                      key={conversation.id}
+                      onClick={() => openConversation(conversation.id)}
                       style={{
                         width: '100%',
                         textAlign: 'left',
@@ -760,12 +764,17 @@ export default function InboxClient({
                         }}
                       >
                         {selectedConversation.inquiry.email ? (
-                          <div>Email: {selectedConversation.inquiry.email}</div>
+                          <div>Email: <a href={`mailto:${selectedConversation.inquiry.email}`}>{selectedConversation.inquiry.email}</a></div>
                         ) : null}
                         {selectedConversation.inquiry.preferredContactMethod ? (
                           <div>
                             Prefers: {selectedConversation.inquiry.preferredContactMethod}
                           </div>
+                        ) : null}
+                        {selectedConversation.inquiry.source === 'fluffytail-native' ? (
+                          <div>SMS consent: {selectedConversation.inquiry.smsConsent ? 'Yes' : 'No'}
+                            {selectedConversation.inquiry.notificationStatus === 'needs-review' || selectedConversation.inquiry.notificationStatus === 'pending'
+                              ? ' | Operator alert needs review. Do not resend automatically.' : ''}</div>
                         ) : null}
                         {selectedConversation.inquiry.puppy ? (
                           <div>Puppy: {selectedConversation.inquiry.puppy}</div>
@@ -848,6 +857,7 @@ export default function InboxClient({
                   }}
                 >
                   <form onSubmit={handleSend}>
+                    {!canText && selectedConversation.inquiry?.email ? <p><a href={`mailto:${selectedConversation.inquiry.email}`}>Reply by Email</a></p> : null}
                     <label
                       style={{
                         display: 'block',
@@ -859,6 +869,7 @@ export default function InboxClient({
                     </label>
 
                     <textarea
+                      disabled={!canText}
                       value={replyBody}
                       onChange={(e) => setReplyBody(e.target.value)}
                       rows={3}
@@ -945,6 +956,7 @@ export default function InboxClient({
                         className="btn"
                         onClick={() => galleryInputRef.current?.click()}
                         disabled={
+                          !canText ||
                           isUploading ||
                           isSending ||
                           isDeleting ||
@@ -964,6 +976,7 @@ export default function InboxClient({
                         className="btn"
                         onClick={() => cameraInputRef.current?.click()}
                         disabled={
+                          !canText ||
                           isUploading ||
                           isSending ||
                           isDeleting ||
@@ -1003,6 +1016,7 @@ export default function InboxClient({
                         className="btn"
                         onClick={handleSendDepositLink}
                         disabled={
+                          !canText ||
                           !canCreateDepositLink ||
                           isUploading ||
                           isSending ||
@@ -1043,6 +1057,7 @@ export default function InboxClient({
                         className="btn"
                         onClick={handleSendInvoiceLink}
                         disabled={
+                          !canText ||
                           !canCreateInvoice ||
                           isUploading ||
                           isSending ||
@@ -1083,6 +1098,7 @@ export default function InboxClient({
                         className="btn"
                         onClick={handleSendPaymentLink}
                         disabled={
+                          !canText ||
                           !canCreatePaymentLink ||
                           isUploading ||
                           isSending ||
@@ -1121,6 +1137,7 @@ export default function InboxClient({
                         className="btn btnPrimary"
                         type="submit"
                         disabled={
+                          !canText ||
                           isUploading ||
                           isSending ||
                           isDeleting ||
@@ -1266,12 +1283,8 @@ function extractPuppySlug(url?: string) {
 }
 
 function toE164(value?: string) {
-  if (!value) return ''
-  const digits = value.replace(/\D/g, '')
-  if (!digits) return ''
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  if (digits.length === 10) return `+1${digits}`
-  return value.startsWith('+') ? value : `+${digits}`
+  try { return normalizePhone(value || '') }
+  catch { return '' }
 }
 
 function formatPaymentSummary(paymentSummary?: {
@@ -1347,6 +1360,7 @@ function formatTimeOnly(value?: string) {
 
 function formatDisplayPhone(value?: string) {
   if (!value) return 'Unknown'
+  if (value.startsWith('+') && !value.startsWith('+1')) return value
 
   const digits = value.replace(/\D/g, '')
 

@@ -1,5 +1,6 @@
 import '../home.css'
 import Link from 'next/link'
+import InquiryForm from '../components/InquiryForm'
 
 export const revalidate = 60
 export const metadata = {title: 'Contact', alternates: {canonical: '/contact'}}
@@ -7,14 +8,10 @@ import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
   goodDogUrl?: string
-  waitlistUrl?: string
-  puppyInquiryUrl?: string
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  goodDogUrl,
-  waitlistUrl,
-  puppyInquiryUrl
+  goodDogUrl
 }`
 
 export default async function ContactPage() {
@@ -24,8 +21,8 @@ export default async function ContactPage() {
     siteSettings?.goodDogUrl ||
     'https://my.gooddog.com/fluffytail-shih-tzu-alabama'
 
-  const waitlistUrl = siteSettings?.waitlistUrl || ''
-  const puppyInquiryUrl = siteSettings?.puppyInquiryUrl || ''
+  const waitlistUrl = '/puppy-inquiry?interest=waitlist'
+  const puppyInquiryUrl = '/puppy-inquiry'
 
   return (
     <main className="wrap">
@@ -44,7 +41,7 @@ export default async function ContactPage() {
 
         <div className="nav">
           {waitlistUrl ? (
-            <a className="btn btnPrimary" href={waitlistUrl} target="_blank" rel="noreferrer">
+            <a className="btn btnPrimary" href={waitlistUrl}>
               Open Waitlist
             </a>
           ) : null}
@@ -73,8 +70,8 @@ export default async function ContactPage() {
 
               <div className="ctaRow">
                 {waitlistUrl ? (
-                  <a className="btn btnPrimary" href={waitlistUrl} target="_blank" rel="noreferrer">
-                    Open Waitlist in New Tab
+                  <a className="btn btnPrimary" href={waitlistUrl}>
+                    Join the Waitlist
                   </a>
                 ) : null}
                 <a className="btn" href={goodDogUrl} target="_blank" rel="noreferrer">
@@ -126,7 +123,7 @@ export default async function ContactPage() {
 
             <div className="ctaRow">
               {waitlistUrl ? (
-                <a className="btn btnPrimary" href={waitlistUrl} target="_blank" rel="noreferrer">
+                <a className="btn btnPrimary" href={waitlistUrl}>
                   Join the Waitlist
                 </a>
               ) : null}
@@ -152,23 +149,7 @@ export default async function ContactPage() {
         <div className="pad">
           <h2 style={{marginTop: 0}}>Waitlist form</h2>
 
-          {waitlistUrl ? (
-            <iframe
-              src={waitlistUrl}
-              title="FluffyTail Shih Tzu Waitlist"
-              style={{
-                width: '100%',
-                height: '760px',
-                border: '0',
-                borderRadius: '14px',
-                background: '#fff',
-              }}
-            />
-          ) : (
-            <p className="lead" style={{marginBottom: 0}}>
-              Add the Tally embed URL in Site Settings to display the form here.
-            </p>
-          )}
+          <InquiryForm interest="waitlist" />
         </div>
       </div>
 

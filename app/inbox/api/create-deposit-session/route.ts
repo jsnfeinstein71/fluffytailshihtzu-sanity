@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {createHash, randomBytes} from 'node:crypto'
+import {privateRecordId} from '@/sanity/lib/private-records'
 import {requireOperator} from '@/lib/operator-auth'
 import {getStripe} from '@/sanity/lib/stripe'
 import {getPaymentContext, paymentBaseUrl, paymentFailure, paymentMetadata, PaymentError} from '@/sanity/lib/payment-context'
@@ -31,7 +32,12 @@ export async function POST(req: NextRequest) {
     const token = randomBytes(24).toString('hex')
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
     const metadata = {...paymentMetadata(context), customerName, customerEmail, customerPhone, token, paymentType: 'deposit', chargedAmountCents: String(pricing.depositCents)}
-    const linkId = `deposit-active-${createHash('sha256').update(puppy._id).digest('hex')}`
+    const legacyId = `deposit-active-${createHash('sha256').update(puppy._id).digest('hex')}`
+    const legacy = await sanity.getDocument<DepositLink>(legacyId)
+    if (legacy?.active && (!Number.isFinite(Date.parse(legacy.expiresAt)) || Date.parse(legacy.expiresAt) > Date.now())) {
+      throw new PaymentError('An earlier deposit claim exists. Reconcile or expire its Stripe checkout before creating a private replacement.', 409)
+    }
+    const linkId = privateRecordId('deposit', puppy._id)
     // One active deposit link per puppy; Sanity's conditional revision prevents competing claims.
     let link = await sanity.createIfNotExists<DepositLink>({
       _id: linkId, _type: 'depositLink', token, active: true, expiresAt,

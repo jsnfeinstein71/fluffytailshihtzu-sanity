@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import type Stripe from 'stripe'
-import {createHash} from 'node:crypto'
+import {privateRecordId} from '@/sanity/lib/private-records'
 import {getStripe} from '@/sanity/lib/stripe'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 
@@ -39,7 +39,7 @@ async function recordCheckout(session: Stripe.Checkout.Session) {
   const existing = await sanity.fetch<{_id: string} | null>(`*[_type == "paymentRecord" && stripeCheckoutSessionId == $sessionId][0]{_id}`, {sessionId: session.id}, {cache: 'no-store'})
   if (existing) return // Preserve historical records, including earlier deposit amounts.
   const puppy = await findPuppy(sanity, session.metadata)
-  const recordId = `payment-checkout-${createHash('sha256').update(session.id).digest('hex')}`
+  const recordId = privateRecordId('paymentCheckout', session.id)
   const transaction = sanity.transaction().createIfNotExists({
     _id: recordId, _type: 'paymentRecord', stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : '',
@@ -69,7 +69,7 @@ async function recordInvoice(invoice: Stripe.Invoice) {
   if (existing) return
   const puppy = await findPuppy(sanity, invoice.metadata)
   const transaction = sanity.transaction().createIfNotExists({
-    _id: `payment-invoice-${createHash('sha256').update(invoice.id).digest('hex')}`, _type: 'paymentRecord', stripeInvoiceId: invoice.id,
+    _id: privateRecordId('paymentInvoice', invoice.id), _type: 'paymentRecord', stripeInvoiceId: invoice.id,
     paymentType: 'invoice', amountPaid, paymentStatus: 'paid', puppyId: puppy._id, litterId: puppy.litterId,
     puppySlug: invoice.metadata.puppySlug, puppyName: invoice.metadata.puppyName,
     customerName: invoice.metadata.customerName, customerEmail: invoice.metadata.customerEmail, customerPhone: invoice.metadata.customerPhone,

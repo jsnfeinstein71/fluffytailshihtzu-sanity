@@ -1,6 +1,6 @@
 # FluffyTail Phase 1 Pricing And Release
 
-Status: published release candidate; NOT approved for production. Browser preview verification is pending permission.
+Status: draft PR #2; NOT approved for production. The accepted pricing candidate passed manual QA, CI/build and 34 tests. The new native inquiry/security follow-up supersedes its inquiry/security gates; see [Native Inquiry Release](fluffytail-native-inquiry-release.md) for the current manifest, 61-test baseline, configuration and outstanding blockers. Historical results below are not acceptance of the new form.
 Branch: codex/phase-1-pricing-reliability.
 This supersedes the earlier inventory audit's pricing/auth findings for this branch only. Production parity must be verified after an approved deployment.
 
@@ -39,8 +39,8 @@ Old operator paths intentionally return 404. Update external operator automation
 - Upload accepts supported raster images up to 10 MB. Sanity CDN URLs remain shareable; authenticated upload does not make an asset private.
 - Payment metadata contains server-selected puppy/litter IDs and names. Confirmation exposes no customer contact data.
 - Stripe webhook remains public for Stripe, but requires its signature/secret. Recording is transactional with deterministic IDs; historical records are preserved.
-- Tally inquiry and Twilio inbound are provider callbacks, NOT operator actions. Existing production handlers still lack signature validation/deduplication. Resolve this with provider configuration and a separately reviewed patch, or explicitly accept the risk, before approving production.
-- Moving server reads does NOT protect documents that the Sanity dataset itself permits anonymously. Verify restrictive document-level read permissions or separate operational data. Do not make the dataset private blindly: public content currently uses anonymous reads.
+- On this branch, the Tally callback is a no-write 410 and native inquiries use server validation/request tokens/rate limits. Twilio inbound requires a valid signature and deduplicates SID events. These changes are not yet deployed to production; see the native inquiry release document.
+- Anonymous count-only inspection confirmed 54 readable operational records. New operational IDs are authenticated-only, but existing records require an explicitly approved privacy remediation before production. Do not make the dataset private blindly: public content currently uses anonymous reads.
 - Changed operator/payment code avoids logging customer payloads. Existing provider callback logging/alerts are not comprehensively remediated.
 
 ## Preview Isolation

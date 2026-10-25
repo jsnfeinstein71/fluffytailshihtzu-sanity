@@ -8,6 +8,7 @@ import {paymentRecordType} from './paymentRecord'
 import {depositLinkType} from './depositLink'
 import {invoiceRecordType} from './invoiceRecord'
 import {dogType} from './dog'
+import {inquiryRateType} from './inquiryRate'
 
 export const schemaTypes = [
   siteSettingsType,
@@ -20,4 +21,5 @@ export const schemaTypes = [
   paymentRecordType,
   depositLinkType,
   invoiceRecordType,
+  inquiryRateType,
 ]
