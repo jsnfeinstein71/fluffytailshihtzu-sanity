@@ -1,6 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {stripe} from '@/sanity/lib/stripe'
 import {createClient} from '@sanity/client'
+import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
 
@@ -22,6 +24,8 @@ function createToken(length = 12) {
 }
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const body = await req.json()
 
@@ -75,6 +79,7 @@ export async function POST(req: NextRequest) {
     })
 
     await sanity.create({
+      _id: privateRecordId('deposit'),
       _type: 'depositLink',
       token,
       active: true,

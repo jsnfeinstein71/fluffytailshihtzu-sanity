@@ -1,6 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
 import twilio from 'twilio'
+import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
 
@@ -18,6 +20,8 @@ const twilioClient = twilio(
 )
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const payload = await req.json()
 
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
     })
 
     await sanity.create({
+      _id: privateRecordId('sms'),
       _type: 'smsMessage',
       messageSid: message.sid,
       from: process.env.TWILIO_FROM_NUMBER!,

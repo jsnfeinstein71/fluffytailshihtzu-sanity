@@ -5,7 +5,7 @@ export function proxy(req: NextRequest) {
   const pass = process.env.INBOX_BASIC_AUTH_PASS || ''
 
   if (!user || !pass) {
-    return new NextResponse('Inbox auth is not configured.', {status: 500})
+    return new NextResponse('Inbox auth is not configured.', {status: 500, headers: {'Cache-Control': 'no-store'}})
   }
 
   const authHeader = req.headers.get('authorization')
@@ -23,7 +23,9 @@ export function proxy(req: NextRequest) {
           const suppliedPass = decoded.slice(separatorIndex + 1)
 
           if (suppliedUser === user && suppliedPass === pass) {
-            return NextResponse.next()
+            const response = NextResponse.next()
+            response.headers.set('Cache-Control', 'private, no-store')
+            return response
           }
         }
       } catch {

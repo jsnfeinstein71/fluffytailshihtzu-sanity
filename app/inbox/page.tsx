@@ -1,8 +1,8 @@
 import '../home.css'
-import {client} from '@/sanity/lib/client'
+import {getOperationalClient} from '@/sanity/lib/operational-client'
 import InboxClient from './InboxClient'
 
-export const revalidate = 10
+export const revalidate = 0
 
 export type SmsMessage = {
   _id: string
@@ -113,11 +113,12 @@ const puppyPricesQuery = `*[_type == "puppy"]{
 }`
 
 export default async function InboxPage() {
+  const client = getOperationalClient()
   const [messages, inquiries, paymentRecords, puppyPrices] = await Promise.all([
-    client.fetch<SmsMessage[]>(smsMessagesQuery),
-    client.fetch<PuppyInquiry[]>(puppyInquiriesQuery),
-    client.fetch<PaymentRecord[]>(paymentRecordsQuery),
-    client.fetch<PuppyPrice[]>(puppyPricesQuery),
+    client.fetch<SmsMessage[]>(smsMessagesQuery, {}, {cache: 'no-store'}),
+    client.fetch<PuppyInquiry[]>(puppyInquiriesQuery, {}, {cache: 'no-store'}),
+    client.fetch<PaymentRecord[]>(paymentRecordsQuery, {}, {cache: 'no-store'}),
+    client.fetch<PuppyPrice[]>(puppyPricesQuery, {}, {cache: 'no-store'}),
   ])
 
   const conversations = buildConversations(

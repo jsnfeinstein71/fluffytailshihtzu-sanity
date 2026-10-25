@@ -1,6 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
 import {stripe} from '@/sanity/lib/stripe'
+import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
 
@@ -43,6 +45,8 @@ const paidRecordsQuery = `*[
 }`
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const body = await req.json()
 
@@ -78,7 +82,8 @@ export async function POST(req: NextRequest) {
 
     const paidRecords = await sanity.fetch<PaymentRecord[]>(
       paidRecordsQuery as string,
-      {slug: puppySlug} as Record<string, string>
+      {slug: puppySlug} as Record<string, string>,
+      {cache: 'no-store'}
     )
 
     const totalPaid = paidRecords.reduce((sum, record) => {
@@ -152,6 +157,7 @@ export async function POST(req: NextRequest) {
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id)
 
     await sanity.create({
+      _id: privateRecordId('invoice'),
       _type: 'invoiceRecord',
       createdAt: new Date().toISOString(),
       stripeInvoiceId: finalized.id,

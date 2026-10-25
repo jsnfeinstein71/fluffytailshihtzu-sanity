@@ -1,6 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
 import twilio from 'twilio'
+import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
 
@@ -36,6 +38,8 @@ type TallyPayload = {
 }
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const payload = (await req.json()) as TallyPayload
     const fields: TallyField[] = payload?.data?.fields || []
@@ -179,6 +183,7 @@ export async function POST(req: NextRequest) {
     const smsConsent = getSmsConsent()
 
     await sanity.create({
+      _id: privateRecordId('inquiry'),
       _type: 'puppyInquiry',
       submittedAt: new Date().toISOString(),
       name,
@@ -234,6 +239,7 @@ export async function POST(req: NextRequest) {
 
       for (const sent of sentAlerts) {
         transaction.create({
+          _id: privateRecordId('alert'),
           _type: 'smsMessage',
           messageSid: sent.sid,
           from: process.env.TWILIO_FROM_NUMBER!,

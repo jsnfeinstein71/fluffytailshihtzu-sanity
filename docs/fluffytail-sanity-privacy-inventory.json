@@ -1,0 +1,1491 @@
+{
+  "observedDate": "2026-10-25",
+  "projectId": "3glz6dkx",
+  "dataset": "production",
+  "authenticatedMetadataRead": true,
+  "anonymousCount": 54,
+  "byType": {
+    "puppyInquiry": 5,
+    "smsMessage": 26,
+    "paymentRecord": 0,
+    "depositLink": 9,
+    "invoiceRecord": 14,
+    "inquiryRate": 0
+  },
+  "referenceScope": "Authenticated incoming references() query across the readable dataset; no operational draft/version companions observed.",
+  "identityNotice": "Aliases are report-local, not customer identities. Exact phone/email equality links are not proof of identity or completeness; no customer values or raw operational IDs are retained here.",
+  "uniqueMatchedPuppies": 5,
+  "uniqueMatchedLitters": 3,
+  "records": [
+    {
+      "alias": "D01",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ],
+      "active": false,
+      "hasQuote": false,
+      "hasStripeSessionId": true,
+      "hasSystemBase": true
+    },
+    {
+      "alias": "D02",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ],
+      "active": false,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": true
+    },
+    {
+      "alias": "D03",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ],
+      "active": false,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": true
+    },
+    {
+      "alias": "D04",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P02",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D06",
+        "D07",
+        "I05",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ],
+      "active": true,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": false
+    },
+    {
+      "alias": "D05",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P03",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ],
+      "active": false,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": false
+    },
+    {
+      "alias": "D06",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P02",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D04",
+        "D07",
+        "I05",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ],
+      "active": false,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": false
+    },
+    {
+      "alias": "D07",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "I05",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ],
+      "active": true,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": false
+    },
+    {
+      "alias": "D08",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ],
+      "active": false,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": false
+    },
+    {
+      "alias": "D09",
+      "type": "depositLink",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P03",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D05",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ],
+      "active": true,
+      "hasQuote": false,
+      "hasStripeSessionId": false,
+      "hasSystemBase": false
+    },
+    {
+      "alias": "I01",
+      "type": "puppyInquiry",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P01",
+          "litter": "L03"
+        }
+      ],
+      "exactContactLinks": []
+    },
+    {
+      "alias": "I02",
+      "type": "puppyInquiry",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P04",
+          "litter": "L01"
+        }
+      ],
+      "exactContactLinks": []
+    },
+    {
+      "alias": "I03",
+      "type": "puppyInquiry",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P04",
+          "litter": "L01"
+        }
+      ],
+      "exactContactLinks": [
+        "I04"
+      ]
+    },
+    {
+      "alias": "I04",
+      "type": "puppyInquiry",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P04",
+          "litter": "L01"
+        }
+      ],
+      "exactContactLinks": [
+        "I03"
+      ]
+    },
+    {
+      "alias": "I05",
+      "type": "puppyInquiry",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S01",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S02",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S03",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S04",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S05",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S06",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S07",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S08",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S09",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S10",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S11",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S12",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S13",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S14",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S15",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S16",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S17",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S18",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S19",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S21",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S20",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S24",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S21",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S22",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S22",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S23",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S23",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S25",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S24",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S26",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "S25",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "V03"
+      ]
+    },
+    {
+      "alias": "S26",
+      "type": "smsMessage",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "V08",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "V01",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V02",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V03",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P02",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D04",
+        "D06",
+        "D07",
+        "I05",
+        "S01",
+        "S03",
+        "S04",
+        "S06",
+        "S08",
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S15",
+        "S17",
+        "S18",
+        "S19",
+        "S21",
+        "S22",
+        "S23",
+        "S25"
+      ]
+    },
+    {
+      "alias": "V04",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V05",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V06",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V07",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V07",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V09",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V08",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P03",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V13",
+        "V14"
+      ]
+    },
+    {
+      "alias": "V09",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V10",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V10",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V11",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V11",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V12"
+      ]
+    },
+    {
+      "alias": "V12",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P05",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D01",
+        "D02",
+        "D03",
+        "D08",
+        "V01",
+        "V02",
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V09",
+        "V10",
+        "V11"
+      ]
+    },
+    {
+      "alias": "V13",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P03",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V14"
+      ]
+    },
+    {
+      "alias": "V14",
+      "type": "invoiceRecord",
+      "anonymousReadable": true,
+      "incomingSanityReferences": 0,
+      "puppies": [
+        {
+          "alias": "P03",
+          "litter": "L02"
+        }
+      ],
+      "exactContactLinks": [
+        "D05",
+        "D09",
+        "S02",
+        "S05",
+        "S07",
+        "S14",
+        "S16",
+        "S20",
+        "S24",
+        "S26",
+        "V08",
+        "V13"
+      ]
+    }
+  ]
+}
