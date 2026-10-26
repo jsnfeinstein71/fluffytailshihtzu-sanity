@@ -20,6 +20,7 @@ registerHooks({
     if (specifier === '@/sanity/lib/stripe') return {url: 'fixture:stripe', shortCircuit: true}
     if (specifier === '@/sanity/lib/twilio' || specifier === './twilio') return {url: 'fixture:twilio', shortCircuit: true}
     if (specifier === '@/sanity/lib/client') return {url: 'fixture:sanity-client', shortCircuit: true}
+    if (specifier === './mail-provider' || specifier === '@/sanity/lib/mail-provider') return {url:'fixture:mail-provider',shortCircuit:true}
     if (specifier.startsWith('@/') || specifier.startsWith('.')) {
       const target = specifier.startsWith('@/') ? path.join(root, specifier.slice(2)) : fileURLToPath(new URL(specifier, context.parentURL))
       for (const candidate of [target, target + '.ts', target + '.tsx']) {
@@ -39,6 +40,7 @@ registerHooks({
     if (url === 'fixture:stripe') return {format: 'module', source: 'export const getStripe = () => globalThis.fixtureStripe', shortCircuit: true}
     if (url === 'fixture:twilio') return {format: 'module', source: 'export const getTwilio = () => globalThis.fixtureTwilio', shortCircuit: true}
     if (url === 'fixture:sanity-client') return {format: 'module', source: 'export const client = {fetch: (...args) => globalThis.fixtureSanityFetch(...args)}', shortCircuit: true}
+    if (url === 'fixture:mail-provider') return {format:'module',source:`export * from ${JSON.stringify(pathToFileURL(path.join(root,'sanity/lib/mail-provider.ts')).href)}; import {getMailProvider as realProvider,getMailCapabilities as realCapabilities} from ${JSON.stringify(pathToFileURL(path.join(root,'sanity/lib/mail-provider.ts')).href)}; export const getMailProvider=()=>globalThis.fixtureMailProvider||realProvider(); export const getMailCapabilities=()=>globalThis.fixtureMailProvider?.capabilities||realCapabilities();`,shortCircuit:true}
     if (url.endsWith('.css')) return {format: 'module', source: '', shortCircuit: true}
     if (url.startsWith('file:') && /\.tsx?$/.test(url) && fileURLToPath(url).startsWith(root)) {
       const source = ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), {

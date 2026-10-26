@@ -111,6 +111,12 @@ Next implementation work remains the private application email draft/outbox/repl
 
 ## Sources And Scope
 
+### Hosted Application Email Follow-up
+
+Continues from recovered checkpoint `3df9782` inside the same `/inbox/workspace` interface and email handler. Saved reviews now create one persistent outgoing record per family/draft version. Durable claims, immutable attempt history, explicit failure/uncertainty handling and staff evidence reviews prevent blind retries or duplicate submissions. SMTP acceptance remains separate from delivery. Incoming reply synchronization matches exact participants and known message references, deduplicates imports, retains failed cursors, and returns replies to the correct family conversation. Drafts and historical financial/inventory records are preserved.
+
+Pair SMTP/IMAP adapter contracts and the full application path are exercised with fictional providers. The pinned mail packages are promoted to runtime dependencies; versions remain unchanged. The local companion is development tooling only. No Vercel mail credentials, real access flags, background reader or production setting is activated. See [the hosted email runbook](fluffytail-hosted-email.md) for the exact owner-only test proposed for approval, secure server configuration, scope limits and remaining customer-launch work. Local fixture success, hosted persistence verification and actual provider delivery are distinct release evidence.
+
 ### October 26 Inbox Recovery And Email Preparation
 
 Recovered the same checkout at `C:/fluffytailshihtzu-sanity`, branch `codex/fluffytail-integrated-release`, last committed/pushed checkpoint `429c5dd`. The laptop interruption left five modified tracked files and the new compose/reply/payment-review implementation and tests untracked. Git status/diff, reflog, all new source encodings, local task-log metadata and saved-file metadata were inspected first. No reset, replacement checkout, fetch-based overwrite, saved-record deletion or credential re-entry was performed. Saved fictional family/email files and the encrypted account profile survived. No partially truncated source or pending data file was found.

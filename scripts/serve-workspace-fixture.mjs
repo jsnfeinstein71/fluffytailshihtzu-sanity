@@ -13,7 +13,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..')
 const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview','families.json')
 const allowed=['PATH','Path','SystemRoot','SYSTEMROOT','SystemDrive','WINDIR','windir','COMSPEC','ComSpec','PATHEXT','TEMP','TMP','LOCALAPPDATA','APPDATA','USERPROFILE','HOME']
 const childEnv=Object.fromEntries(allowed.filter(key=>process.env[key]).map(key=>[key,process.env[key]]))
-Object.assign(childEnv,{NEXT_PUBLIC_SANITY_PROJECT_ID:'gu1xkpsg',NEXT_PUBLIC_SANITY_DATASET:'synthetic',VERCEL_ENV:'preview',FLUFFYTAIL_LOCAL_MAIL_UI:'1',FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'fixture-operator',INBOX_BASIC_AUTH_PASS:'fixture-only-password'})
+Object.assign(childEnv,{NEXT_PUBLIC_SANITY_PROJECT_ID:'gu1xkpsg',NEXT_PUBLIC_SANITY_DATASET:'synthetic',VERCEL_ENV:'preview',FLUFFYTAIL_LOCAL_MAIL_UI:'1',FLUFFYTAIL_MAIL_MODE:'fictional',FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'fixture-operator',INBOX_BASIC_AUTH_PASS:'fixture-only-password'})
 Object.assign(process.env,childEnv)
 let initial=[]
 try{initial=JSON.parse(await readFile(storage,'utf8'))}catch(error){if(error.code!=='ENOENT')throw new Error('The local fixture could not be read; refusing to replace it.')}

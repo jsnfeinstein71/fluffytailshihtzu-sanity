@@ -17,3 +17,7 @@
 .ops-incoming-mail pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;margin:15px 0;padding:14px;background:#f3f0ea;border-radius:5px;font-size:12px}.ops-local-mail .ops-family-list p{-webkit-line-clamp:3}.ops-local-mail .ops-context h3:not(:first-of-type){margin-top:24px}@media(max-width:900px){.ops-local-mail .ops-family-list{display:block;max-height:370px;overflow:auto}.ops-local-mail .ops-family-list p{display:block}.ops-local-mail .ops-context{display:block}}
 
 .ops-incoming-mail{min-height:0}
+
+.ops-provider-scenario{display:grid;gap:6px;font-size:11px;margin:15px 0}.ops-email-outbox>details>p{margin:10px 0}.ops-email-outbox .ops-compose-actions{flex-wrap:wrap}.ops-message strong{font-weight:600}
+
+.ops-email-outbox .ops-draft-conflict label{display:block;margin:12px 0 6px}.ops-email-outbox .ops-draft-conflict input[type=checkbox]{width:auto;margin-right:8px;accent-color:#746042}

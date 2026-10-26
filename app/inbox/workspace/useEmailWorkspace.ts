@@ -1,7 +1,7 @@
 'use client'
 
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {emptyEmail,mailMessages,sameEmail,type EmailDraft,type EmailValue,type MailAction,type MailData,type MailResult} from './email-model'
+import {emptyEmail,sameEmail,type EmailDraft,type EmailValue,type MailAction,type MailData,type MailResult,type TransportAction} from './email-model'
 
 type Entry={value:EmailValue;base:EmailValue;revision:string|null;conflict?:EmailDraft}
 export function useEmailWorkspace(ready:boolean){
@@ -24,11 +24,11 @@ export function useEmailWorkspace(ready:boolean){
       return next
     })
   },[])
-  const request=useCallback(async(action?:MailAction):Promise<MailResult|null>=>{
+  const request=useCallback(async(action?:MailAction|TransportAction):Promise<MailResult|null>=>{
     if(lock.current)return null
     lock.current=true;setBusy(true);setError('')
     try{
-      const response=await fetch(new URL('/inbox/workspace/api/email',window.location.origin),{method:action?'POST':'GET',headers:action?{'Content-Type':'application/json'}:undefined,body:action?JSON.stringify(action):undefined,cache:'no-store',signal:AbortSignal.timeout(15000)})
+      const response=await fetch(new URL('/inbox/workspace/api/email',window.location.origin),{method:action?'POST':'GET',headers:action?{'Content-Type':'application/json'}:undefined,body:action?JSON.stringify(action):undefined,cache:'no-store',signal:AbortSignal.timeout(65000)})
       const result:MailResult=await response.json()
       if(!response.ok){
         if(action?.type==='payment'&&response.status===409)delete requestIds.current[`payment:${action.familyId}:${action.puppyId}:${action.kind}`]
@@ -56,7 +56,7 @@ export function useEmailWorkspace(ready:boolean){
     return {...previous,[familyId]:{value:useSaved?saved.value:entry.value,base:saved.value,revision:saved.revision}}
   });setError('')}
   function startReply(familyId:string,messageId:string){
-    const parent=mailMessages.find(m=>m.id===messageId&&m.familyId===familyId&&m.direction==='in')
+    const parent=data?.messages.find(m=>m.id===messageId&&m.familyId===familyId&&m.direction==='in'&&m.messageId)
     if(parent)edit(familyId,{replyToId:parent.id,subject:/^re:/i.test(parent.subject)?parent.subject:`Re: ${parent.subject}`})
   }
   async function review(familyId:string){
@@ -71,6 +71,6 @@ export function useEmailWorkspace(ready:boolean){
     const result=await request({type:'payment',familyId,puppyId,kind,requestId:requestIds.current[key]})
     if(result?.preparedPaymentId){edit(familyId,{paymentRequestId:result.preparedPaymentId});delete requestIds.current[key]}
   }
-  return {data,entries,error,busy,load:()=>request(),edit,save,resolve,startReply,review,payment,dirty:Object.values(entries).some(e=>!sameEmail(e.value,e.base)),empty:emptyEmail()}
+  return {data,entries,error,busy,load:()=>request(),edit,save,resolve,startReply,review,payment,dispatch:(reviewId:string,scenario?:'accepted'|'rejected'|'uncertain')=>request({type:'dispatch',reviewId,...(scenario?{scenario}:{})}),sync:()=>request({type:'sync'}),reconcile:()=>request({type:'reconcile'}),resolveAttempt:(outgoingId:string,attemptKey:string,decision:'accepted'|'not-accepted',evidence:string)=>request({type:'resolve',outgoingId,attemptKey,decision,evidence,acknowledged:true}),dirty:Object.values(entries).some(e=>!sameEmail(e.value,e.base)),empty:emptyEmail()}
 }
 export type EmailWorkspace=ReturnType<typeof useEmailWorkspace>

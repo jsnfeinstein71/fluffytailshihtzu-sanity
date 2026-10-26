@@ -2,10 +2,11 @@ import 'server-only'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {privateRecordId} from './private-records'
 import {families,puppies} from '@/app/inbox/workspace/model'
-import {emptyEmail,jeanneEmail,mailMessages,paymentPreviewPath,sameEmail,type EmailDraft,type EmailReview,type EmailValue,type MailAction,type MailData,type PaymentRequest} from '@/app/inbox/workspace/email-model'
+import {emptyEmail,jeanneEmail,mailMessages,paymentPreviewPath,sameEmail,type EmailDraft,type EmailReview,type EmailValue,type MailAction,type MailData,type PaymentRequest,type IncomingEmail} from '@/app/inbox/workspace/email-model'
 import type {SavedFamily} from '@/app/inbox/workspace/persistence'
 import {getBalance,getPricing} from '@/lib/pricing'
 import {listWorkspaceFamilies,requireSyntheticWorkspace,workspaceId,WorkspaceError} from './workspace'
+import {emailRecipient} from './mail-provider'
 
 type DraftDocument={_id:string;_rev:string;_type:'staffEmailDraft';workspace:'review-v1';familyId:string;value:EmailValue;updatedAt:string}
 export class EmailWorkflowError extends Error{
@@ -53,10 +54,16 @@ async function familyRecord(id:string){
   if(!record.profile.email.toLowerCase().endsWith('@example.test'))throw new EmailWorkflowError('This review accepts fictional family addresses only. Live correspondence must stay outside the synthetic Preview.',409)
   return record
 }
-function checkReply(family:SavedFamily,value:EmailValue){
+async function checkReply(family:SavedFamily,value:EmailValue){
   if(!value.replyToId)return null
-  const parent=mailMessages.find(m=>m.id===value.replyToId&&m.familyId===family.familyKey&&m.direction==='in')
-  if(!parent||parent.from.toLowerCase()!==family.profile.email.toLowerCase()||parent.to!==jeanneEmail)throw new EmailWorkflowError('That email does not belong to this family’s incoming conversation.',409)
+  let parent=mailMessages.find(m=>m.id===value.replyToId&&m.familyId===family.familyKey&&m.direction==='in')
+  if(!parent&&/^private\.staffIncomingEmail\.[a-f0-9]{64}$/.test(value.replyToId)){
+    const imported=await getOperatorClient().getDocument<IncomingEmail>(value.replyToId)
+    if(imported?._type==='staffIncomingEmail'&&imported.workspace==='review-v1'&&imported.familyId===family.familyKey)parent=imported
+  }
+  const expectedFrom=parent?.id.startsWith('private.staffIncomingEmail.')?emailRecipient(family.profile.email):family.profile.email
+  if(!parent||parent.from.toLowerCase()!==expectedFrom.toLowerCase()||parent.to!==jeanneEmail)throw new EmailWorkflowError('That email does not belong to this family’s incoming conversation.',409)
+  if(!parent.messageId)throw new EmailWorkflowError('This incoming email has no usable Message-ID. Start a new email instead of guessing its reply headers.',409)
   return parent
 }
 function quote(family:SavedFamily,puppyId:string,kind:'deposit'|'balance'){
@@ -112,7 +119,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const id=emailDraftId(action.familyId)
   const current=await client.getDocument<DraftDocument>(id)
   if(action.type==='save'){
-    checkReply(family,action.value)
+    await checkReply(family,action.value)
     if(action.value.paymentRequestId)await checkedPayment(action.value.paymentRequestId,family,false)
     if(current&&sameEmail(current.value,action.value))return {}
     if((current?._rev||null)!==action.revision)throw new EmailWorkflowError('This email changed in another tab. Compare the saved copy before replacing it.',409,current?asDraft(current):{familyId:action.familyId,revision:null,value:emptyEmail(family.drafts.Email)})
@@ -130,11 +137,11 @@ export async function prepareEmailAction(input:unknown,origin:string){
   if(!current||current._rev!==action.revision)throw new EmailWorkflowError('Save and refresh this email before preparing a review.',409)
   const value=validValue(current.value)
   if(!value.subject.trim()||!value.body.trim())throw new EmailWorkflowError('Enter a subject and message before preparing the review.')
-  const parent=checkReply(family,value)
+  const parent=await checkReply(family,value)
   const payment=value.paymentRequestId?await checkedPayment(value.paymentRequestId,family):null
   const testUrl=payment?new URL(paymentPreviewPath(payment.requestId),origin).href:null
   const body=payment?`${value.body}\n\nTEST PAYMENT REQUEST — no payment can be made using this link.\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${testUrl}`:value.body
-  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:'review-v1',requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:family.profile.email,subject:value.subject,body,inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:true}
+  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:'review-v1',requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body,inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:true}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
   const stored=await client.getDocument<EmailReview>(record._id)
   if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject)throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
@@ -148,4 +155,20 @@ export async function getPaymentPreview(requestId:string){
   const family=await familyRecord(record.familyId)
   const request=await checkedPayment(record._id,family)
   return {request,familyName:family.profile.name}
+}
+
+export async function validateSavedEmailReview(id:string,origin:string){
+  requireSyntheticWorkspace()
+  if(!/^private\.staffEmailReview\.[a-f0-9]{64}$/.test(id))throw new EmailWorkflowError('Choose a saved email review.',400)
+  const review=await getOperatorClient().getDocument<EmailReview>(id)
+  if(!review||review._type!=='staffEmailReview'||review.workspace!=='review-v1'||review._id!==emailReviewId(review.requestId))throw new EmailWorkflowError('Saved email review was not found.',404)
+  const family=await familyRecord(review.familyId)
+  const draft=await getOperatorClient().getDocument<DraftDocument>(emailDraftId(review.familyId))
+  if(!draft||draft._rev!==review.draftRevision)throw new EmailWorkflowError('This review is an earlier draft version. Save and review the current email before preparing another outgoing message.',409)
+  const value=validValue(draft.value)
+  const parent=await checkReply(family,value)
+  const payment=value.paymentRequestId?await checkedPayment(value.paymentRequestId,family):null
+  const body=payment?`${value.body}\n\nTEST PAYMENT REQUEST — no payment can be made using this link.\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${new URL(paymentPreviewPath(payment.requestId),origin).href}`:value.body
+  if(review.from!==jeanneEmail||review.replyTo!==jeanneEmail||review.to!==emailRecipient(family.profile.email)||review.subject!==value.subject||review.body!==body||review.inReplyTo!==(parent?.messageId||null)||JSON.stringify(review.references)!==JSON.stringify(parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[])||review.paymentRequestId!==(payment?._id||null))throw new EmailWorkflowError('The saved review no longer matches this family, draft or payment context. Prepare a fresh review.',409)
+  return review
 }

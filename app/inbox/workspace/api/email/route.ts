@@ -4,10 +4,12 @@ import {readRequestText} from '@/lib/request-body'
 import {InquiryError} from '@/lib/inquiry'
 import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {WorkspaceError} from '@/sanity/lib/workspace'
-import {EmailWorkflowError,loadMailbox,prepareEmailAction} from '@/sanity/lib/workspace-email'
+import {EmailWorkflowError,prepareEmailAction} from '@/sanity/lib/workspace-email'
+import {ensureOutgoing,loadEmailWorkflow,performTransportAction} from '@/sanity/lib/email-workflow'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
+export const maxDuration=60
 const headers={'Cache-Control':'private, no-store'}
 function failure(error:unknown){
   if(error instanceof EmailWorkflowError)return NextResponse.json({error:error.message,conflict:error.conflict},{status:error.status,headers})
@@ -16,7 +18,7 @@ function failure(error:unknown){
 }
 export async function GET(req:Request){
   const denied=requireOperator(req);if(denied)return denied
-  try{return NextResponse.json(await loadMailbox(),{headers})}catch(error){return failure(error)}
+  try{return NextResponse.json(await loadEmailWorkflow(),{headers})}catch(error){return failure(error)}
 }
 export async function POST(req:Request){
   const denied=requireOperator(req);if(denied)return denied
@@ -25,7 +27,10 @@ export async function POST(req:Request){
   try{
     const text=await readRequestText(req,100000)
     let data:unknown;try{data=JSON.parse(text)}catch{throw new EmailWorkflowError('Invalid email request.')}
-    const result=await prepareEmailAction(data,new URL(req.url).origin)
-    return NextResponse.json({...await loadMailbox(),...result},{headers})
+    const origin=new URL(req.url).origin
+    const type=(data as {type?:string})?.type
+    const result=['dispatch','sync','reconcile','resolve'].includes(type||'')?await performTransportAction(data,origin):await prepareEmailAction(data,origin)
+    if('reviewId' in result&&typeof result.reviewId==='string')await ensureOutgoing(result.reviewId,origin)
+    return NextResponse.json({...await loadEmailWorkflow(),...result},{headers})
   }catch(error){return failure(error)}
 }
