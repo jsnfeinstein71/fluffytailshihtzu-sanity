@@ -17,7 +17,7 @@ const render = async (Component, props = {}) => renderToStaticMarkup(await Compo
 const litter = (id, status = 'current', extra = {}) => ({_id: id, _type: 'litter', title: id, status, birthDate: '2026-10-01', ...extra})
 const puppy = (id, litterId, status = 'available', extra = {}) => ({_id: id, _type: 'puppy', name: id, slug: {current: id}, litter: {_ref: litterId}, status, sex: 'female', ...extra})
 
-test('approved homepage introduction appears locally without overriding the production CMS headline', async () => {
+test('approved homepage ships in production while retaining future CMS headlines', async () => {
   const previousEnv = process.env.NODE_ENV
   const previousVercelEnv = process.env.VERCEL_ENV
   try {
@@ -33,7 +33,9 @@ test('approved homepage introduction appears locally without overriding the prod
     process.env.VERCEL_ENV = 'production'
     const production = await render(Home)
     assert.match(production, /<h2>CMS-managed headline<\/h2>/)
-    assert.doesNotMatch(production, /IMG_6731/)
+    assert.match(production, /IMG_6731/)
+    dataset = [{_id: 'settings', _type: 'siteSettings', homepageHeadline: 'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'}]
+    assert.match(await render(Home), /<h2>Raised With Love, Welcomed Into Your Family\.<\/h2>/)
     dataset = []
     assert.match(await render(Home), /<h2>Raised With Love, Welcomed Into Your Family\.<\/h2>/)
   } finally {

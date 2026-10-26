@@ -40,8 +40,8 @@ export default async function HomePage() {
   const heroImageUrl = siteSettings?.heroImageUrl || activeLitters[0]?.groupPhotoUrl
   const availableCount = puppies.filter(canInquireAboutPuppy).length
   const designPreview = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview'
-  // Preview approved copy without publishing a change to the live CMS document.
-  const introHeadline = designPreview
+  // Publish the approved headline while preserving future CMS editorial changes.
+  const introHeadline = designPreview || siteSettings?.homepageHeadline === 'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'
     ? approvedIntroHeadline
     : siteSettings?.homepageHeadline || approvedIntroHeadline
 

@@ -96,12 +96,17 @@ test('the hero proposal preserves the original JPEG and requests it eagerly with
   assert.doesNotMatch(html, /https:\/\/example.com\/cms.jpg/)
 })
 
-test('normal hero rendering retains the Sanity source and the proposal is development-only', () => {
+test('production publishes the approved hero and preserves future Sanity image selections', () => {
   const html = renderToStaticMarkup(createElement(HomeHero, {imageUrl: 'https://example.com/cms.jpg'}))
   assert.match(html, /src="https:\/\/example.com\/cms.jpg"/)
-  assert.doesNotMatch(html, /home-hero-proposal|IMG_6731/)
+  assert.match(html, /home-hero-proposal/)
+  assert.doesNotMatch(html, /IMG_6731/)
   const empty = renderToStaticMarkup(createElement(HomeHero))
-  assert.doesNotMatch(empty, /<img/)
+  assert.match(empty, /src="\/design-preview\/IMG_6731.JPEG"/)
+  const legacy = renderToStaticMarkup(createElement(HomeHero, {imageUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/bd64e3600d604b26c9be93461487adc79922acb2-3787x2580.jpg'}))
+  assert.match(legacy, /src="\/design-preview\/IMG_6731.JPEG"/)
+  assert.match(legacy, /home-hero-proposal/)
+  assert.doesNotMatch(legacy, /brand-button-light/)
   assert.match(empty, /Meet our puppies/)
   const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8')
   assert.match(page, /process.env.NODE_ENV === 'development' \|\| process.env.VERCEL_ENV === 'preview'/)
