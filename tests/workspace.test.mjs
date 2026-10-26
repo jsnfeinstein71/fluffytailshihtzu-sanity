@@ -124,3 +124,25 @@ test('pickup checklists and notes stay local, family-specific, immutable and res
   assert.equal(reviewReducer(next,{type:'check',familyId:'avery',item:'Unsupported medical schedule'}),next)
   assert.deepEqual(reviewReducer(next,{type:'reset'}),initialState())
 })
+
+test('refreshing saved notes and pickup checks never replaces a newer unsaved draft',()=>{
+  let state=reviewReducer(initialState(),{type:'draft',familyId:'avery',channel:'Email',body:'Still typing this draft'})
+  const record={familyKey:'avery',drafts:{Email:'Older saved draft',Text:''},notes:[{text:'Newly saved note'}],checks:['CKC registration papers']}
+  state=reviewReducer(state,{type:'restore',families:[record],loadDrafts:false})
+  assert.equal(state.drafts[draftKey('avery','Email')],'Still typing this draft')
+  assert.deepEqual(state.notes.avery,['Newly saved note'])
+  assert.deepEqual(state.checks.avery,['CKC registration papers'])
+  const restored=reviewReducer(initialState(),{type:'restore',families:[record],loadDrafts:true})
+  assert.equal(restored.drafts[draftKey('avery','Email')],'Older saved draft')
+})
+
+test('resetting delivery simulations cannot erase saved draft text, notes or pickup preparation',()=>{
+  let state=reviewReducer(initialState(),{type:'draft',familyId:'morgan',channel:'Email',body:'Saved draft copy'})
+  state=reviewReducer(state,{type:'note',familyId:'morgan',body:'Keep this note'})
+  state=reviewReducer(state,{type:'attempt',familyId:'morgan',channel:'Email',outcome:'failed'})
+  const next=reviewReducer(state,{type:'reset-attempts'})
+  assert.equal(next.attempts.length,0)
+  assert.equal(next.drafts[draftKey('morgan','Email')],'Saved draft copy')
+  assert.deepEqual(next.notes,state.notes)
+  assert.deepEqual(next.checks,state.checks)
+})

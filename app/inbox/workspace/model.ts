@@ -1,4 +1,5 @@
 import {getBalance, getPricing} from '@/lib/pricing'
+import type {SavedFamily} from './persistence'
 
 export type Channel = 'Email' | 'Text'
 export type Family = {
@@ -14,7 +15,7 @@ export const puppies = [
   {id: 'pippin', name: 'Pippin', sex: 'Boy', color: 'Cream', litter: 'Autumn litter', status: 'Reserved', price: 1600, deposit: 400},
 ] as const
 
-// Entirely fictional review fixtures. These are never fetched from or saved to Sanity.
+// Fictional review fixtures. Persistence is restricted to the isolated synthetic dataset.
 export const families: Family[] = [
   {id:'avery', name:'Avery Brooks', initials:'AB', location:'Mobile, AL', email:'avery@example.test', phone:'+1 202-555-0101', preference:'Email', smsConsent:false, stage:'Deposit due', puppyId:'maple', next:'Review deposit request', unread:true, checks:[], records:[], messages:[
     {id:'a1', direction:'in', channel:'Email', body:'We loved meeting Maple. Could you let us know the next step to reserve her?', time:'Today · 9:42 AM'},
@@ -58,10 +59,23 @@ export type Action =
   | {type:'check'; familyId:string; item:string}
   | {type:'note'; familyId:string; body:string}
   | {type:'clear-error'}
+  | {type:'restore'; families:SavedFamily[]; loadDrafts:boolean}
+  | {type:'reset-attempts'}
   | {type:'reset'}
 
 export function reviewReducer(state: ReviewState, action: Action): ReviewState {
   if (action.type === 'reset') return initialState()
+  if (action.type === 'reset-attempts') return {...state,attempts:[],error:''}
+  if (action.type === 'restore') {
+    const next={...state,drafts:{...state.drafts},notes:{...state.notes},checks:{...state.checks}}
+    for(const record of action.families){
+      if(!families.some(f=>f.id===record.familyKey))continue
+      next.notes[record.familyKey]=record.notes.map(note=>note.text)
+      next.checks[record.familyKey]=[...record.checks]
+      if(action.loadDrafts)for(const channel of ['Email','Text'] as const)next.drafts[draftKey(record.familyKey,channel)]=record.drafts[channel]
+    }
+    return next
+  }
   if (action.type === 'clear-error') return {...state,error:''}
   const family = families.find(f => f.id === action.familyId)
   if (!family) return {...state, error:'Choose a family before continuing.'}

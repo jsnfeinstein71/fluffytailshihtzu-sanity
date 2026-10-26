@@ -1,8 +1,9 @@
 'use client'
 
-import {useReducer, useState} from 'react'
+import {useEffect, useReducer, useRef, useState} from 'react'
 import Link from 'next/link'
 import {draftKey, families, initialState, matchesFamily, money, paymentSummary, pickupChecks, puppies, reviewReducer, type Channel, type Attempt, type Family} from './model'
+import {useSavedWorkspace} from './useSavedWorkspace'
 
 type View = 'Today' | 'Families' | 'Conversations' | 'Puppies' | 'Payments' | 'Pickups' | 'Readiness'
 const navigation: {name:View; symbol:string}[] = [
@@ -28,19 +29,52 @@ export default function Workspace() {
   const [channel, setChannel] = useState<Channel>('Email')
   const [threadTab, setThreadTab] = useState('Messages')
   const [scenario, setScenario] = useState<Attempt['outcome']>('simulated')
-  const [note, setNote] = useState('')
+  const [noteDrafts, setNoteDrafts] = useState<Record<string,string>>({})
   const [notice, setNotice] = useState('')
   const [paymentReview, setPaymentReview] = useState(false)
   const [state, dispatch] = useReducer(reviewReducer, undefined, initialState)
+  const saved = useSavedWorkspace()
+  const restored = useRef(false)
+  const noteRequests = useRef<Record<string,{body:string;id:string}>>({})
   const family = families.find(f => f.id === familyId)!
   const puppy = puppies.find(p => p.id === family.puppyId)
   const balance = paymentSummary(family)
   const draft = state.drafts[draftKey(family.id, channel)] || ''
+  const note = noteDrafts[family.id] || ''
+  const draftConflict = saved.conflicts[draftKey(family.id,channel)]
+  const draftDirty = saved.ready && draft !== saved.base(family.id,channel)
   const visible = families.filter(f => matchesFamily(f, search) && (filter !== 'Needs a reply' || f.unread) && (filter !== 'Pickup planning' || f.stage === 'Pickup planning'))
   const attempts = state.attempts.filter(a => a.familyId === family.id)
+  useEffect(()=>{
+    if(saved.ready && saved.records){dispatch({type:'restore',families:saved.records,loadDrafts:!restored.current});restored.current=true}
+  },[saved.records,saved.ready])
+  const unsaved = saved.ready && (families.some(f => (['Email','Text'] as const).some(c => (state.drafts[draftKey(f.id,c)]||'') !== saved.base(f.id,c))) || Object.values(noteDrafts).some(body=>body.trim()))
+  useEffect(()=>{
+    if(!unsaved)return
+    const warn=(event:BeforeUnloadEvent)=>event.preventDefault()
+    window.addEventListener('beforeunload',warn)
+    return()=>window.removeEventListener('beforeunload',warn)
+  },[unsaved])
+
+  async function saveNote() {
+    const key=family.id;const body=note.trim()
+    if(!body)return
+    if(noteRequests.current[key]?.body!==body)noteRequests.current[key]={body,id:crypto.randomUUID()}
+    const confirmed=await saved.mutate({type:'note',familyId:key,body,requestId:noteRequests.current[key].id})
+    if(confirmed){setNoteDrafts(previous=>previous[key]?.trim()===body?{...previous,[key]:''}:previous);delete noteRequests.current[key];setNotice(`Private note saved for ${family.name} in the test workspace.`)}
+  }
+  async function saveDraft() {
+    const confirmed=await saved.mutate({type:'draft',familyId:family.id,channel,body:draft,base:saved.base(family.id,channel)})
+    if(confirmed)setNotice(`${channel} draft saved for ${family.name}. Nothing was sent.`)
+  }
+  function resolveDraft(useSaved:boolean) {
+    const body=saved.resolve(family.id,channel)
+    if(useSaved && body!==undefined)dispatch({type:'draft',familyId:family.id,channel,body})
+    setNotice(useSaved?'Saved draft restored.':'Your draft is kept. Save it when you are ready to replace the reviewed saved version.')
+  }
 
   function selectFamily(f: Family, destination: View = 'Conversations') {
-    setFamilyId(f.id); setChannel(f.preference === 'Text' ? 'Text' : 'Email'); setThreadTab('Messages'); setView(destination); setNotice(''); setNote(''); setPaymentReview(false); dispatch({type:'clear-error'})
+    setFamilyId(f.id); setChannel(f.preference === 'Text' ? 'Text' : 'Email'); setThreadTab('Messages'); setView(destination); setNotice(''); setPaymentReview(false); dispatch({type:'clear-error'})
   }
   function changeView(next: View) {setView(next); setPaymentReview(false); setNotice(''); dispatch({type:'clear-error'})}
   function simulate() {
@@ -59,11 +93,16 @@ export default function Workspace() {
       <div className="ops-sidebar-bottom"><span className="ops-lock">PRIVATE · STAFF ONLY</span><p>For you and Jeanne.<br />Families don’t need an account.</p><Link href="/inbox">Open existing Inbox ↗</Link></div>
     </aside>
     <div className="ops-main">
-      <div className="ops-review-banner"><span><b>Review version</b> · Fictional records · All actions simulated</span><button onClick={() => {dispatch({type:'reset'}); setNotice('Review reset. Fictional starting records restored.')}}>Reset demo</button></div>
+      <div className="ops-review-banner"><span><b>Test workspace</b> · Fictional families · Saved records; sending simulated</span><button onClick={() => {dispatch({type:'reset-attempts'}); setNotice('Delivery simulations cleared. Saved drafts, notes and pickup preparation are kept.')}}>Reset simulations</button></div>
       <header className="ops-topbar"><span>FluffyTail <span aria-hidden="true">/</span> {view}</span><div><span className="ops-status-dot" /> Preview only <span className="ops-user">J</span></div></header>
       <main id="workspace-content" className="ops-content">
         <div className="ops-page-heading"><div><p className="ops-eyebrow">{view === 'Today' ? 'WELCOME BACK, JEANNE' : `YOUR ${view.toUpperCase()}`}</p><h1>{headings[view]}</h1><p>{descriptions[view]}</p></div><Badge tone="quiet">Staff only</Badge></div>
         {notice ? <p role="status" className="ops-notice">{notice}</p> : null}
+        <section className="ops-persistence" aria-label="Saved workspace connection">
+          {saved.loading ? <p role="status">Loading saved workspace…</p> : saved.ready ? <p><Badge tone={saved.error?'amber':'green'}>{saved.error?'Saved copy loaded · connection needs attention':'Saved records connected'}</Badge> Drafts, private notes and pickup preparation can be saved. Email, texts and payments remain simulated.</p> : saved.records ? <><p>Start the saved workspace to keep the four fictional families and their staff records between visits. Any existing saved records are kept.</p><button className="ops-button secondary" disabled={saved.busy} onClick={()=>void saved.mutate({type:'initialize'})}>{saved.busy?'Starting…':'Start saved workspace'}</button></> : <p>The saved workspace is not connected yet. Editing is paused until its records can be loaded.</p>}
+          {saved.error ? <div role="alert"><p>{saved.error}</p><button className="ops-button secondary" onClick={()=>void saved.load()} disabled={saved.busy||saved.loading}>Retry connection</button></div> : null}
+          {saved.ready&&!saved.error ? <button className="ops-button secondary" onClick={()=>void saved.load()} disabled={saved.busy||saved.loading}>Refresh saved records</button> : null}
+        </section>
         {view === 'Today' ? <>
           <div className="ops-stats">
             {[{label:'Families to follow up',value:'3',detail:'New questions and next steps',next:'Conversations' as View}, {label:'Available puppies',value:'1',detail:'In the fictional Autumn litter',next:'Puppies' as View}, {label:'Recorded deposits',value:'$400',detail:'Confirmed fixture payments only',next:'Payments' as View}, {label:'Pickup to coordinate',value:'1',detail:'Time and details need confirmation',next:'Pickups' as View}].map(stat => <button className="ops-stat" key={stat.label} onClick={() => changeView(stat.next)}><span>{stat.label}</span><strong>{stat.value}</strong><small>{stat.detail}</small><i aria-hidden="true">↗</i></button>)}
@@ -83,10 +122,12 @@ export default function Workspace() {
               {threadTab === 'Messages' ? <><div className="ops-messages"><p className="ops-thread-disclosure">Fictional conversation · No real messages have been sent</p>{family.messages.map(m => <article className={`ops-message ${m.direction}`} key={m.id}><small>{m.direction === 'in' ? family.name.split(' ')[0] : 'Jeanne'} · {m.channel} · {m.time}</small><p>{m.body}</p></article>)}{attempts.map(a => <article className="ops-message out simulated" key={a.id}><small>{a.channel} · {a.outcome === 'simulated' ? 'Simulated only' : a.outcome === 'failed' ? 'Failed simulation' : 'Needs review · simulated'}</small><p>{a.body}</p></article>)}</div>
                 <div className="ops-composer"><div className="ops-channel-picker"><label>Reply via <select aria-label="Reply channel" value={channel} onChange={e => setChannel(e.target.value as Channel)}><option>Email</option><option disabled={!family.smsConsent}>Text</option></select></label><small>{channel === 'Email' ? 'From: jeanne@fluffytailshihtzu.com · not connected' : 'SMS consent recorded in this fixture'}</small></div>
                   {!family.smsConsent ? <p className="ops-consent-note">No SMS consent. Use email for this family.</p> : null}
-                  <label className="ops-sr" htmlFor="workspace-reply">Message to {family.name}</label><textarea id="workspace-reply" value={draft} onChange={e => dispatch({type:'draft', familyId:family.id, channel, body:e.target.value})} placeholder={`Write ${channel === 'Email' ? 'an email' : 'a text'} reply…`} rows={4}/>
+                  <label className="ops-sr" htmlFor="workspace-reply">Message to {family.name}</label><textarea id="workspace-reply" value={draft} disabled={!saved.ready} maxLength={10000} onChange={e => dispatch({type:'draft', familyId:family.id, channel, body:e.target.value})} placeholder={`Write ${channel === 'Email' ? 'an email' : 'a text'} reply…`} rows={4}/>
+                  <div className="ops-draft-save"><span role="status">{!saved.ready?'Connect saved records before editing.':draftDirty?'Unsaved draft changes':'Draft matches your saved copy'}</span><button className="ops-button secondary" disabled={!saved.ready||saved.busy||!draftDirty||!!draftConflict} onClick={()=>void saveDraft()}>{saved.busy?'Saving…':'Save draft'}</button></div>
+                  {draftConflict ? <section className="ops-draft-conflict" role="alert"><strong>This draft changed in another tab.</strong><p>Your text is kept above. Compare it with the saved version:</p><pre>{draftConflict.saved||'(Empty saved draft)'}</pre><div><button className="ops-button secondary" onClick={()=>resolveDraft(true)}>Use saved draft</button><button className="ops-button secondary" onClick={()=>resolveDraft(false)}>Keep my draft</button></div></section> : null}
                   <div className="ops-compose-actions"><label>Test result <select aria-label="Simulated delivery result" value={scenario} onChange={e => setScenario(e.target.value as Attempt['outcome'])}><option value="simulated">Success simulation</option><option value="failed">Failure simulation</option><option value="review">Uncertain simulation</option></select></label><button className="ops-button" onClick={simulate} disabled={!draft.trim()}>Simulate reply →</button></div>
-                  <p className="ops-draft-note">Drafts stay here while switching families or sections. Reloading clears this review.</p>{state.error ? <p role="alert" className="ops-error">{state.error}</p> : null}
-                </div></> : threadTab === 'Activity' ? <div className="ops-activity"><h3>Conversation & payment activity</h3><p>Inquiry received · {family.preference} preferred</p>{family.records.map((r,i) => <p key={i}>Fixture payment confirmed · {money(r.amountPaid * 100)}</p>)}{attempts.map(a => <p key={a.id}>Attempt {a.id} · {a.channel} · {a.outcome === 'review' ? 'Uncertain simulation — review before retrying' : a.outcome === 'failed' ? 'Failure simulation — draft retained' : 'Success simulation — nothing sent'}</p>)}<small>Sending a message never marks a payment paid or reserves a puppy.</small></div> : <div className="ops-activity"><h3>Notes for your team</h3><p>Internal only. Families do not see these notes.</p>{(state.notes[family.id] || []).map((n,i) => <p className="ops-private-note" key={i}>{n}</p>)}<form onSubmit={e => {e.preventDefault(); dispatch({type:'note',familyId:family.id,body:note}); setNote('')}}><label htmlFor="workspace-note">Add a private demo note</label><textarea id="workspace-note" value={note} onChange={e => setNote(e.target.value)} rows={4}/><button className="ops-button" disabled={!note.trim()}>Add demo note</button></form></div>}
+                  <p className="ops-draft-note">Save your draft to keep it after reloading. Delivery simulations do not change the saved copy or send anything.</p>{state.error ? <p role="alert" className="ops-error">{state.error}</p> : null}
+                </div></> : threadTab === 'Activity' ? <div className="ops-activity"><h3>Conversation & payment activity</h3><p>Inquiry received · {family.preference} preferred</p>{family.records.map((r,i) => <p key={i}>Fixture payment confirmed · {money(r.amountPaid * 100)}</p>)}{attempts.map(a => <p key={a.id}>Attempt {a.id} · {a.channel} · {a.outcome === 'review' ? 'Uncertain simulation — review before retrying' : a.outcome === 'failed' ? 'Failure simulation — draft retained' : 'Success simulation — nothing sent'}</p>)}<small>Sending a message never marks a payment paid or reserves a puppy.</small></div> : <div className="ops-activity"><h3>Notes for your team</h3><p>Internal only. Saved notes remain here after reloading.</p>{(state.notes[family.id] || []).map((n,i) => <p className="ops-private-note" key={i}>{n}</p>)}<form onSubmit={e => {e.preventDefault();void saveNote()}}><label htmlFor="workspace-note">Add a private note</label><textarea id="workspace-note" value={note} maxLength={4000} disabled={!saved.ready} onChange={e => setNoteDrafts(previous=>({...previous,[family.id]:e.target.value}))} rows={4}/><button className="ops-button" disabled={!saved.ready||saved.busy||!note.trim()}>{saved.busy?'Saving…':'Save private note'}</button></form></div>}
             </section>
             <aside className="ops-context"><p className="ops-eyebrow">FAMILY DETAILS</p><h3>{puppy?.name || 'Finding the right fit'}</h3><p>{puppy ? `${puppy.sex} · ${puppy.color} · ${puppy.litter}` : 'No puppy associated yet. An inquiry is not a reservation.'}</p><dl><dt>Email</dt><dd>{family.email}</dd><dt>Phone</dt><dd>{family.phone}</dd><dt>Next step</dt><dd>{family.next}</dd></dl>{balance ? <><h3>Payment snapshot</h3><dl><dt>Agreed price · fixture</dt><dd>{money(balance.totalCents)}</dd><dt>Confirmed paid</dt><dd>{money(balance.paidCents)}</dd><dt>Remaining balance</dt><dd>{money(balance.remainingCents)}</dd></dl><button className="ops-button secondary" onClick={() => {setView('Payments'); setPaymentReview(true)}}>Review payment request</button></> : null}<p className="ops-context-footnote">Private staff record. No account, invitation, or password is needed by this family.</p></aside>
           </div>}
@@ -97,7 +138,7 @@ export default function Workspace() {
         {view === 'Payments' ? <><div className="ops-callout"><strong>Payment certainty comes first.</strong><p>Historical prices remain attached to their records. A payment request or sent link does not confirm payment. No live links are created here.</p></div><div className="ops-payment-grid"><section className="ops-panel"><div className="ops-panel-heading"><h2>Payment overview</h2><Badge>Fixture records</Badge></div>{families.filter(f => f.puppyId).map(f => {const b = paymentSummary(f)!; return <button className="ops-payment-row" key={f.id} onClick={() => {setFamilyId(f.id); setPaymentReview(true)}}><Avatar family={f}/><span><strong>{f.name}</strong><small>{puppies.find(p => p.id === f.puppyId)?.name} · {b.paidCents ? 'Deposit recorded' : 'No payment recorded'}</small></span><span><strong>{money(b.remainingCents)}</strong><small>Remaining</small></span><span aria-hidden="true">→</span></button>})}</section>
           <section className="ops-panel ops-payment-detail">{paymentReview && balance ? <><p className="ops-eyebrow">REVIEW REQUEST · NO LINK CREATED</p><h2>{family.name}</h2><p>{puppy?.name} · {family.preference} preferred</p><dl><dt>Puppy price</dt><dd>{money(balance.totalCents)}</dd><dt>Deposit amount</dt><dd>{money(balance.depositCents)}</dd><dt>Recorded paid</dt><dd>{money(balance.paidCents)}</dd><dt>Remaining</dt><dd>{money(balance.remainingCents)}</dd><dt>Additional taxes / fees</dt><dd>$0.00</dd></dl><p>Deposits are non-refundable and apply to the total price. Balance may be paid before or at pickup, as coordinated with Jeanne.</p><Badge tone="amber">Live request creation disabled</Badge><p className="ops-context-footnote">The next version needs validated link creation, email/text delivery, payment confirmation, duplicate protection, and reconciliation. No link or delivery is implied by this review.</p><button className="ops-button secondary" onClick={() => selectFamily(family)}>Open conversation →</button></> : <div className="ops-empty"><span aria-hidden="true">↖</span><h2>Review before requesting.</h2><p>Choose a family to see the puppy, price, confirmed payments, and remaining balance together.</p></div>}</section></div></> : null}
 
-        {view === 'Pickups' ? <div className="ops-pickup-grid">{families.filter(f => f.puppyId).map(f => <section className="ops-panel" key={f.id}><div className="ops-panel-heading"><div><p className="ops-eyebrow">{puppies.find(p => p.id === f.puppyId)?.name} + {f.name}</p><h2>{f.pickup ? 'Plan coming together' : 'Details to coordinate'}</h2></div><Badge>{state.checks[f.id].length}/{pickupChecks.length}</Badge></div><p className="ops-pickup-location">{f.pickup || 'Pickup location and time have not been confirmed.'}</p><p>Pickup in Mobile or at the airport, coordinated with Jeanne.</p><div className="ops-checklist">{pickupChecks.map(item => <label key={item}><input type="checkbox" checked={state.checks[f.id].includes(item)} onChange={() => dispatch({type:'check',familyId:f.id,item})}/><span>{item}</span></label>)}</div><p className="ops-context-footnote">Checking a box only updates this demo. No records, appointments, or medical schedules are created.</p><button className="ops-button secondary" onClick={() => selectFamily(f)}>Coordinate with family →</button></section>)}</div> : null}
+        {view === 'Pickups' ? <div className="ops-pickup-grid">{families.filter(f => f.puppyId).map(f => <section className="ops-panel" key={f.id}><div className="ops-panel-heading"><div><p className="ops-eyebrow">{puppies.find(p => p.id === f.puppyId)?.name} + {f.name}</p><h2>{f.pickup ? 'Plan coming together' : 'Details to coordinate'}</h2></div><Badge>{state.checks[f.id].length}/{pickupChecks.length}</Badge></div><p className="ops-pickup-location">{f.pickup || 'Pickup location and time have not been confirmed.'}</p><p>Pickup in Mobile or at the airport, coordinated with Jeanne.</p><div className="ops-checklist">{pickupChecks.map(item => <label key={item}><input type="checkbox" disabled={!saved.ready||saved.busy} checked={state.checks[f.id].includes(item)} onChange={event => void saved.mutate({type:'check',familyId:f.id,item,checked:event.target.checked})}/><span>{item}</span></label>)}</div><p className="ops-context-footnote">Preparation checks save only after confirmation. They do not create appointments, medical records, or payment confirmations.</p><button className="ops-button secondary" onClick={() => selectFamily(f)}>Coordinate with family →</button></section>)}</div> : null}
 
         {view === 'Readiness' ? <section className="ops-panel ops-readiness"><div className="ops-panel-heading"><div><p className="ops-eyebrow">BEFORE LIVE BUSINESS</p><h2>Prove each part of the journey.</h2></div><Badge tone="amber">Not ready for live use</Badge></div>{[
           ['Staff access','Existing operator protection is required. This review has no customer login or public navigation link.'],
@@ -105,11 +146,11 @@ export default function Workspace() {
           ['Text messaging','No messages sent. Retain opt-in checks, delivery states, incoming replies, and retry protection before activation.'],
           ['Deposits & balances','No live links created. Validate historical pricing, confirmed payments, expired links, duplicate events, and before/at-pickup collection.'],
           ['Puppies & reservations','Fictional inventory only. Family association, availability, reservation confirmation, and payment state need independent checks.'],
-          ['Pickup & records','Demo checklists only. Confirm record handling, starter kit preparation, and the actual pickup agreement.'],
-          ['Privacy & recovery','Production privacy release gates remain open. Private records, backups, persistent drafts, failure recovery, and reconciliation must be proven.'],
+          ['Pickup & records','Private preparation checks can be saved for fictional families. Actual documents, starter kit handling, and pickup agreements still need integration.'],
+          ['Privacy & recovery','Saved records and draft conflict handling are under isolated testing. Production privacy release gates, backups, and payment reconciliation remain open.'],
         ].map(([title,detail]) => <article key={title}><span className="ops-readiness-circle" aria-hidden="true">○</span><div><h3>{title}</h3><p>{detail}</p></div><Badge tone="quiet">Pending</Badge></article>)}<div className="ops-panel-footer">No production records, payments, mailbox settings, or customer-facing design are changed by this review.</div></section> : null}
       </main>
-      <footer className="ops-footer">FluffyTail staff workspace · Review only · Changes reset when this page reloads</footer>
+      <footer className="ops-footer">FluffyTail staff workspace · Fictional records only · Saved drafts, notes and pickup checks survive reloading</footer>
     </div>
   </div>
 }
