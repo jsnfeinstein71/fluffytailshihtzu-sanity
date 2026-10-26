@@ -1,19 +1,16 @@
 import '../home.css'
+import '../content.css'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Privacy Policy | FluffyTail Shih Tzu',
+  alternates: {canonical: '/privacy-policy'},
+  title: 'Privacy Policy',
   description: 'Privacy Policy for FluffyTail Shih Tzu.',
 }
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <Link className="btn" href="/available-puppies">Available Puppies</Link>
-        <Link className="btn" href="/contact">Contact</Link>
-      </div>
+    <main className="wrap legal-page">
 
       <div className="card">
         <div className="pad">
@@ -98,8 +95,9 @@ export default function PrivacyPolicyPage() {
           <section className="section">
   <h2>SMS communications</h2>
   <p className="lead">
-    SMS consent is collected only through the puppy inquiry form at{' '}
-    <Link href="/puppy-inquiry">https://www.fluffytailshihtzu.com/puppy-inquiry</Link>. To opt in,
+    SMS consent is collected through our website inquiry forms at{' '}
+    <Link href="/puppy-inquiry">/puppy-inquiry</Link> and <Link href="/contact">/contact</Link>.
+    Consent is required only when you select Text or Either, not for email-only inquiries. To opt in,
     you enter your phone number, review the SMS disclosure, check the required SMS consent box, and
     submit the form.
   </p>
@@ -162,9 +160,6 @@ export default function PrivacyPolicyPage() {
         </div>
       </div>
 
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
     </main>
   )
 }

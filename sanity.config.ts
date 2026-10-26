@@ -12,7 +12,7 @@ import {apiVersion, dataset, projectId} from './sanity/env'
 import {schemaTypes} from './sanity/schemaTypes'
 import {structure} from './sanity/structure'
 
-const operationalTypes = ['puppyInquiry', 'smsMessage', 'paymentRecord', 'depositLink', 'invoiceRecord']
+const operationalTypes = ['puppyInquiry', 'smsMessage', 'paymentRecord', 'depositLink', 'invoiceRecord', 'inquiryRate']
 
 export default defineConfig({
   basePath: '/studio',

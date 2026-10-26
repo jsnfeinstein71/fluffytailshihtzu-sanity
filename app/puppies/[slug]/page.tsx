@@ -1,309 +1,65 @@
 export const revalidate = 60
 
 import '../../home.css'
+import './puppy-detail.css'
 import Link from 'next/link'
-import {client} from '@/sanity/lib/client'
+import {tryPricing} from '@/lib/pricing'
+import {notFound} from 'next/navigation'
+import {getPuppy} from '@/sanity/lib/inventory'
+import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass} from '@/lib/inventory'
 
-type PuppyPageData = {
-  name?: string
-  slug?: string
-  sex?: 'female' | 'male'
-  status?: 'available' | 'hold' | 'reserved' | 'sold' | 'holdback' | 'gone-home'
-  color?: string
-  notes?: string
-  photoUrl?: string
-  litterTitle?: string
-  birthDate?: string
-  overridePrice?: number
-  litterPrice?: number
-  litterDeposit?: number
-}
+type Props = {params: Promise<{slug: string}>}
 
-const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
-  name,
-  "slug": slug.current,
-  sex,
-  status,
-  color,
-  notes,
-  "photoUrl": mainImage.asset->url,
-  "birthDate": litter->birthDate,
-  overridePrice,
-  "litterTitle": litter->title,
-  "litterPrice": litter->price,
-  "litterDeposit": litter->deposit
-}`
-
-export default async function PuppyDetailPage({
-  params,
-}: {
-  params: Promise<{slug: string}>
-}) {
+export async function generateMetadata({params}: Props) {
   const {slug} = await params
-  const puppy = await client.fetch<PuppyPageData>(puppyQuery, {slug})
+  const puppy = await getPuppy(slug)
+  if (!puppy) notFound()
+  return {title: puppy.name || 'Puppy', alternates: {canonical: puppyPath(slug)}}
+}
 
-  if (!puppy) {
-    return (
-      <main className="wrap">
-        <h1 className="h1">Puppy not found</h1>
-        <p className="lead">This puppy page could not be found.</p>
-        <a className="btn" href="/available-puppies">Back to Available Puppies</a>
-      </main>
-    )
-  }
+export default async function PuppyDetailPage({params}: Props) {
+  const {slug} = await params
+  const puppy = await getPuppy(slug)
+  if (!puppy) notFound()
+  const canInquire = canInquireAboutPuppy(puppy)
+  const puppyInquiryUrl = buildPuppyInquiryUrl(puppy)
+  const age = getAgeInWeeks(puppy.birthDate)
+  const ready = canInquire ? getReadyDate(puppy.birthDate) : ''
+  const pricing = tryPricing(puppy)
+  const totalPrice = pricing ? pricing.totalCents / 100 : undefined
+  const deposit = pricing ? pricing.depositCents / 100 : undefined
+  const finalPayment = pricing ? pricing.remainingCents / 100 : undefined
 
-  const puppyInquiryUrl = buildPuppyInquiryUrl({
-    puppyName: puppy.name,
-    litterTitle: puppy.litterTitle,
-    slug: puppy.slug,
-  })
+  return <main className="wrap puppy-detail-page">
+    <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
+    <div className="puppy-detail-layout">
+      <header className="puppy-detail-heading">
+        <div className="puppy-detail-title"><h1 className="h1">{puppy.name || 'Unnamed puppy'}</h1><span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>{formatPuppyStatus(puppy.status)}</span></div>
+        {puppy.litterTitle ? <p className="puppy-detail-litter">Litter: {puppy.litterTitle}</p> : null}
+      </header>
+      <figure className="puppy-detail-portrait">{puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" decoding="async" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Puppy photo to come">Photo to come</div>}</figure>
+      <div className="puppy-detail-info">
+        <dl className="puppy-detail-facts">
+          <div><dt>Sex</dt><dd>{puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'To be confirmed'}</dd></div>
+          {puppy.color ? <div><dt>Color</dt><dd>{puppy.color}</dd></div> : null}
+          {age !== null ? <div><dt>Age</dt><dd>{age} week{age === 1 ? '' : 's'} old</dd></div> : null}
+          {ready ? <div><dt>Ready from</dt><dd>{ready}</dd></div> : null}
+        </dl>
+        {puppy.notes?.trim() && puppy.notes.trim().toLowerCase() !== puppy.color?.trim().toLowerCase() ? <p className="puppy-detail-notes">{puppy.notes}</p> : null}
 
-  const totalPrice = puppy.overridePrice ?? puppy.litterPrice
-  const deposit = puppy.litterDeposit
-  const finalPayment =
-    typeof totalPrice === 'number' && typeof deposit === 'number'
-      ? Math.max(totalPrice - deposit, 0)
-      : undefined
-
-  return (
-    <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <Link className="btn" href="/available-puppies">Available Puppies</Link>
-        <Link className="btn" href="/contact">Contact</Link>
+        {typeof totalPrice === 'number' ? <dl className="puppy-price">
+          <div className="price-total"><dt>Total puppy price</dt><dd>{formatCurrency(totalPrice, true)}</dd></div>
+          {typeof deposit === 'number' ? <>
+            <div><dt>Deposit</dt><dd>{formatCurrency(deposit, true)}</dd></div>
+            <div><dt>Final payment</dt><dd>{formatCurrency(finalPayment!, true)}</dd></div>
+          </> : null}
+        </dl> : null}
+        <p className="puppy-detail-payment-note">{pricing ? 'The deposit is applied toward the total puppy price, not added on top.' : 'Please contact FluffyTail to confirm pricing before payment.'}</p>
+        <div className="puppy-detail-action">{canInquire ? <Link className="brand-button" href={puppyInquiryUrl}>Request Info About This Puppy <span aria-hidden="true">&rarr;</span></Link> : <>
+          <p>This puppy is not currently available for a new reservation. Contact us about other availability.</p>
+          <Link className="brand-button" href="/contact">Contact FluffyTail</Link>
+        </>}</div>
       </div>
-
-      <div className="grid">
-        <div className="card">
-          <div className="photos" style={{gridTemplateColumns: '1fr'}}>
-            <div className="heroPhoto">
-              {puppy.photoUrl ? (
-                <img src={puppy.photoUrl} alt={puppy.name || 'Puppy'} />
-              ) : null}
-            </div>
-          </div>
-
-          <div className="pad">
-            <h1 className="h1" style={{fontSize: '34px', marginBottom: '10px'}}>
-              {puppy.name || 'Unnamed puppy'}
-            </h1>
-
-            <div className="ctaRow" style={{marginTop: 0, marginBottom: '14px'}}>
-              <span className={`statusBadge status-${puppy.status || 'available'}`}>
-                {formatPuppyStatus(puppy.status)}
-              </span>
-
-              <span className="badge">
-                {getAgeInWeeks(puppy.birthDate)} week
-                {getAgeInWeeks(puppy.birthDate) === 1 ? '' : 's'} old
-              </span>
-
-              <span className="badge">
-                {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
-              </span>
-
-              {puppy.color ? <span className="badge">{puppy.color}</span> : null}
-
-              {getReadyDate(puppy.birthDate) ? (
-                <span className="badge">{`Ready ${getReadyDate(puppy.birthDate)}`}</span>
-              ) : null}
-            </div>
-
-            {puppy.litterTitle ? <p className="lead">Litter: {puppy.litterTitle}</p> : null}
-
-            {typeof totalPrice === 'number' ? (
-              <div
-                style={{
-                  marginTop: '14px',
-                  marginBottom: '14px',
-                  padding: '16px 18px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: '18px',
-                  background: 'rgba(0,0,0,0.02)',
-                  maxWidth: '360px',
-                }}
-              >
-                {typeof deposit === 'number' ? (
-                  <>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      <span className="lead" style={{margin: 0}}>
-                        Deposit
-                      </span>
-                      <span style={{fontWeight: 700}}>{formatCurrencyWithCents(deposit)}</span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        marginBottom: '12px',
-                      }}
-                    >
-                      <span className="lead" style={{margin: 0}}>
-                        Final payment
-                      </span>
-                      <span style={{fontWeight: 700}}>
-                        {formatCurrencyWithCents(finalPayment ?? 0)}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        borderTop: '1px solid rgba(0,0,0,0.18)',
-                        margin: '8px 0 12px',
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                      }}
-                    >
-                      <span style={{fontWeight: 800}}>Total</span>
-                      <span style={{fontWeight: 800}}>
-                        {formatCurrencyWithCents(totalPrice)}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                    }}
-                  >
-                    <span style={{fontWeight: 800}}>Total</span>
-                    <span style={{fontWeight: 800}}>
-                      {formatCurrencyWithCents(totalPrice)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            {puppy.notes ? (
-              <p className="lead" style={{marginBottom: 0}}>
-                {puppy.notes}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="pad">
-            <h2 className="panelTitle">Interested in this puppy?</h2>
-
-            <p className="lead">
-              If you would like to ask about {puppy.name || 'this puppy'}, use the inquiry button
-              below and your message will already include the puppy and litter details.
-            </p>
-
-            <div className="ctaRow">
-              {puppyInquiryUrl ? (
-                <Link
-                  className="btn btnPrimary"
-                  href={puppyInquiryUrl}
-                >
-                  Request Info About This Puppy
-                </Link>
-              ) : (
-                <Link className="btn btnPrimary" href="/contact">
-                  Contact About This Puppy
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
-    </main>
-  )
+    </div>
+  </main>
 }
-
-function formatPuppyStatus(status?: string) {
-  if (status === 'available') return 'Available'
-  if (status === 'hold') return 'Hold'
-  if (status === 'reserved') return 'Reserved'
-  if (status === 'sold') return 'Sold'
-  if (status === 'holdback') return 'Holdback'
-  if (status === 'gone-home') return 'Gone Home'
-  return 'Available'
-}
-
-function getAgeInWeeks(birthDate?: string) {
-  if (!birthDate) return 1
-
-  const born = new Date(birthDate)
-  const now = new Date()
-  const diffMs = now.getTime() - born.getTime()
-  const weeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7))
-
-  return Math.max(1, weeks)
-}
-
-function getReadyDate(birthDate?: string) {
-  if (!birthDate) return ''
-
-  const born = new Date(birthDate)
-  const ready = new Date(born)
-  ready.setDate(ready.getDate() + 56)
-
-  return ready.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function buildPuppyInquiryUrl({
-  puppyName,
-  litterTitle,
-  slug,
-}: {
-  puppyName?: string
-  litterTitle?: string
-  slug?: string
-}) {
-  const baseUrl = '/puppy-inquiry'
-  const message = buildPrefilledMessage(puppyName, litterTitle)
-  const puppyPageUrl = slug
-    ? `https://www.fluffytailshihtzu.com/puppies/${encodeURIComponent(slug)}`
-    : 'https://www.fluffytailshihtzu.com/available-puppies'
-
-  return (
-    `${baseUrl}?` +
-    `puppy=${encodeURIComponent(puppyName || '')}` +
-    `&litter=${encodeURIComponent(litterTitle || '')}` +
-    `&puppyPageUrl=${encodeURIComponent(puppyPageUrl)}` +
-    `&message=${encodeURIComponent(message)}`
-  )
-}
-
-function buildPrefilledMessage(puppyName?: string, litterTitle?: string) {
-  const puppyText = puppyName || 'this puppy'
-  const litterText = litterTitle ? ` from the ${litterTitle} litter` : ''
-  return `Hi, I’m interested in ${puppyText}${litterText}. Please send me more information.`
-}
-
-function formatCurrencyWithCents(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-

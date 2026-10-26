@@ -1,19 +1,16 @@
 import '../home.css'
+import '../content.css'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Terms and Conditions | FluffyTail Shih Tzu',
+  alternates: {canonical: '/terms-and-conditions'},
+  title: 'Terms and Conditions',
   description: 'Terms and Conditions for FluffyTail Shih Tzu.',
 }
 
 export default function TermsAndConditionsPage() {
   return (
-    <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <Link className="btn" href="/available-puppies">Available Puppies</Link>
-        <Link className="btn" href="/contact">Contact</Link>
-      </div>
+    <main className="wrap legal-page">
 
       <div className="card">
         <div className="pad">
@@ -62,8 +59,9 @@ export default function TermsAndConditionsPage() {
     Program name: <strong>FluffyTail Shih Tzu Customer Messaging</strong>
   </p>
   <p className="lead">
-    SMS consent is collected only through the puppy inquiry form at{' '}
-    <Link href="/puppy-inquiry">https://www.fluffytailshihtzu.com/puppy-inquiry</Link>. By entering
+    SMS consent is collected through our website inquiry forms at{' '}
+    <Link href="/puppy-inquiry">/puppy-inquiry</Link> and <Link href="/contact">/contact</Link>.
+    Consent is required only when you select Text or Either, not for email-only inquiries. By entering
     your phone number, reviewing the SMS disclosure, checking the required SMS consent box, and
     submitting that form, you agree to receive conversational and customer-care text messages from
     FluffyTail Shih Tzu regarding your puppy inquiry, puppy availability, scheduling, and related
@@ -137,9 +135,6 @@ export default function TermsAndConditionsPage() {
         </div>
       </div>
 
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
     </main>
   )
 }

@@ -5,6 +5,9 @@ export const paymentRecordType = defineType({
   title: 'Payment Record',
   type: 'document',
   fields: [
+    defineField({name: 'puppyId', title: 'Puppy ID', type: 'string', readOnly: true}),
+    defineField({name: 'litterId', title: 'Litter ID', type: 'string', readOnly: true}),
+    defineField({name: 'stripeInvoiceId', title: 'Stripe Invoice ID', type: 'string', readOnly: true}),
     defineField({name: 'createdAt', title: 'Created At', type: 'datetime'}),
     defineField({name: 'stripeCheckoutSessionId', title: 'Stripe Checkout Session ID', type: 'string'}),
     defineField({name: 'stripePaymentIntentId', title: 'Stripe Payment Intent ID', type: 'string'}),

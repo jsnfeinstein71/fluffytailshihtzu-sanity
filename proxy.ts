@@ -1,48 +1,13 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {requireOperator} from '@/lib/operator-auth'
 
 export function proxy(req: NextRequest) {
-  const user = process.env.INBOX_BASIC_AUTH_USER || ''
-  const pass = process.env.INBOX_BASIC_AUTH_PASS || ''
-
-  if (!user || !pass) {
-    return new NextResponse('Inbox auth is not configured.', {status: 500, headers: {'Cache-Control': 'no-store'}})
-  }
-
-  const authHeader = req.headers.get('authorization')
-
-  if (authHeader) {
-    const [scheme, encoded] = authHeader.split(' ')
-
-    if (scheme === 'Basic' && encoded) {
-      try {
-        const decoded = atob(encoded)
-        const separatorIndex = decoded.indexOf(':')
-
-        if (separatorIndex !== -1) {
-          const suppliedUser = decoded.slice(0, separatorIndex)
-          const suppliedPass = decoded.slice(separatorIndex + 1)
-
-          if (suppliedUser === user && suppliedPass === pass) {
-            const response = NextResponse.next()
-            response.headers.set('Cache-Control', 'private, no-store')
-            return response
-          }
-        }
-      } catch {
-        // Fall through to auth challenge below.
-      }
-    }
-  }
-
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="FluffyTail Inbox"',
-      'Cache-Control': 'no-store',
-    },
-  })
+  if(req.nextUrl.pathname==='/inbox/access'||req.nextUrl.pathname==='/inbox/access/api')return NextResponse.next()
+  const denied = requireOperator(req)
+  if (denied) return denied
+  const response = NextResponse.next()
+  response.headers.set('Cache-Control', 'private, no-store')
+  return response
 }
 
-export const config = {
-  matcher: ['/inbox/:path*'],
-}
+export const config = {matcher: ['/inbox/:path*']}

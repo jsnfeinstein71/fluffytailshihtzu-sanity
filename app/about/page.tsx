@@ -1,38 +1,32 @@
 import '../home.css'
+import '../content.css'
+import {getInventory} from '@/sanity/lib/inventory'
+import {getLittersByStatus} from '@/lib/inventory'
+
+export const revalidate = 60
+export const metadata = {title: 'About', alternates: {canonical: '/about'}}
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
-  homepageIntro?: string
   serviceArea?: string
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  homepageIntro,
   serviceArea
 }`
 
 export default async function AboutPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery)
+  const [siteSettings, {litters}] = await Promise.all([
+    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}),
+    getInventory(),
+  ])
+  const photo = getLittersByStatus(litters, 'current').find(litter => litter.groupPhotoUrl)?.groupPhotoUrl
 
   return (
-    <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <a className="btn" href="/">Home</a>
-        <a className="btn" href="/the-breed">The Breed</a>
-        <a className="btn" href="/puppy-resources">Puppy Resources</a>
-        <a className="btn" href="/pricing">Pricing</a>
-        <a className="btn" href="/available-puppies">Available Puppies</a>
-        <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
-        <a className="btn" href="/contact">Contact</a>
-      </div>
+    <main className="wrap content-page">
 
-      <div className="topbar">
-        <div className="pill">
-          <span className="dot"></span>
-          Small home-based breeder
-        </div>
-      </div>
-
+      <header className="content-intro">
+      <p className="eyebrow">Small home-based breeder</p>
       <h1 className="h1">About FluffyTail Shih Tzu</h1>
 
       <p className="lead">
@@ -45,19 +39,20 @@ export default async function AboutPage() {
           'Primarily serving the Southeast, with approved homes beyond the region.'}
       </p>
 
-      <div className="grid">
-        <div className="card">
+      </header>
+      <div className={`grid${photo ? ' content-has-photo' : ''}`}>
+        {photo ? <figure className="content-photo"><img src={photo} alt="A FluffyTail Shih Tzu" loading="eager" decoding="async" /><figcaption>From our FluffyTail family.</figcaption></figure> : null}
+        <div className="card content-copy">
           <div className="pad">
             <div className="section" style={{marginTop: 0}}>
               <h2>Our approach</h2>
               <p className="lead">
-                We raise our Shih Tzus in our home, where they are part of daily life from the
-                beginning. We care about temperament, socialization, and giving families a clear,
-                personal experience.
+                We work directly with families who are considering a puppy and welcome questions
+                about availability, timing, and next steps.
               </p>
               <p className="lead" style={{marginBottom: 0}}>
-                We are intentionally small. That lets us stay hands-on and keep the process direct
-                and personal.
+                Browse each puppy’s details, then contact Jeanne about the puppy or future litter
+                you are interested in.
               </p>
             </div>
 
@@ -66,18 +61,11 @@ export default async function AboutPage() {
             <div className="section">
               <h2>About Jeanne</h2>
               <p className="lead">
-                Jeanne is at the heart of FluffyTail Shih Tzu. She cares deeply about the dogs,
-                keeps them in the home as part of daily family life, and wants families to feel like
-                they are working with a real person, not a system.
+                Jeanne is the breeder behind FluffyTail Shih Tzu in the Mobile, Alabama area.
+                Her breeding dogs live in her home.
               </p>
               <p className="lead">
-                Her goal is to keep the process straightforward, personal, and comfortable. That
-                means clear communication, honest answers, and a home environment where the dogs are
-                raised with daily attention and care.
-              </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                For Jeanne, this is not about volume. It is about raising well-loved Shih Tzus and
-                placing them with families who truly value them.
+                She is your point of contact for questions about current puppies and upcoming litters.
               </p>
             </div>
 
@@ -87,23 +75,21 @@ export default async function AboutPage() {
               <h2>What matters to us</h2>
               <div className="qa">
                 <div>
-                  <div className="q">Home environment</div>
+                  <div className="q">Daily life</div>
                   <div className="a">
-                    Our dogs are raised in the home as family pets, with real daily interaction.
+                    Our dogs are part of the household.
                   </div>
                 </div>
                 <div>
-                  <div className="q">Straightforward communication</div>
+                  <div className="q">Questions welcome</div>
                   <div className="a">
-                    We want families to know what to expect and to feel comfortable asking
-                    questions.
+                    Ask about a puppy’s availability and the next step before making a decision.
                   </div>
                 </div>
                 <div>
-                  <div className="q">A personal process</div>
+                  <div className="q">Planning ahead</div>
                   <div className="a">
-                    FluffyTail is built around quality, care, and a direct connection with the
-                    families we work with.
+                    You can ask about future litters even if you are not choosing a puppy today.
                   </div>
                 </div>
               </div>
@@ -111,31 +97,16 @@ export default async function AboutPage() {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card content-aside">
           <div className="pad">
             <h2 className="panelTitle">At a glance</h2>
-            <div className="meta">
-              <span>📍 Mobile, Alabama area</span>
-              <span>🏠 In-home raised</span>
-              <span>🐶 Small breeder, not a kennel</span>
-              <span>🌎 Southeast and beyond</span>
-            </div>
+            <ul className="content-facts">
+              <li>Mobile, Alabama area</li>
+              <li>In-home raised</li>
+              <li>Small breeder, not a kennel</li>
+              <li>Southeast and beyond</li>
+            </ul>
 
-            <div className="ctaRow">
-              <a className="btn btnPrimary" href="/available-puppies">
-                View Available Puppies
-              </a>
-              <a className="btn" href="/contact">
-                Contact
-              </a>
-            </div>
-
-            <div className="divider"></div>
-
-            <p className="lead" style={{margin: 0}}>
-              {siteSettings?.homepageIntro ||
-                'FluffyTail Shih Tzu is a small, home-based breeder in Alabama.'}
-            </p>
           </div>
         </div>
       </div>
@@ -148,22 +119,19 @@ export default async function AboutPage() {
             questions.
           </p>
           <div className="ctaRow">
-            <a className="btn btnPrimary" href="/available-puppies">
+            <a className="brand-button" href="/available-puppies">
               View Available Puppies
             </a>
-            <a className="btn" href="/the-breed">
+            <a className="text-link" href="/the-breed">
               About the Breed
             </a>
-            <a className="btn" href="/contact">
+            <a className="text-link" href="/contact">
               Contact FluffyTail
             </a>
           </div>
         </div>
       </div>
 
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
     </main>
   )
 }

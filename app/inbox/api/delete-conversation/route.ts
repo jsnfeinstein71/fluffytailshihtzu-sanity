@@ -1,16 +1,10 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {getOperatorClient} from '@/sanity/lib/operator-client'
+import {requireOperator} from '@/lib/operator-auth'
 import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
-import {createClient} from '@sanity/client'
+import {normalizePhone as normalizeContactPhone} from '@/lib/inquiry'
 
 export const runtime = 'nodejs'
-
-const sanity = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
-  apiVersion: '2025-01-01',
-  token: process.env.SANITY_API_WRITE_TOKEN!,
-  useCdn: false,
-})
 
 type SmsMessageRecord = {
   _id: string
@@ -26,14 +20,24 @@ type PuppyInquiryRecord = {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req)
+  if (denied) return denied
   const frozen = operationalWriteFreeze()
   if (frozen) return frozen
   try {
-    const {phone} = await req.json()
+    const sanity = getOperatorClient()
+    const {phone, inquiryId} = await req.json()
 
     const normalizedTarget = normalizePhone(String(phone || ''))
 
     if (!normalizedTarget) {
+      if (typeof inquiryId === 'string') {
+        const inquiry = await sanity.getDocument<PuppyInquiryRecord & {_type: string}>(inquiryId)
+        if (inquiry?._type === 'puppyInquiry' && !normalizePhone(inquiry.phone)) {
+          await sanity.delete(inquiry._id)
+          return NextResponse.json({ok: true, deleted: 1, deletedInquiries: 1, deletedMessages: 0})
+        }
+      }
       return NextResponse.json({error: 'Missing phone'}, {status: 400})
     }
 
@@ -45,13 +49,13 @@ export async function POST(req: NextRequest) {
           to,
           direction,
           source
-        }`, {}, {cache: 'no-store'}
+        }`
       ),
       sanity.fetch<PuppyInquiryRecord[]>(
         `*[_type == "puppyInquiry"]{
           _id,
           phone
-        }`, {}, {cache: 'no-store'}
+        }`
       ),
     ])
 
@@ -95,24 +99,13 @@ export async function POST(req: NextRequest) {
       deletedMessages: messageIdsToDelete.length,
       deletedInquiries: inquiryIdsToDelete.length,
     })
-  } catch (error) {
-    console.error('Failed to delete conversation', error)
+  } catch {
+    console.error('Failed to delete conversation')
     return NextResponse.json({error: 'Failed to delete conversation'}, {status: 500})
   }
 }
 
 function normalizePhone(value?: string) {
-  if (!value) return ''
-
-  const digits = value.replace(/\D/g, '')
-
-  if (digits.length === 11 && digits.startsWith('1')) {
-    return digits.slice(1)
-  }
-
-  if (digits.length === 10) {
-    return digits
-  }
-
-  return digits
+  try { return normalizeContactPhone(value || '') }
+  catch { return value?.trim() || '' }
 }

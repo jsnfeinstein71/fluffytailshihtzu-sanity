@@ -1,4 +1,5 @@
 import {defineField, defineType} from 'sanity'
+import {puppyStatusOptions} from '../../lib/inventory'
 
 export const puppyType = defineType({
   name: 'puppy',
@@ -36,14 +37,17 @@ export const puppyType = defineType({
       title: 'Status',
       type: 'string',
       options: {
-        list: [
-          {title: 'Available', value: 'available'},
-          {title: 'Reserved', value: 'reserved'},
-          {title: 'Sold', value: 'sold'},
-          {title: 'Holdback', value: 'holdback'},
-        ],
+        list: puppyStatusOptions,
       },
       initialValue: 'available',
+      description: 'All statuses stay in the original litter. Only Available puppies in active litters accept new inquiries.',
+    }),
+    defineField({
+      name: 'isVisible',
+      title: 'Show on Website',
+      type: 'boolean',
+      initialValue: true,
+      description: 'Published puppies remain visible unless disabled. The parent litter must also be published and visible.',
     }),
     defineField({
       name: 'sex',
@@ -70,9 +74,10 @@ export const puppyType = defineType({
     }),
     defineField({
       name: 'notes',
-      title: 'Notes',
+      title: 'Public Notes',
       type: 'text',
       rows: 4,
+      description: 'Displayed on the puppy page. Falls back to Summary when empty.',
     }),
     defineField({
       name: 'mainImage',
@@ -91,6 +96,7 @@ export const puppyType = defineType({
       title: 'Override Price',
       type: 'number',
       description: 'Optional. If set, this price overrides the litter price for this puppy.',
+      validation: (Rule) => Rule.positive().precision(2),
     }),
   ],
   preview: {

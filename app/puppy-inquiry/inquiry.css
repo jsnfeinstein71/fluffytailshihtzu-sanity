@@ -1,0 +1,10 @@
+.inquiry-page .inquiry-page-inner { max-width: 700px; margin-inline: auto; }
+.inquiry-page .page-intro { padding-bottom: 0; }
+.inquiry-page .page-intro .h1 { margin-bottom: 14px; }
+.inquiry-page .page-intro .lead { margin: 0; font-size: 16px; }
+@media (max-width: 600px) {
+  .brand-site .inquiry-page { padding-top: 28px; }
+  .inquiry-page .page-intro .eyebrow { margin-bottom: 10px; }
+  .inquiry-page .page-intro .h1 { margin-bottom: 12px; }
+  .inquiry-page .page-intro .lead { font-size: 15px; }
+}

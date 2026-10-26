@@ -54,14 +54,16 @@ export const siteSettingsType = defineType({
       name: 'waitlistUrl',
       title: 'Waitlist URL',
       type: 'url',
-      description: 'General future-interest waitlist form URL.',
+      description: 'Retired external form URL. Preserved for history; the website uses /puppy-inquiry?interest=waitlist.',
+      readOnly: true,
     }),
     defineField({
       name: 'puppyInquiryUrl',
       title: 'Puppy Inquiry Form URL',
       type: 'url',
       description:
-        'Dedicated puppy inquiry form URL. This should be a separate Tally form from the general waitlist.',
+        'Retired external form URL. Preserved for history; the website uses /puppy-inquiry.',
+      readOnly: true,
     }),
     defineField({
       name: 'serviceArea',

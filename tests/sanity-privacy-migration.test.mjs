@@ -10,10 +10,9 @@ import {parse, evaluate} from 'groq-js'
 import {planPrivacyMigration, classifyMigration, prepareBackup, sealBackup, openBackup, fingerprint, legacyPrivateId} from '../scripts/sanity-privacy-migration.mjs'
 import {sourceQueries} from './privacy-test-helpers.mjs'
 import {syntheticPrivacyFixture as fixture} from './privacy-synthetic-fixture.mjs'
+import * as queries from '../sanity/lib/inventory-queries.ts'
 
-const queries = {...sourceQueries('app/available-puppies/page.tsx'), ...sourceQueries('app/puppies/[slug]/page.tsx'),
-  puppySitemapQuery: sourceQueries('app/sitemap.ts').puppiesQuery}
-const {paidRecordsQuery} = sourceQueries('app/api/stripe/create-invoice/route.ts')
+const {paidRecordsQuery} = sourceQueries('sanity/lib/payment-context.ts')
 const {default: Inbox} = await import('../app/inbox/page.tsx')
 const {privateRecordId} = await import('../sanity/lib/private-records.ts')
 const clone = value => structuredClone(value)
@@ -96,7 +95,7 @@ test('authenticated real Inbox, payment joins and legacy token lookups retain mi
   before.push({_id: 'historical-payment', _rev: 'p1', _type: 'paymentRecord', puppySlug: 'synthetic-puppy',
     customerPhone: '+15555550101', amountPaid: 300, paymentStatus: 'paid', paymentType: 'deposit', stripeCheckoutSessionId: 'cs_synthetic_paid', createdAt: '2026-04-02T00:00:00Z'})
   const after = applyOffline(before, planPrivacyMigration(before).mutations)
-  globalThis.fixtureOperationalClient = {fetch: (groq, params) => query(after, groq, params)}
+  globalThis.fixtureOperatorClient = {fetch: (groq, params) => query(after, groq, params)}
   const inbox = await Inbox()
   assert.equal(inbox.props.conversations.length, 1)
   assert.equal(inbox.props.conversations[0].messages.length, 26)

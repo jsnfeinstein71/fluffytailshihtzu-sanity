@@ -5,6 +5,13 @@ export const depositLinkType = defineType({
   title: 'Deposit Link',
   type: 'document',
   fields: [
+    defineField({name: 'puppyId', title: 'Puppy ID', type: 'string', readOnly: true}),
+    defineField({name: 'litterId', title: 'Litter ID', type: 'string', readOnly: true}),
+    defineField({name: 'expiresAt', title: 'Expires At', type: 'datetime', readOnly: true}),
+    defineField({name: 'stripeCheckoutSessionId', title: 'Stripe Checkout Session ID', type: 'string', readOnly: true}),
+    defineField({name: 'checkoutMetadata', title: 'Checkout Quote', type: 'object', readOnly: true, hidden: true,
+      fields: ['pricingVersion', 'puppyId', 'puppySlug', 'puppyName', 'litterId', 'litterTitle', 'totalPriceCents', 'depositCents', 'chargedAmountCents', 'customerName', 'customerEmail', 'customerPhone', 'token', 'paymentType'].map(name => defineField({name, type: 'string'})),
+    }),
     defineField({name: 'createdAt', title: 'Created At', type: 'datetime'}),
     defineField({name: 'token', title: 'Token', type: 'string'}),
     defineField({name: 'active', title: 'Active', type: 'boolean', initialValue: true}),

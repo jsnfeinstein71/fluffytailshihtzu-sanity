@@ -371,6 +371,7 @@ a{
   align-items:flex-start;
   justify-content:space-between;
   gap:10px;
+  flex-wrap:wrap;
   margin-bottom:8px;
 }
 
@@ -378,6 +379,7 @@ a{
   margin:0;
   font-size:16px;
   line-height:1.15;
+  overflow-wrap:anywhere;
 }
 
 .puppyMetaLine{
@@ -439,6 +441,27 @@ a{
   background:#f2f4f7;
   color:#344054;
   border-color:#d0d5dd;
+}
+
+.status-unknown{
+  background:#f2f4f7;
+  color:#344054;
+}
+
+.parentPhoto{
+  display:block;
+  width:100%;
+  aspect-ratio:4 / 3;
+  object-fit:cover;
+  margin:6px 0;
+}
+
+.tileMeta{
+  overflow-wrap:anywhere;
+}
+
+details > summary{
+  cursor:pointer;
 }
 
 .footer{
