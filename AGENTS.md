@@ -24,7 +24,7 @@ FluffyTail Shih Tzu is a production Next.js and Sanity site for a small breeder.
 
 ## Current Priority
 
-- Website branding/UX is active on `codex/fluffytail-brand-ux`, based on PR #2. Merging or changing Production requires explicit approval.
+- Website design is complete and locked. Integration/review is active on `codex/fluffytail-integrated-release`, combining current `main`, PR #2 and the approved `codex/fluffytail-brand-ux` snapshot. See `docs/fluffytail-integrated-release.md`. Do not resume individual-page redesigns. Merging or changing Production requires explicit approval.
 - Existing Adobe `FluffyTail Brand` is the authoritative design reference: approved artwork, Brown `#58493D`, Champagne `#D8BD9D`, Cormorant Garamond SemiBold headings and Acumin Pro Regular body. No replacement logo or proprietary font redistribution. See `docs/fluffytail-brand-ux.md` for provenance and the development web kit.
 - The owner approved the desktop/mobile homepage design on 2026-10-25. Preserve its composition, original two-cream-puppy photograph, branding, navigation and puppy cards. Use it as the reference for remaining pages; do not redesign the homepage again. Sanity content corrections and Production deployment still require separate approval.
 - Available Puppies is also owner-approved on desktop/mobile. Preserve its layout, pricing presentation, status badges and puppy cards. Use these two approved pages as the reference for remaining pages; do not redesign either again.

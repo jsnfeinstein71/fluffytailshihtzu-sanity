@@ -39,13 +39,14 @@ export default async function HomePage() {
   const activeLitters = getLittersByStatus(litters, 'current')
   const heroImageUrl = siteSettings?.heroImageUrl || activeLitters[0]?.groupPhotoUrl
   const showWaitlistIndicator = shouldShowWaitlist(litters, puppies)
+  const designPreview = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview'
   // Preview approved copy without publishing a change to the live CMS document.
-  const introHeadline = process.env.NODE_ENV === 'development'
+  const introHeadline = designPreview
     ? approvedIntroHeadline
     : siteSettings?.homepageHeadline || approvedIntroHeadline
 
   return <main>
-    <HomeHero imageUrl={heroImageUrl} preview={process.env.NODE_ENV === 'development'} />
+    <HomeHero imageUrl={heroImageUrl} preview={designPreview} />
 
     <section className="brand-container home-intro">
       <div><p className="eyebrow">Home-raised in Alabama</p><h2>{introHeadline}</h2></div>

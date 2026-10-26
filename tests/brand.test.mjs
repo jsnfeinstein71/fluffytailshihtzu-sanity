@@ -104,7 +104,8 @@ test('normal hero rendering retains the Sanity source and the proposal is develo
   assert.doesNotMatch(empty, /<img/)
   assert.match(empty, /Meet our puppies/)
   const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8')
-  assert.match(page, /preview=\{process.env.NODE_ENV === 'development'\}/)
+  assert.match(page, /process.env.NODE_ENV === 'development' \|\| process.env.VERCEL_ENV === 'preview'/)
+  assert.match(page, /preview=\{designPreview\}/)
   assert.match(page, /"heroImageUrl": heroImage.asset->url/)
 })
 

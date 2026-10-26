@@ -4,6 +4,7 @@ import twilio from 'twilio'
 import {InquiryError, normalizePhone} from '@/lib/inquiry'
 import {readRequestText} from '@/lib/request-body'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
@@ -17,6 +18,8 @@ function reply(acknowledge = false) {
 }
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   if (process.env.VERCEL_ENV === 'preview') return NextResponse.json({error: 'Provider callbacks are disabled in preview.'}, {status: 503})
   const signature = req.headers.get('x-twilio-signature')
   if (!signature) return NextResponse.json({error: 'Invalid signature.'}, {status: 403})

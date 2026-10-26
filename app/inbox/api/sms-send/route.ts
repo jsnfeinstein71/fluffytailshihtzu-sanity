@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {requireOperator} from '@/lib/operator-auth'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {getTwilio} from '@/sanity/lib/twilio'
 import {privateRecordId} from '@/sanity/lib/private-records'
 import {InquiryError, normalizePhone} from '@/lib/inquiry'
@@ -10,6 +11,8 @@ export const runtime = 'nodejs'
 export async function POST(req: NextRequest) {
   const denied = requireOperator(req)
   if (denied) return denied
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const sanity = getOperatorClient()
     const payload = await req.json()

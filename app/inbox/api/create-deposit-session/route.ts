@@ -2,6 +2,7 @@ import {NextRequest, NextResponse} from 'next/server'
 import {createHash, randomBytes} from 'node:crypto'
 import {privateRecordId} from '@/sanity/lib/private-records'
 import {requireOperator} from '@/lib/operator-auth'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {getStripe} from '@/sanity/lib/stripe'
 import {getPaymentContext, paymentBaseUrl, paymentFailure, paymentMetadata, PaymentError} from '@/sanity/lib/payment-context'
 
@@ -16,6 +17,8 @@ type DepositLink = {
 export async function POST(req: NextRequest) {
   const denied = requireOperator(req)
   if (denied) return denied
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const stripe = getStripe()
     const body = await req.json()

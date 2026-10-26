@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {requireOperator} from '@/lib/operator-auth'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {privateRecordId} from '@/sanity/lib/private-records'
 import {toCents} from '@/lib/pricing'
 import {getStripe} from '@/sanity/lib/stripe'
@@ -10,6 +11,8 @@ export const runtime = 'nodejs'
 export async function POST(req: NextRequest) {
   const denied = requireOperator(req)
   if (denied) return denied
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const body = await req.json()
     const customerEmail = String(body.customerEmail || '').trim()

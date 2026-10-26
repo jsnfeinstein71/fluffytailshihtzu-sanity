@@ -50,6 +50,7 @@ function applyPatch(change) {
 }
 
 beforeEach(() => {
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE
   process.env.INBOX_BASIC_AUTH_USER = 'fixture'
   process.env.INBOX_BASIC_AUTH_PASS = 'fixture-password'
   process.env.STRIPE_WEBHOOK_SECRET = secret
@@ -418,5 +419,23 @@ test('preview disables provider callbacks and outbound messaging before operatio
   }
   const {POST} = await import('../app/inbox/api/sms-send/route.ts')
   assert.equal((await POST(request('/inbox/api/sms-send', {to: '+15555550101', body: 'fixture'}))).status, 503)
+  assert.equal(calls.length, 0)
+  assert.equal((await webhook(new Request('https://preview.example/api/stripe/webhook', {method: 'POST'}))).status, 503)
+})
+
+test('signed Stripe redelivery after a local freeze creates one private payment without provider calls', async () => {
+  const session = {id: 'cs_test_recovery', payment_status: 'paid', currency: 'usd', amount_total: 12500,
+    metadata: {puppySlug: 'puppy', paymentType: 'manual-payment'}}
+  process.env.FLUFFYTAIL_WRITE_FREEZE = '1'
+  const frozen = await signedEvent('checkout.session.completed', session)
+  assert.equal(frozen.status, 503)
+  assert.equal(frozen.headers.get('retry-after'), '60')
+  assert.equal(records().length, 0)
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE
+  assert.equal((await signedEvent('checkout.session.completed', session)).status, 200)
+  assert.equal((await signedEvent('checkout.session.completed', session)).status, 200)
+  assert.equal(records().length, 1)
+  assert.match(records()[0]._id, /^private\./)
+  assert.equal(records()[0].amountPaid, 125)
   assert.equal(calls.length, 0)
 })

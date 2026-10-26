@@ -14,6 +14,8 @@ const nextModules = new Map(['next/link', 'next/navigation', 'next/server'].map(
 // Test-only loader: execute actual TSX pages with a read-only in-memory Sanity client.
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (specifier === 'server-only') return {url: 'fixture:empty', shortCircuit: true}
+    if (specifier === '@sanity/client') return {url: 'fixture:sanity-sdk', shortCircuit: true}
     if (specifier === '@/sanity/lib/operator-client' || specifier === './operator-client') return {url: 'fixture:operator-client', shortCircuit: true}
     if (specifier === '@/sanity/lib/stripe') return {url: 'fixture:stripe', shortCircuit: true}
     if (specifier === '@/sanity/lib/twilio' || specifier === './twilio') return {url: 'fixture:twilio', shortCircuit: true}
@@ -31,6 +33,8 @@ registerHooks({
     return nextResolve(specifier, context)
   },
   load(url, context, nextLoad) {
+    if (url === 'fixture:empty') return {format: 'module', source: '', shortCircuit: true}
+    if (url === 'fixture:sanity-sdk') return {format: 'module', source: 'export const createClient = config => {globalThis.fixtureWriterConfigs?.push(config); return globalThis.fixtureOperatorClient}', shortCircuit: true}
     if (url === 'fixture:operator-client') return {format: 'module', source: 'export const getOperatorClient = () => globalThis.fixtureOperatorClient', shortCircuit: true}
     if (url === 'fixture:stripe') return {format: 'module', source: 'export const getStripe = () => globalThis.fixtureStripe', shortCircuit: true}
     if (url === 'fixture:twilio') return {format: 'module', source: 'export const getTwilio = () => globalThis.fixtureTwilio', shortCircuit: true}

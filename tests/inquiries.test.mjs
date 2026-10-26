@@ -29,6 +29,7 @@ const leads = () => docs.filter(doc => doc._type === 'puppyInquiry')
 const messages = () => docs.filter(doc => doc._type === 'smsMessage')
 
 beforeEach(() => {
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE
   delete process.env.VERCEL
   delete process.env.VERCEL_ENV
   process.env.INQUIRY_FORM_SECRET = 'fixture-only-secret-at-least-32-characters'
@@ -401,4 +402,23 @@ test('private IDs are deterministic per event, opaque, and never encode customer
   assert.match(privateRecordId('sms'), /^private\.sms\.[a-f0-9]{64}$/)
   assert.doesNotMatch(privateRecordId('inquiry', 'fixture@example.test'), /fixture|example/)
   assert.throws(() => privateRecordId('bad.kind'))
+})
+
+test('frozen signed SMS and native inquiries reject without false acknowledgement, then deduplicate after local resume', async () => {
+  process.env.FLUFFYTAIL_WRITE_FREEZE = '1'
+  for (const response of [await submit(inquiryRequest()), await inbound(smsRequest())]) {
+    assert.equal(response.status, 503)
+    assert.equal(response.headers.get('retry-after'), '60')
+  }
+  assert.equal(leads().length, 0)
+  assert.equal(messages().length, 0)
+  assert.equal(notifications.length, 0)
+  delete process.env.FLUFFYTAIL_WRITE_FREEZE
+  assert.equal((await submit(inquiryRequest())).status, 201)
+  assert.equal((await submit(inquiryRequest())).status, 200)
+  assert.match(await (await inbound(smsRequest())).text(), /<Message>/)
+  assert.doesNotMatch(await (await inbound(smsRequest())).text(), /<Message>/)
+  assert.equal(leads().length, 1)
+  assert.equal(messages().filter(message => message.direction === 'inbound').length, 1)
+  assert.equal(notifications.length, 1) // Mocked operator alert only.
 })

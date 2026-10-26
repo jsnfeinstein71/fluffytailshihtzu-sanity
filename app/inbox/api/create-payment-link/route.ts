@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {requireOperator} from '@/lib/operator-auth'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {toCents} from '@/lib/pricing'
 import {getStripe} from '@/sanity/lib/stripe'
 import {getPaymentContext, paymentMetadata, paymentBaseUrl, paymentFailure, PaymentError} from '@/sanity/lib/payment-context'
@@ -9,6 +10,8 @@ export const runtime = 'nodejs'
 export async function POST(req: NextRequest) {
   const denied = requireOperator(req)
   if (denied) return denied
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const body = await req.json()
     const context = await getPaymentContext(String(body.puppySlug || '').trim())

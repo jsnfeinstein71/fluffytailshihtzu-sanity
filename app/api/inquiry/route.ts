@@ -3,6 +3,7 @@ import {InquiryError, validateInquiry} from '@/lib/inquiry'
 import {inquiryCookie, issueInquiryToken, requireInquiryOrigin, verifyInquiryToken} from '@/lib/inquiry-security'
 import {readRequestText} from '@/lib/request-body'
 import {acceptInquiry} from '@/sanity/lib/inquiry-service'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 
 export const runtime = 'nodejs'
 const headers = {'Cache-Control': 'no-store', Vary: 'Cookie'}
@@ -27,6 +28,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     requireInquiryOrigin(req)
     if (!req.headers.get('content-type')?.startsWith('application/json')) throw new InquiryError('JSON is required.', 415)

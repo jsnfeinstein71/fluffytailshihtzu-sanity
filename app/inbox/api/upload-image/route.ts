@@ -1,12 +1,15 @@
 import {NextRequest, NextResponse} from 'next/server'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {requireOperator} from '@/lib/operator-auth'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   const denied = requireOperator(req)
   if (denied) return denied
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const sanity = getOperatorClient()
     const formData = await req.formData()

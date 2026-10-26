@@ -10,8 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      NEXT_PUBLIC_SANITY_PROJECT_ID: 3glz6dkx
-      NEXT_PUBLIC_SANITY_DATASET: production
+      NEXT_PUBLIC_SANITY_PROJECT_ID: gu1xkpsg
+      NEXT_PUBLIC_SANITY_DATASET: synthetic
+      VERCEL_ENV: preview
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

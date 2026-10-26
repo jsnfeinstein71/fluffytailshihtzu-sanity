@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import {privateRecordId} from '@/sanity/lib/private-records'
 import {getStripe} from '@/sanity/lib/stripe'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 
 export const runtime = 'nodejs'
 
@@ -81,6 +82,9 @@ async function recordInvoice(invoice: Stripe.Invoice) {
 }
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
+  if (process.env.VERCEL_ENV === 'preview') return NextResponse.json({error: 'Provider callbacks are disabled in preview.'}, {status: 503})
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing signature', {status: 400})
   if (!process.env.STRIPE_WEBHOOK_SECRET) return new NextResponse('Webhook is not configured', {status: 503})
