@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
     "mail:setup": "powershell.exe -NoProfile -STA -File scripts/setup-jeanne-mail.ps1",
-    "mail:check": "node scripts/check-jeanne-mail.mjs --connect"
+    "mail:check": "node scripts/check-jeanne-mail.mjs --connect",
+    "mail:inbox": "node scripts/serve-jeanne-inbox.mjs"
   },
   "dependencies": {
     "@portabletext/react": "^6.0.3",

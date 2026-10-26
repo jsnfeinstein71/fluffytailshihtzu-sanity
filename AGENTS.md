@@ -40,6 +40,8 @@ FluffyTail Shih Tzu is a production Next.js and Sanity site for a small breeder.
 
 ## Commands
 
+Recovery instruction, October 26: resume the existing PR #4 branch and preserve all local files and saved records. No reset or replacement checkout. Email compose/reply drafts, held reviews and non-payable payment-link preparation are authorized for isolated fictional testing. Customer delivery remains hard-disabled. Existing mailbox reads are also paused, including message lists, bodies and reply-envelope lookups; the local companion enforces this before touching the provider and has no browser/environment activation switch. Do not run live mailbox diagnostics, enable reads, import mail, modify Production Sanity/payments, merge or deploy Production without new owner authorization. Document the recovery and verification remotely on PR #4.
+
 - Install: `npm install`
 - Dev server: `npm run dev`
 - Build: `npm run build`

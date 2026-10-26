@@ -7,7 +7,7 @@ import ts from 'typescript'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(import.meta.url)
 // Resolve before installing hooks: newer Node releases hook require.resolve too.
-const nextModules = new Map(['next/link', 'next/navigation', 'next/server'].map(specifier =>
+const nextModules = new Map(['next/link', 'next/navigation', 'next/server', 'next/image'].map(specifier =>
   [specifier, pathToFileURL(require.resolve(specifier)).href]
 ))
 
