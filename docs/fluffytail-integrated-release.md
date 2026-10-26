@@ -29,11 +29,37 @@ These confirmed facts are presented on Pricing & Process using its existing sect
 
 ### Remaining Business Approval Queue
 
-1. **Payment-link delivery:** The owner wants text and email. The existing Inbox has SMS sending, copy-link actions and a normal email reply link; automatic email-link delivery is not verified or promised. Confirm whether a prepared email in Jeanne's normal email app is sufficient or whether sending directly from Inbox is required. Do not provision an email service or send live messages without authorization. Accepted payment methods beyond existing Checkout still need confirmation if they are to be advertised.
+1. **Payment-link delivery:** The owner confirmed that correspondence must flow through `jeanne@fluffytailshihtzu.com` and should remain in the existing website Inbox. Treat this as an unfinished integration, not a choice of a mailto shortcut. See the focused implementation brief below. Accepted payment methods beyond existing Checkout still need confirmation if they are to be advertised.
 2. **Jeanne:** Supply any additional biography/practices to publish; none are invented. The minimal introduction remains based on substantiated public facts.
 3. **Historical status:** Identify which past-litter Reserved records should become Sold or Gone Home. Current public data has 18 Reserved puppies in March–June past litters; age alone does not establish the replacement status. Preserve original litter links and financial history.
 4. **Two typos:** Approve `girl-1-1` name `Girl.1` → `Girl 1` (document `6e181ad7-3340-4b2f-ba61-91fbd9155ca0`) and `girl-2-1` color `Creram and Whitr` → `Cream and White` (document `136dcb97-3aaf-41dd-9a5d-b5fe194d629e`). Keep slugs/IDs/photos/status/prices unchanged.
 5. **Policies:** Supply the actual approved effective/revision date for each legal policy. Existing body wording and date behavior stay unchanged pending that decision.
+
+### Next Focused Task: Jeanne's Inbox Email and Payment-Link Delivery
+
+**Status: investigated and implementation-ready brief; no application email sender, mailbox synchronization, mailbox login or live email test has been implemented/performed in this pass.** Do not represent Email as a verified sending channel yet. Keep the approved public-site design and existing payment rules unchanged.
+
+Owner requirements: keep the website Inbox as the working interface; correspondence uses `jeanne@fluffytailshihtzu.com`; support normal replies and deposit/payment links by either email or SMS. The owner has not used the payment-link buttons live, so creation and delivery both require controlled verification.
+
+Verified current gap:
+
+- `InboxClient.tsx` Send Deposit/Invoice/Payment Link handlers call `/inbox/api/sms-send`; they are text actions, not email actions. Create Link copies/opens a URL. Reply by Email is only `mailto:` and cannot enforce the sending account or capture replies in the website Inbox.
+- `app/inbox/page.tsx` currently reads inquiries, SMS messages and financial records, with no mailbox reader. There is no configured application email sender in this repo.
+- The prior **Pair Email API Integration** chat confirms that Jeanne's mailbox is hosted at Pair. Read-only public DNS on 2026-10-26 showed Pair Networks/OX Cloud MX hosts and OX Cloud SPF. This supports Pair-hosted email but does not establish the exact account product or authorized mailbox settings.
+- Pair's official [Pro Mail setup](https://www.pairdomains.com/kb/posts/1048) documents authenticated IMAP (993) and SMTP (465/587). Its [hosting SMTP guide](https://www.pair.com/support/kb/smtp-service-at-pair-networks/) documents account-specific hostnames and TLS. Confirm the actual account's settings; do not treat MX hosts as client/server login settings or assume an OX partner API is available to the mailbox.
+- No suitable Pair/IMAP connection was found among the available app tools. Do not substitute the connected Gmail account or migrate email providers.
+
+Implementation scope for the next code pass:
+
+1. Add an authenticated email channel to the existing operator Inbox, with a visible Email/Text choice and clear recipient, subject and delivery status. In production, From and Reply-To are server-enforced as Jeanne's address; a browser-supplied sender must never select another account.
+2. Connect Pair sending and bounded Inbox/Sent synchronization using the mailbox's documented secure settings. Start with an explicit authenticated refresh; leave mailbox messages, read flags, folders and existing history intact. Do not perform an automatic bulk historical import. Associate only authorized customer correspondence with the appropriate inquiry; retain Message-ID/thread headers and deduplicate synchronization.
+3. Reuse the existing server-validated deposit/payment URLs and historical-balance calculations. Creating a link, sending it, and receiving a confirmed payment remain separate states. A sent email must never reserve a puppy or mark a balance paid. Provider-generated Stripe receipts/invoices are separate from Jeanne's correspondence.
+4. Keep mail content and delivery state authenticated-only, following existing private-ID/no-store conventions, operator authentication/CSRF checks and write-freeze behavior. Do not expose email history through public Sanity queries. Use explicit operator sends; an ambiguous SMTP result must require review rather than a blind resend.
+5. Keep actual mail access/sending disabled by default and blocked in the current synthetic Preview. Build fixture-driven compose, reply, link and synchronization checks first. A separately scoped test mailbox and explicit operator-owned test recipient are needed for provider checks; never inherit Jeanne's real mailbox credential into the review Preview. No mailbox password belongs in chat, source, logs or test artifacts.
+
+Acceptance checks: synthetic Email/Text/Either inquiries enter the intended conversation; email reply and both payment-link types use the correct sender/recipient/context; replies appear in the same conversation; repeated refreshes do not duplicate messages; errors/ambiguous sends retain drafts and show truthful status; no email action changes payment or reservation state; SMS consent gates remain intact; no production mailbox, customer, payment, DNS or provider configuration is changed by testing.
+
+Connection prerequisite: confirm the actual Pair mailbox client settings and configure authorized test-mailbox credentials through the deployment's secure server settings. No credentials have been requested, retrieved, configured or tested here. Production activation and a real payment/email smoke test require separate approval after the isolated checks.
 
 Previously documented production gates below remain in force. This correction phase does not authorize paused privacy migration, legacy-link handling, live delivery checks or release.
 
