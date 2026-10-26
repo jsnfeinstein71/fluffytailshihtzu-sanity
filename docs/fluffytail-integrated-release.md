@@ -1,6 +1,16 @@
 # Integrated Website Review
 
-Status: integration and isolated verification in progress. Production is unchanged.
+Status: owner explicitly authorized website publication on October 26, 2026. Production release is in progress; the sections below record prior phases and their evidence limits.
+
+## Owner-authorized public website release — October 26, 2026
+
+The owner's instruction is **"PUBLISH THE WEBSITE"**. This supersedes earlier merge/deployment approval holds for the public site. Publish PR #4 through main using Production configuration; do not promote the synthetic Preview build or carry its test credentials/data into Production.
+
+The release fixes an actual production-only presentation mismatch: the approved hero styling and original `IMG_6731.JPEG` now render outside Preview. The known pre-release CMS photograph/headline fall back to the approved originals; future different CMS image/headline selections remain editable. Production CMS records themselves are unchanged.
+
+The existing `/inbox` remains the operational staff interface. The unfinished new workspace remains Preview-only and Pair access remains disabled; publishing the public website does not claim that the new workspace is ready for customer use. Latest preceding checkpoint `c2fb7ea` passed CI and includes the completed owner-only Pair trial documented in `fluffytail-inbox-delivery-phase.md`.
+
+The 54 historically exposed operational records remain an unresolved existing privacy issue. The paused migration is not restarted by this website release. Historical payment records and the three obsolete/unverifiable links are unchanged; invalid links continue to fail closed. Live financial settlement and general staff email activation are not claimed verified by publication.
 
 ## Focused Audit Corrections — 2026-10-26
 
