@@ -19,7 +19,7 @@ export const puppies = [
 export type WorkspacePuppy={id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug?:string}
 export function familyFromSaved(record:SavedFamily):Family {
   const fixture=families.find(f=>f.id===record.familyKey)
-  return {...record.profile,unread:record.profile.unread??true,records:record.profile.records||fixture?.records||[],messages:record.profile.messages||fixture?.messages||[],checks:record.checks}
+  return {...record.profile,unread:record.profile.unread??fixture?.unread??true,records:record.profile.records||fixture?.records||[],messages:record.profile.messages||fixture?.messages||[],checks:record.checks}
 }
 
 // Fictional review fixtures. Persistence is restricted to the isolated synthetic dataset.

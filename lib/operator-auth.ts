@@ -1,6 +1,6 @@
 import {createHash, timingSafeEqual} from 'node:crypto'
 import {NextResponse} from 'next/server'
-import {validStaffSession} from './staff-session'
+import {isolatedStaffPreview,validStaffSession} from './staff-session'
 
 function equal(a: string, b: string) {
   return timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest())
@@ -20,7 +20,11 @@ export function requireOperator(req: Request) {
     const split = decoded.indexOf(':')
     if (split >= 0) valid = equal(decoded.slice(0, split), user) && equal(decoded.slice(split + 1), pass)
   }
-  if (!valid && !validStaffSession(req)) return NextResponse.json({error: 'Authentication required.'}, {status: 401, headers: {...headers, 'WWW-Authenticate': 'Basic realm="FluffyTail Inbox"'}})
+  if (!valid && !validStaffSession(req)) {
+    const workspace=isolatedStaffPreview()&&(new URL(req.url).pathname==='/inbox/workspace'||new URL(req.url).pathname.startsWith('/inbox/workspace/'))
+    // A background workspace fetch must never open a browser-wide Basic Auth dialog.
+    return NextResponse.json({error:'Authentication required.'},{status:401,headers:workspace?headers:{...headers,'WWW-Authenticate':'Basic realm="FluffyTail Inbox"'}})
+  }
 
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     const origin = req.headers.get('origin')

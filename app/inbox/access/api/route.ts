@@ -16,6 +16,6 @@ export async function POST(req:Request){
   const record=await client.getDocument<{_rev:string;_type:string;workspace:string;expiresAt:number;used:boolean}>(id)
   if(!record||record._type!=='staffAccess'||record.workspace!=='review-v1'||record.used||!Number.isFinite(record.expiresAt)||record.expiresAt<Date.now())throw new Error()
   await client.patch(id).ifRevisionId(record._rev).set({used:true,usedAt:new Date().toISOString()}).commit({visibility:'sync'})
-  const response=NextResponse.json({ok:true},{headers});response.cookies.set(staffCookie,makeStaffSession(new URL(req.url).origin),{httpOnly:true,secure:new URL(req.url).protocol==='https:',sameSite:'strict',path:'/inbox/workspace',maxAge:8*60*60});return response
+  const response=NextResponse.json({ok:true},{headers});response.cookies.set(staffCookie,makeStaffSession(new URL(req.url).origin),{httpOnly:true,secure:new URL(req.url).protocol==='https:',sameSite:'lax',path:'/inbox/workspace',maxAge:8*60*60});return response
  }catch{return NextResponse.json({error:'This owner link has expired or was already used. Request a fresh Preview link.'},{status:401,headers})}
 }
