@@ -72,5 +72,5 @@ export function useSavedWorkspace() {
     setError('')
     return conflict.saved
   }
-  return {records,loading,busy,error,conflicts,load,mutate,resolve,base:(familyId:string,channel:Channel)=>bases.current[draftKey(familyId,channel)]||'',ready:!!records?.length}
+  return {records,loading,busy,error,conflicts,load,mutate,resolve,base:(familyId:string,channel:Channel)=>bases.current[draftKey(familyId,channel)]||'',ready:records!==null}
 }

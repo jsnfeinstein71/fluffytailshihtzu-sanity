@@ -1,0 +1,29 @@
+# Live staff workspace release
+
+Owner authorization, October 26, 2026: finish and publish the approved workspace at the real website, continuing the already merged PR #4 and live `main` at `5c6eb0e`. The saved sign-in corrections were committed at `ecf4c36` before merging the current main into the working branch. No saved source or records were reset. The Adobe public/staff design and existing `/inbox` remain.
+
+## Staff use
+
+Stable entry: `https://www.fluffytailshihtzu.com/inbox/workspace`. Unauthenticated navigation opens the branded staff sign-in at `/inbox/access`, using the existing Inbox username/password. It issues an eight-hour HttpOnly, Secure, SameSite Lax, host-bound session. Production sessions cover the old Inbox during transition. Workspace API authentication failures do not trigger a browser-wide Basic Auth popup. No customer accounts. An authenticated operator can mint a ten-minute, one-use owner entry grant; only its hash is stored in private Sanity, and consumption is revision-checked.
+
+The production workspace uses `3glz6dkx/production` with the independent `live-v1` namespace. Preview remains `gu1xkpsg/synthetic` and `review-v1`; examples, test payments and the completed owner trial are not copied into Production. Existing real FluffyTail inquiries and new native inquiries project into private staff families. Exact normalized name/email/phone matches share one conversation; separate identities are not merged merely by email. Repeat projection appends inquiry messages once and preserves staff drafts/notes/checklists. Original inquiry records remain unchanged. This is the approved application connection, not the paused historical privacy migration.
+
+Jeanne can review families and current inventory, associate a puppy without reserving it, save independent email/text drafts, add private notes and maintain pickup checklists. Email requires save → review → explicit Send confirmation. Outgoing records and revision-claimed attempts persist before Pair submission; accepted, failed and uncertain outcomes stay distinct, drafts remain, and uncertain/in-progress attempts block resubmission. SMTP acceptance is not confirmed delivery.
+
+Before the first manual send in each conversation, Pair initializes a future-only mailbox watermark using metadata only. **Synchronize this family’s replies** searches only newer replies with known sent Message-IDs and matching participants, imports matched plain text privately and deduplicates by identity. No mailbox flag/folder changes, unrelated historical import or background reader. Replies stay in Pair while a laptop/browser is off. More than 100 outgoing versions in one conversation requires explicit scope review instead of silently skipping history.
+
+SMS uses existing Twilio configuration and records, with a durable workspace attempt per saved text version. Manual Send rechecks the saved draft, latest explicit inquiry consent, contact preference and verified STOP/START information. Provider acceptance remains delivery-unconfirmed. Duplicate/uncertain sends are blocked; the draft is retained. Related verified inbound messages appear with the family. Existing Inbox SMS behavior remains available.
+
+Deposit and balance requests use current server quotes and the existing Stripe Checkout integration. Preparing a link does not send it, confirm payment or reserve a puppy. Live/test sessions and family/request/puppy/amount metadata must match. Repeated creation uses persisted idempotency keys/claims. A manual verification retrieves Stripe status; only the existing signed webhook records confirmed payment and applies the existing deposit reservation transition. New ledger entries retain quoted total/deposit snapshots. Historical records without a verified agreed-price snapshot are never silently repriced: requesting their balance requires review in the existing Inbox. Historical prices, payments, invoices and links are not rewritten.
+
+## Production settings
+
+`FLUFFYTAIL_STAFF_WORKSPACE_ENABLED=1` enables only Production with the exact real project/dataset. Pair uses server-only `FLUFFYTAIL_MAIL_MODE=pair`, `FLUFFYTAIL_PAIR_MAIL_PASSWORD` (sensitive secret), `FLUFFYTAIL_PAIR_SEND_ENABLED=1` and `FLUFFYTAIL_PAIR_READ_ENABLED=1`. Existing Production Sanity/operator/Twilio/Stripe secrets and provider callbacks are reused, including the fixed `INQUIRY_FORM_SECRET`. No test credential is copied into Production. Pair settings authorize operator actions, never an automatic customer send or bulk import.
+
+Rollback: disable `FLUFFYTAIL_STAFF_WORKSPACE_ENABLED` and rebuild, or restore the preceding Production deployment. Existing Inbox/public routes remain. Keep private staff records for recovery; do not reset namespaces or replay uncertain sends.
+
+## Verification boundaries and tracked work
+
+Regression checks execute actual application handlers with offline providers for Production-shaped data, including identity/draft persistence, explicit send confirmation, per-family reply cursors, SMS consent/STOP/deduplication, live Stripe metadata checks and separate payment/reservation state, real-price snapshot preservation and staff login/session/CSRF. The hosted release checks verify the real sign-in, authenticated private family projection/read/persistence and provider configuration without creating customer messages or charging payments. Provider send/reply evidence from the prior approved owner-only trial is retained in PR #4; it is not a new customer-delivery test.
+
+The Stage 2 privacy migration remains paused at `d2bfd3e`. The previously tracked historical public-record exposure and historical-link handling remain tracked separately; this release neither claims they were repaired nor restarts migration. External-recipient email delivery and SMS delivery receipts are not asserted from acceptance. No unrelated historical mailbox import is performed.

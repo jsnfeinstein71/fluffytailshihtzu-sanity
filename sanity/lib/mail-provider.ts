@@ -1,3 +1,4 @@
+import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import 'server-only'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {privateRecordId} from './private-records'
@@ -17,6 +18,7 @@ export function ownerTestConfigured(){return process.env.FLUFFYTAIL_MAIL_MODE===
 export function emailRecipient(profileEmail:string){return ownerTestConfigured()?jeanneEmail:profileEmail}
 
 export function getMailCapabilities():MailCapabilities{
+  if(liveWorkspaceEnabled()&&process.env.FLUFFYTAIL_MAIL_MODE==='pair'){const credentials=!!process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD;return {provider:'pair',canDispatch:credentials&&process.env.FLUFFYTAIL_PAIR_SEND_ENABLED==='1',canSync:credentials&&process.env.FLUFFYTAIL_PAIR_READ_ENABLED==='1'}}
   if(process.env.FLUFFYTAIL_MAIL_MODE==='fictional'){
     requireSyntheticWorkspace()
     return {provider:'fictional',canDispatch:true,canSync:true}
@@ -35,7 +37,7 @@ export function getMailProvider():MailProvider{
   const capabilities=getMailCapabilities()
   if(capabilities.provider==='pair'){
     const adapter=createPairAdapter({password:process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD,sendEnabled:capabilities.canDispatch,readEnabled:capabilities.canSync,recipientAllowlist:[jeanneEmail]})
-    return {capabilities,send:async message=>await adapter.send(message) as SendResult,sync:async input=>await adapter.sync(input) as SyncBatch}
+    return {capabilities,send:async message=>await (liveWorkspaceEnabled()?createPairAdapter({password:process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD,sendEnabled:capabilities.canDispatch,readEnabled:capabilities.canSync,recipientAllowlist:[message.to]}):adapter).send(message) as SendResult,sync:async input=>await (liveWorkspaceEnabled()?createPairAdapter({password:process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD,sendEnabled:false,readEnabled:capabilities.canSync,recipientAllowlist:[...new Set(input.threads.map(t=>t.to))]}):adapter).sync(input) as SyncBatch}
   }
   return {
     capabilities,

@@ -45,6 +45,8 @@ async function recordCheckout(session: Stripe.Checkout.Session) {
     _id: recordId, _type: 'paymentRecord', stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : '',
     paymentType: session.metadata.paymentType, amountPaid, paymentStatus: 'paid',
+    ...(session.metadata.pricingVersion==='1'?{quotedTotalCents:Number(session.metadata.totalPriceCents),quotedDepositCents:Number(session.metadata.depositCents)}:{}),
+    ...(session.metadata.staffFamilyId?{staffFamilyId:session.metadata.staffFamilyId}:{}),
     puppyId: puppy._id, litterId: puppy.litterId, puppySlug: session.metadata.puppySlug,
     puppyName: session.metadata.puppyName, litterTitle: session.metadata.litterTitle,
     customerName: session.metadata.customerName, customerEmail: session.metadata.customerEmail, customerPhone: session.metadata.customerPhone,
