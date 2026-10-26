@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "codex/fluffytail-integrated-release": false,
+      "codex/fluffytail-integrated-release": true,
       "codex/historical-sanity-privacy": true
     }
   }

@@ -5,7 +5,7 @@ import {createClient} from '@sanity/client'
 // Explicit synthetic target only. Never run this against the production website or dataset.
 const base = new URL(process.argv[2])
 assert.ok(base.protocol === 'https:' && base.hostname.endsWith('.vercel.app') ||
-  base.protocol === 'http:' && base.hostname === '127.0.0.1')
+  base.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(base.hostname))
 assert.equal(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID, 'gu1xkpsg')
 assert.equal(process.env.NEXT_PUBLIC_SANITY_DATASET, 'synthetic')
 assert.ok(process.env.SANITY_API_WRITE_TOKEN)
@@ -31,7 +31,7 @@ const alertsBefore = await sanity.fetch('count(*[_type=="smsMessage" && source==
 for (const method of ['Email', 'Text', 'Either']) {
   const name = 'Website QA ' + id + ' ' + method
   const payload = {name, email: `website-qa-${id}-${method.toLowerCase()}@example.test`,
-    phone: method === 'Email' ? '' : '+15005550006', preferredContactMethod: method,
+    phone: method === 'Email' ? '' : method === 'Text' ? '+15555550106' : '+15555550107', preferredContactMethod: method,
     message: 'Synthetic website integration verification only.', smsConsent: method !== 'Email', website: '',
     puppySlug: 'preview-girl-1', interest: 'puppy'}
   if (method === 'Text') {
