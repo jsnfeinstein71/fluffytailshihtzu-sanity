@@ -57,7 +57,7 @@ export function useEmailWorkspace(ready:boolean){
     const parent=data?.messages.filter(m=>m.familyId===familyId&&m.direction==='in'&&m.messageId).sort((a,b)=>Date.parse(b.time)-Date.parse(a.time))[0]
     setEntries(previous=>{
       const entry=previous[familyId];if(!entry)return previous
-      const thread=patch.body&&!entry.value.body&&!explicitThread.current[familyId]&&parent?{replyToId:parent.id,subject:/^re:/i.test(parent.subject)?parent.subject:`Re: ${parent.subject}`}:{}}
+      const thread=patch.body&&!entry.value.body&&!explicitThread.current[familyId]&&parent?{replyToId:parent.id,subject:/^re:/i.test(parent.subject)?parent.subject:`Re: ${parent.subject}`}:{}
       return {...previous,[familyId]:{...entry,value:{...entry.value,...thread,...patch}}}
     })
   }
