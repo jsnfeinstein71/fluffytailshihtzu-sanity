@@ -3,6 +3,7 @@ import type {SavedFamily} from './persistence'
 
 export type Channel = 'Email' | 'Text'
 export type Family = {
+  inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
   id: string; name: string; initials: string; location: string; email: string; phone: string
   preference: Channel | 'Either'; smsConsent: boolean; stage: string; puppyId?: string
   next: string; unread: boolean; pickup?: string; checks: string[]
@@ -14,6 +15,12 @@ export const puppies = [
   {id: 'clover', name: 'Clover', sex: 'Girl', color: 'Gold & white', litter: 'Autumn litter', status: 'Available', price: 1600, deposit: 400},
   {id: 'pippin', name: 'Pippin', sex: 'Boy', color: 'Cream', litter: 'Autumn litter', status: 'Reserved', price: 1600, deposit: 400},
 ] as const
+
+export type WorkspacePuppy={id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug?:string}
+export function familyFromSaved(record:SavedFamily):Family {
+  const fixture=families.find(f=>f.id===record.familyKey)
+  return {...record.profile,unread:record.profile.unread??true,records:record.profile.records||fixture?.records||[],messages:record.profile.messages||fixture?.messages||[],checks:record.checks}
+}
 
 // Fictional review fixtures. Persistence is restricted to the isolated synthetic dataset.
 export const families: Family[] = [
@@ -69,7 +76,6 @@ export function reviewReducer(state: ReviewState, action: Action): ReviewState {
   if (action.type === 'restore') {
     const next={...state,drafts:{...state.drafts},notes:{...state.notes},checks:{...state.checks}}
     for(const record of action.families){
-      if(!families.some(f=>f.id===record.familyKey))continue
       next.notes[record.familyKey]=record.notes.map(note=>note.text)
       next.checks[record.familyKey]=[...record.checks]
       if(action.loadDrafts)for(const channel of ['Email','Text'] as const)next.drafts[draftKey(record.familyKey,channel)]=record.drafts[channel]
@@ -77,7 +83,7 @@ export function reviewReducer(state: ReviewState, action: Action): ReviewState {
     return next
   }
   if (action.type === 'clear-error') return {...state,error:''}
-  const family = families.find(f => f.id === action.familyId)
+  const family = families.find(f => f.id === action.familyId) || (/^inquiry-[a-f0-9]{64}$/.test(action.familyId)?{id:action.familyId,smsConsent:false}:undefined)
   if (!family) return {...state, error:'Choose a family before continuing.'}
   if (action.type === 'draft') return {...state, error:'', drafts:{...state.drafts,[draftKey(family.id, action.channel)]:action.body}}
   if (action.type === 'check') {

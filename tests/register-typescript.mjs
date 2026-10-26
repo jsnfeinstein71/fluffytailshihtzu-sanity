@@ -17,7 +17,7 @@ registerHooks({
     if (specifier === 'server-only') return {url: 'fixture:empty', shortCircuit: true}
     if (specifier === '@sanity/client') return {url: 'fixture:sanity-sdk', shortCircuit: true}
     if (specifier === '@/sanity/lib/operator-client' || specifier === './operator-client') return {url: 'fixture:operator-client', shortCircuit: true}
-    if (specifier === '@/sanity/lib/stripe') return {url: 'fixture:stripe', shortCircuit: true}
+    if ((specifier === '@/sanity/lib/stripe' || specifier === './stripe')) return {url: 'fixture:stripe', shortCircuit: true}
     if (specifier === '@/sanity/lib/twilio' || specifier === './twilio') return {url: 'fixture:twilio', shortCircuit: true}
     if (specifier === '@/sanity/lib/client') return {url: 'fixture:sanity-client', shortCircuit: true}
     if (specifier === './mail-provider' || specifier === '@/sanity/lib/mail-provider') return {url:'fixture:mail-provider',shortCircuit:true}

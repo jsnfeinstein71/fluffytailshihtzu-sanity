@@ -8,6 +8,8 @@ import {getOperatorClient} from './operator-client'
 import {privateRecordId} from './private-records'
 import {getTwilio} from './twilio'
 
+import {projectInquiryFamily} from './workspace'
+
 type Admission = {_id: string; _rev: string; count: number}
 
 async function admit(sanity: ReturnType<typeof getOperatorClient>, key: string, limit: number, milliseconds: number) {
@@ -41,7 +43,8 @@ export async function acceptInquiry(input: InquiryInput, ip: string) {
     : null
   if (input.puppySlug && !puppy) throw new InquiryError('This puppy is no longer listed. Please refresh or send a general inquiry.', 409)
   const id = privateRecordId('inquiry', inquiryHash('duplicate', JSON.stringify({...input, day: new Date().toISOString().slice(0, 10)})))
-  if (await sanity.getDocument(id)) return {duplicate: true}
+  const existingInquiry=await sanity.getDocument(id)
+  if(existingInquiry){if(process.env.VERCEL_ENV==='preview'){try{await projectInquiryFamily(existingInquiry as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Saved inquiry remains accepted; staff can synchronize again. */}}return {duplicate:true}}
   const numbers = alertNumbers()
   if (numbers.length) getTwilio()
   await admit(sanity, `ip:${ip}`, 5, 15 * 60_000)
@@ -60,6 +63,7 @@ export async function acceptInquiry(input: InquiryInput, ip: string) {
     puppy: puppy?.name || '', litter: puppy?.litterTitle || '', puppyPageUrl,
     source: 'fluffytail-native', notificationStatus: numbers.length ? 'pending' : 'preview',
   })
+  if(process.env.VERCEL_ENV==='preview'){try{await projectInquiryFamily(record as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Inquiry is saved; staff synchronization can recover its family projection. */}}
   if (record.receipt !== receipt) return {duplicate: true}
 
   const body = [
