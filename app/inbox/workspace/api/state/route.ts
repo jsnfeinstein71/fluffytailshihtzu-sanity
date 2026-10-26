@@ -1,9 +1,10 @@
+import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {NextResponse} from 'next/server'
 import {requireOperator} from '@/lib/operator-auth'
 import {readRequestText} from '@/lib/request-body'
 import {InquiryError} from '@/lib/inquiry'
 import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
-import {listWorkspaceFamilies, mutateWorkspace, WorkspaceError} from '@/sanity/lib/workspace'
+import {listWorkspaceFamilies, mutateWorkspace, syncInquiryFamilies, WorkspaceError} from '@/sanity/lib/workspace'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,7 @@ function failure(error:unknown) {
 export async function GET(req:Request) {
   const denied = requireOperator(req)
   if (denied) return denied
-  try {return NextResponse.json({families:await listWorkspaceFamilies()},{headers})}
+  try {if(liveWorkspaceEnabled()&&!operationalWriteFreeze())await syncInquiryFamilies();return NextResponse.json({families:await listWorkspaceFamilies()},{headers})}
   catch (error) {return failure(error)}
 }
 export async function POST(req:Request) {

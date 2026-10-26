@@ -1,3 +1,4 @@
+import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {randomUUID} from 'node:crypto'
 import {InquiryError, normalizePhone, type InquiryInput} from '@/lib/inquiry'
 import {inquiryHash} from '@/lib/inquiry-security'
@@ -44,7 +45,7 @@ export async function acceptInquiry(input: InquiryInput, ip: string) {
   if (input.puppySlug && !puppy) throw new InquiryError('This puppy is no longer listed. Please refresh or send a general inquiry.', 409)
   const id = privateRecordId('inquiry', inquiryHash('duplicate', JSON.stringify({...input, day: new Date().toISOString().slice(0, 10)})))
   const existingInquiry=await sanity.getDocument(id)
-  if(existingInquiry){if(process.env.VERCEL_ENV==='preview'){try{await projectInquiryFamily(existingInquiry as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Saved inquiry remains accepted; staff can synchronize again. */}}return {duplicate:true}}
+  if(existingInquiry){if((process.env.VERCEL_ENV==='preview'||liveWorkspaceEnabled())){try{await projectInquiryFamily(existingInquiry as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Saved inquiry remains accepted; staff can synchronize again. */}}return {duplicate:true}}
   const numbers = alertNumbers()
   if (numbers.length) getTwilio()
   await admit(sanity, `ip:${ip}`, 5, 15 * 60_000)
@@ -63,7 +64,7 @@ export async function acceptInquiry(input: InquiryInput, ip: string) {
     puppy: puppy?.name || '', litter: puppy?.litterTitle || '', puppyPageUrl,
     source: 'fluffytail-native', notificationStatus: numbers.length ? 'pending' : 'preview',
   })
-  if(process.env.VERCEL_ENV==='preview'){try{await projectInquiryFamily(record as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Inquiry is saved; staff synchronization can recover its family projection. */}}
+  if((process.env.VERCEL_ENV==='preview'||liveWorkspaceEnabled())){try{await projectInquiryFamily(record as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Inquiry is saved; staff synchronization can recover its family projection. */}}
   if (record.receipt !== receipt) return {duplicate: true}
 
   const body = [

@@ -3,7 +3,7 @@ import type {SavedFamily} from './persistence'
 
 export type Channel = 'Email' | 'Text'
 export type Family = {
-  inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
+  historicalBalanceNeedsReview?:boolean; agreedTotalCents?:number; inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
   id: string; name: string; initials: string; location: string; email: string; phone: string
   preference: Channel | 'Either'; smsConsent: boolean; stage: string; puppyId?: string
   next: string; unread: boolean; pickup?: string; checks: string[]
@@ -50,10 +50,10 @@ export function matchesFamily(family: Family, search: string) {
   const puppy = puppies.find(p => p.id === family.puppyId)
   return `${family.name} ${family.location} ${family.stage} ${puppy?.name || ''} ${family.messages.map(m => m.body).join(' ')}`.toLowerCase().includes(search.trim().toLowerCase())
 }
-export function paymentSummary(family: Family) {
-  const puppy = puppies.find(p => p.id === family.puppyId)
-  if (!puppy) return null
-  const pricing = getPricing({litterPrice:puppy.price, litterDeposit:puppy.deposit})
+export function paymentSummary(family: Family, inventory:readonly WorkspacePuppy[]=puppies) {
+  const puppy = inventory.find(p => p.id === family.puppyId)
+  if (!puppy||family.historicalBalanceNeedsReview) return null
+  const pricing = getPricing({litterPrice:family.agreedTotalCents? family.agreedTotalCents/100:puppy.price, litterDeposit:puppy.deposit})
   return {...pricing, ...getBalance(pricing.totalCents, family.records)}
 }
 export function money(cents: number) {return new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:2}).format(cents / 100)}

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const record = await sanity.createIfNotExists({
       _id: privateRecordId('sms', messageSid), _type: 'smsMessage', receipt,
       messageSid, from, to, body, direction: 'inbound', source: 'fluffytail',
-      signatureVerified: true, receivedAt: new Date().toISOString(), numMedia, mediaUrls,
+      signatureVerified: true, optOutType:['STOP','START','HELP'].includes(field('OptOutType'))?field('OptOutType'):'', receivedAt: new Date().toISOString(), numMedia, mediaUrls,
     })
     return reply(record.receipt === receipt)
   } catch (error) {
