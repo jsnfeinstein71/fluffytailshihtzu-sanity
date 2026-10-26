@@ -7,6 +7,9 @@ const email=await import('../app/inbox/workspace/api/email/route.ts')
 const sms=await import('../app/inbox/workspace/api/sms/route.ts')
 const access=await import('../app/inbox/access/api/route.ts')
 const {familyMailCursorId}=await import('../sanity/lib/email-workflow.ts')
+const {sendEmailDraft,sendTextDraft}=await import('../app/inbox/workspace/send-draft.ts')
+const {conversationEvents,textStatus}=await import('../app/inbox/workspace/conversation.ts')
+const {reviewReducer,initialState,draftKey}=await import('../app/inbox/workspace/model.ts')
 const {requireOperator}=await import('../lib/operator-auth.ts')
 const origin='https://www.fluffytailshihtzu.com',auth='Basic '+Buffer.from('staff:offline-password').toString('base64')
 let store,mailCalls,smsCalls,scope,sessions
@@ -62,4 +65,77 @@ test('uncertain SMS attempts survive a changed draft and cannot be bypassed with
  assert.equal((await sms.POST(request('/inbox/workspace/api/sms',{familyId:family.familyKey,body:'First text',confirmed:true}))).status,409)
  await json(await state.POST(request('/inbox/workspace/api/state',{type:'draft',familyId:family.familyKey,channel:'Text',body:'Changed text',base:'First text'})))
  assert.equal((await sms.POST(request('/inbox/workspace/api/sms',{familyId:family.familyKey,body:'Changed text',confirmed:true}))).status,409);assert.equal(smsCalls,1)
+})
+
+const composeRequest=async action=>{const response=await send(action);return response.ok?response.json():null}
+const newDraft=familyId=>({familyId,revision:null,value:{subject:'Offline correspondence test',body:'One Send action, no customer contacted.',replyToId:null,paymentRequestId:null}})
+const composeId='00000000-0000-4000-8000-000000000711'
+test('one Send saves an unsaved email, claims one attempt and clears only after acceptance',async()=>{
+ const family=(await load()).families[0],draft=newDraft(family.familyKey)
+ const result=await sendEmailDraft(family.familyKey,draft,composeId,composeRequest)
+ assert.deepEqual(result,{state:'accepted',cleared:true});assert.equal(mailCalls,1)
+ const data=await json(await email.GET(request('/inbox/workspace/api/email')))
+ assert.equal(data.drafts[0].value.body,'');assert.equal(data.outgoing[0].body,draft.value.body);assert.equal(data.outgoing[0].delivery,'unconfirmed')
+ // Retrying the original unsaved snapshot cannot replace the newer cleared draft.
+ assert.equal(await sendEmailDraft(family.familyKey,draft,composeId,composeRequest),null);assert.equal(mailCalls,1)
+})
+test('one Send retains rejected and uncertain drafts and never retries an uncertain submission',async()=>{
+ const family=(await load()).families[0],draft=newDraft(family.familyKey)
+ globalThis.fixtureMailProvider.send=async()=>{mailCalls++;return {outcome:'rejected',code:'OFFLINE_REJECTED'}}
+ assert.equal((await sendEmailDraft(family.familyKey,draft,composeId,composeRequest)).state,'failed')
+ let data=await json(await email.GET(request('/inbox/workspace/api/email')));assert.equal(data.drafts[0].value.body,draft.value.body)
+ globalThis.fixtureMailProvider.send=async()=>{mailCalls++;throw new Error('Lost provider acknowledgement')}
+ const current=data.drafts[0];assert.equal((await sendEmailDraft(family.familyKey,current,composeId,composeRequest)).state,'uncertain')
+ assert.equal((await sendEmailDraft(family.familyKey,current,composeId,composeRequest)).state,'uncertain');assert.equal(mailCalls,2)
+ data=await json(await email.GET(request('/inbox/workspace/api/email')));assert.equal(data.drafts[0].value.body,draft.value.body)
+})
+test('lost send acknowledgement preserves the draft; a later explicit retry discovers acceptance without sending twice',async()=>{
+ const family=(await load()).families[0],draft=newDraft(family.familyKey)
+ assert.equal(await sendEmailDraft(family.familyKey,draft,composeId,async action=>{const data=await composeRequest(action);return action.type==='dispatch'?null:data}),null)
+ let data=await json(await email.GET(request('/inbox/workspace/api/email')));assert.equal(data.drafts[0].value.body,draft.value.body)
+ assert.equal((await sendEmailDraft(family.familyKey,data.drafts[0],composeId,composeRequest)).state,'accepted');assert.equal(mailCalls,1)
+})
+test('automatic refresh never initializes unrelated mailbox history, throttles reads, imports scoped replies once and preserves drafts',async()=>{
+ const family=(await load()).families[0]
+ await json(await send({type:'refresh',familyId:family.familyKey}));assert.equal(scope.length,0)
+ const {review}=await prepare();await json(await send({type:'dispatch',reviewId:review._id,confirmed:true}))
+ const outgoing=(await json(await email.GET(request('/inbox/workspace/api/email')))).outgoing[0]
+ const cursor=store.documents.get(familyMailCursorId(family.familyKey));cursor.lastCheckedAt=0
+ let reads=0
+ globalThis.fixtureMailProvider.sync=async input=>{reads++;assert.deepEqual(input.threads.map(t=>t.familyId),[family.familyKey]);return {validity:'mailbox',lastUid:11,messages:[{uid:11,validity:'mailbox',messageId:'<offline-reply@example.org>',from:legacy.email,to:'jeanne@fluffytailshihtzu.com',subject:'Re: Your puppy inquiry',body:'A new matching reply',references:[outgoing.messageId],inReplyTo:outgoing.messageId,time:'2026-10-26T22:04:00Z'}]}}
+ let data=await json(await send({type:'refresh',familyId:family.familyKey}));assert.equal(reads,1);assert.equal(data.messages.length,1)
+ data=await json(await send({type:'refresh',familyId:family.familyKey}));assert.equal(reads,1)
+ store.documents.get(cursor._id).lastCheckedAt=0
+ data=await json(await send({type:'refresh',familyId:family.familyKey}));assert.equal(reads,2);assert.equal(data.messages.length,1);assert.equal(data.drafts[0].value.body,review.body);assert.equal(data.outgoing[0].delivery,'unconfirmed')
+ globalThis.fixtureMailProvider.sync=async()=>{throw new Error('Offline mailbox unavailable')};store.documents.get(cursor._id).lastCheckedAt=0
+ data=await json(await send({type:'refresh',familyId:family.familyKey}));assert.match(data.syncNotice,/unavailable/);assert.equal(data.messages.length,1);assert.equal(mailCalls,1)
+ assert.equal((await send({type:'refresh',familyId:'invalid'})).status,400)
+})
+test('one Text Send saves automatically, enforces consent, deduplicates, and clears only the submitted text',async()=>{
+ const family=(await load()).families[0],id=family.familyKey
+ const save=async action=>(await state.POST(request('/inbox/workspace/api/state',action))).ok
+ const submit=async body=>json(await sms.POST(request('/inbox/workspace/api/sms',body)))
+ assert.deepEqual(await sendTextDraft(id,'Unsaved text','',save,submit),{state:'accepted',cleared:true});assert.equal(smsCalls,1)
+ let local=reviewReducer(initialState(),{type:'draft',familyId:id,channel:'Text',body:'Newer typing'})
+ local=reviewReducer(local,{type:'sent-text',familyId:id,body:'Unsaved text'});assert.equal(local.drafts[draftKey(id,'Text')],'Newer typing')
+ store.documents.set('stop',{_id:'stop',_type:'smsMessage',from:legacy.phone,direction:'inbound',source:'fluffytail',body:'STOP',signatureVerified:true,receivedAt:'2026-10-26T23:00:00Z'})
+ await assert.rejects(()=>sendTextDraft(id,'Keep this stopped text','',save,submit));assert.equal(smsCalls,1)
+ const data=await load();assert.equal(data.families[0].drafts.Text,'Keep this stopped text');assert.match(data.families[0].profile.smsBlockedReason,/opted out/)
+})
+test('refresh retrieves only saved SMS submission statuses and never converts acceptance into delivery',async()=>{
+ const family=(await load()).families[0],id=family.familyKey
+ await json(await state.POST(request('/inbox/workspace/api/state',{type:'draft',familyId:id,channel:'Text',body:'Offline SMS','base':''})))
+ await json(await sms.POST(request('/inbox/workspace/api/sms',{familyId:id,body:'Offline SMS',confirmed:true})))
+ let reads=0,status='sent'
+ const messages=sid=>({fetch:async()=>{reads++;return {sid,status,from:process.env.TWILIO_FROM_NUMBER,to:legacy.phone}}});messages.create=globalThis.fixtureTwilio.messages.create;globalThis.fixtureTwilio.messages=messages
+ let data=await json(await send({type:'refresh',familyId:id}));assert.equal(reads,1);assert.equal(data.families[0].profile.messages.at(-1).delivery,'unconfirmed')
+ await json(await send({type:'refresh',familyId:id}));assert.equal(reads,1)
+ const record=[...store.documents.values()].find(d=>d._type==='smsMessage'&&d.direction==='outbound');record.statusCheckedAt=0;status='delivered'
+ data=await json(await send({type:'refresh',familyId:id}));assert.equal(reads,2);assert.equal(data.families[0].profile.messages.at(-1).delivery,'delivered');assert.equal(smsCalls,1)
+ assert.match(textStatus('accepted','unconfirmed'),/unconfirmed/);assert.match(textStatus('accepted','failed'),/Delivery failed/)
+})
+test('conversation merges inquiry, SMS and email chronologically with channel and submission states',()=>{
+ const family={id:'family',source:'inquiry',messages:[{id:'inquiry',channel:'Text',direction:'in',body:'Website form',time:'2026-10-26T20:00:00Z'},{id:'sms',kind:'sms',channel:'Text',direction:'in',body:'Text reply',time:'2026-10-26T20:03:00Z'}]}
+ const data={messages:[{id:'email',familyId:'family',direction:'in',time:'2026-10-26T20:02:00Z',body:'Email reply',subject:'Reply',messageId:'<reply@example.org>'}],outgoing:[{_id:'out',familyId:'family',body:'Email sent',subject:'Hello',state:'accepted',attempts:[{startedAt:'2026-10-26T20:01:00Z'}]}]}
+ const events=conversationEvents(family,data);assert.deepEqual(events.map(e=>e.id),['inquiry','out','email','sms']);assert.deepEqual(events.map(e=>e.label),['Website inquiry','Email','Email','Text']);assert.match(events[1].status,/delivery unconfirmed/);assert.equal(events[2].replyId,'email')
 })

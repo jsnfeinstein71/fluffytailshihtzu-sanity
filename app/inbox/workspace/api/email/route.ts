@@ -29,7 +29,7 @@ export async function POST(req:Request){
     let data:unknown;try{data=JSON.parse(text)}catch{throw new EmailWorkflowError('Invalid email request.')}
     const origin=new URL(req.url).origin
     const type=(data as {type?:string})?.type
-    const result=['dispatch','sync','reconcile','resolve'].includes(type||'')?await performTransportAction(data,origin):await prepareEmailAction(data,origin)
+    const result=['dispatch','sync','refresh','reconcile','resolve'].includes(type||'')?await performTransportAction(data,origin):await prepareEmailAction(data,origin)
     if('reviewId' in result&&typeof result.reviewId==='string')await ensureOutgoing(result.reviewId,origin)
     return NextResponse.json({...await loadEmailWorkflow(),...result},{headers})
   }catch(error){return failure(error)}

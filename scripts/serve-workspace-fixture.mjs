@@ -24,6 +24,7 @@ globalThis.fixtureOperatorClient=workspaceStoreFixture(initial,async documents=>
 })
 const {GET,POST}=await import('../app/inbox/workspace/api/state/route.ts')
 const emailRoutes=await import('../app/inbox/workspace/api/email/route.ts')
+const accessRoutes=await import('../app/inbox/access/api/route.ts')
 const {default:PaymentPreview}=await import('../app/inbox/workspace/payment-preview/[requestId]/page.tsx')
 const {default:PaymentNotFound}=await import('../app/inbox/workspace/payment-preview/[requestId]/not-found.tsx')
 const {renderToStaticMarkup}=await import('react-dom/server')
@@ -69,13 +70,13 @@ const server=createServer(async(req,res)=>{
     res.writeHead(status,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow'})
     res.end('<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff test payment request</title><link rel="stylesheet" href="/inbox/workspace/workspace-review.css"></head><body>'+renderToStaticMarkup(page)+'</body></html>');return
   }
-  if(pathname==='/inbox/workspace/api/state'||pathname==='/inbox/workspace/api/email'){
+  if(pathname==='/inbox/access/api'||pathname==='/inbox/workspace/api/state'||pathname==='/inbox/workspace/api/email'){
     // Serialize the disk-backed fixture. Real Sanity concurrency is tested separately.
     const task=queue.then(async()=>{
       const chunks=[];let length=0
       for await(const chunk of req){length+=chunk.length;if(length>150000){res.writeHead(413,{'Cache-Control':'no-store'});res.end('Request too large');return}chunks.push(chunk)}
       const request=new Request('http://localhost:3100'+path,{method:req.method,headers:req.headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)})
-      const routes=pathname.endsWith('/email')?emailRoutes:{GET,POST}
+      const routes=pathname==='/inbox/access/api'?accessRoutes:pathname.endsWith('/email')?emailRoutes:{GET,POST}
       const response=req.method==='GET'?await routes.GET(request):req.method==='POST'?await routes.POST(request):new Response(null,{status:405})
       res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()))
     })

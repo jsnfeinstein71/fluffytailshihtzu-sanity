@@ -3,12 +3,12 @@ import type {SavedFamily} from './persistence'
 
 export type Channel = 'Email' | 'Text'
 export type Family = {
-  historicalBalanceNeedsReview?:boolean; agreedTotalCents?:number; inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
+  smsBlockedReason?:string; historicalBalanceNeedsReview?:boolean; agreedTotalCents?:number; inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
   id: string; name: string; initials: string; location: string; email: string; phone: string
   preference: Channel | 'Either'; smsConsent: boolean; stage: string; puppyId?: string
   next: string; unread: boolean; pickup?: string; checks: string[]
   records: {paymentStatus: string; amountPaid: number}[]
-  messages: {id: string; direction: 'in' | 'out'; channel: Channel; body: string; time: string}[]
+  messages: {id: string; direction: 'in' | 'out'; channel: Channel; body: string; time: string;kind?:'inquiry'|'sms';status?:string;delivery?:string}[]
 }
 export const puppies = [
   {id: 'maple', name: 'Maple', sex: 'Girl', color: 'Cream & white', litter: 'Autumn litter', status: 'Reserved', price: 1600, deposit: 400},
@@ -62,6 +62,7 @@ export function workspaceAllowed(environment: string | undefined, nodeEnvironmen
 }
 export type Action =
   | {type:'draft'; familyId:string; channel:Channel; body:string}
+  | {type:'sent-text';familyId:string;body:string}
   | {type:'attempt'; familyId:string; channel:Channel; outcome:Attempt['outcome']}
   | {type:'check'; familyId:string; item:string}
   | {type:'note'; familyId:string; body:string}
@@ -85,6 +86,7 @@ export function reviewReducer(state: ReviewState, action: Action): ReviewState {
   if (action.type === 'clear-error') return {...state,error:''}
   const family = families.find(f => f.id === action.familyId) || (/^inquiry-[a-f0-9]{64}$/.test(action.familyId)?{id:action.familyId,smsConsent:false}:undefined)
   if (!family) return {...state, error:'Choose a family before continuing.'}
+  if(action.type==='sent-text'){const key=draftKey(action.familyId,'Text');return state.drafts[key]===action.body?{...state,drafts:{...state.drafts,[key]:''}}:state}
   if (action.type === 'draft') return {...state, error:'', drafts:{...state.drafts,[draftKey(family.id, action.channel)]:action.body}}
   if (action.type === 'check') {
     if (!pickupChecks.includes(action.item)) return state
