@@ -7,6 +7,22 @@ import {getTwilio} from './twilio'
 import {normalizePhone} from '@/lib/inquiry'
 import type {SavedFamily} from '@/app/inbox/workspace/persistence'
 
+export async function refreshWorkspaceSms(familyId:string){
+ requireWorkspace()
+ if(!liveWorkspaceEnabled())return
+ const client=getOperatorClient()
+ const records=await client.fetch<{_id:string;_rev:string;messageSid:string;from:string;to:string;statusCheckedAt?:number}[]>('*[_type == "smsMessage" && workspace == $workspace && familyId == $familyId && direction == "outbound" && status == "accepted" && delivery == "unconfirmed" && defined(messageSid)] | order(receivedAt desc)[0...5]',{workspace:workspaceNamespace(),familyId},{cache:'no-store'})
+ for(const record of records){
+  if(!/^(SM|MM)[a-f0-9]{32}$/i.test(record.messageSid)||Date.now()-(record.statusCheckedAt||0)<30000)continue
+  try{await client.patch(record._id).ifRevisionId(record._rev).set({statusCheckedAt:Date.now()}).commit({visibility:'sync'})}catch{continue}
+  // Read only this saved submission's status; never creates or retries a send.
+  const message=await getTwilio().messages(record.messageSid).fetch()
+  if(message.sid!==record.messageSid||message.from!==record.from||message.to!==record.to)throw new WorkspaceError('Text delivery identity needs review.',409)
+  const delivery=message.status==='delivered'?'delivered':['failed','undelivered','canceled'].includes(message.status)?'failed':'unconfirmed'
+  await client.patch(record._id).set({providerStatus:message.status,delivery}).commit({visibility:'sync'})
+ }
+}
+
 export async function submitWorkspaceSms(input:unknown){
  requireWorkspace()
  if(!liveWorkspaceEnabled())throw new WorkspaceError('SMS sending is unavailable in Preview.',503)

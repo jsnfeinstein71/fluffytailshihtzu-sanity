@@ -127,7 +127,7 @@ export async function loadMailbox():Promise<MailData>{
     return {familyId:f.familyKey,revision:null,value:emptyEmail(f.drafts.Email||'')}
   })
   const inventory=await client.fetch<{id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug:string}[]>('*[_type == "puppy" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,sex,color,"litter":litter->title,status,"price":coalesce(overridePrice,litter->price),"deposit":litter->deposit,"slug":slug.current}',{},{cache:'no-store'})
-  return {drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
+  return {families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
 }
 export async function prepareEmailAction(input:unknown,origin:string){
   requireWorkspace()

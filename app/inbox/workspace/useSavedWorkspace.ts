@@ -34,6 +34,7 @@ export function useSavedWorkspace() {
     setRecords(data.families)
   },[])
 
+  const ingestProfiles=useCallback((families:SavedFamily[])=>setRecords(previous=>families.map(family=>{const current=previous?.find(f=>f.familyKey===family.familyKey);return current?{...current,profile:family.profile}:family})),[])
   const load=useCallback(async(signal?:AbortSignal)=>{
     setLoading(true);setError('')
     try{
@@ -72,5 +73,5 @@ export function useSavedWorkspace() {
     setError('')
     return conflict.saved
   }
-  return {records,loading,busy,error,conflicts,load,mutate,resolve,base:(familyId:string,channel:Channel)=>bases.current[draftKey(familyId,channel)]||'',ready:records!==null}
+  return {records,loading,busy,error,conflicts,load,ingestProfiles,mutate,resolve,base:(familyId:string,channel:Channel)=>bases.current[draftKey(familyId,channel)]||'',ready:records!==null}
 }

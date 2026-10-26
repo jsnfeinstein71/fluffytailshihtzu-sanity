@@ -21,3 +21,5 @@
 .ops-provider-scenario{display:grid;gap:6px;font-size:11px;margin:15px 0}.ops-email-outbox>details>p{margin:10px 0}.ops-email-outbox .ops-compose-actions{flex-wrap:wrap}.ops-message strong{font-weight:600}
 
 .ops-email-outbox .ops-draft-conflict label{display:block;margin:12px 0 6px}.ops-email-outbox .ops-draft-conflict input[type=checkbox]{width:auto;margin-right:8px;accent-color:#746042}
+
+.ops-thread-tabs .ops-refresh{margin-left:auto;font-size:11px}.ops-thread-disclosure{display:flex;justify-content:center;gap:10px}

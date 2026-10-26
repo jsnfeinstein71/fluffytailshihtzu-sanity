@@ -5,7 +5,8 @@ import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {privateRecordId} from './private-records'
 import {getMailCapabilities,getMailProvider,ownerTestConfigured,ownerTestBody,ownerTestSubject,type Cursor,type ReplyEnvelope} from './mail-provider'
 import {EmailWorkflowError,loadMailbox,validateSavedEmailReview} from './workspace-email'
-import {requireWorkspace} from './workspace'
+import {requireWorkspace,validFamilyKey} from './workspace'
+import {refreshWorkspaceSms} from './workspace-sms'
 import {jeanneEmail,type EmailReview,type IncomingEmail,type MailData,type OutgoingEmail,type OutgoingState,type TransportAction} from '@/app/inbox/workspace/email-model'
 
 const outgoingQuery='*[_type == "staffOutgoingEmail" && workspace == $workspace] | order(createdAt desc)[0...100]'
@@ -14,7 +15,7 @@ export const outgoingId=(review:Pick<EmailReview,'familyId'|'draftRevision'>)=>p
 export const mailGuardId=(familyId:string)=>privateRecordId('staffMailGuard',`${workspaceNamespace()}:${familyId}`)
 export const mailCursorId=privateRecordId('staffMailCursor','review-v1:INBOX')
 type Guard={_id:string;_rev:string;activeId:string|null}
-type SavedCursor=Cursor&{_id:string;_rev:string;source:string;syncToken:string|null;leaseUntil:number}
+type SavedCursor=Cursor&{_id:string;_rev:string;source:string;syncToken:string|null;leaseUntil:number;lastCheckedAt?:number}
 const conflict=(error:unknown)=>(error as {statusCode?:number})?.statusCode===409
 const stale=(record:OutgoingEmail)=>record.state==='sending'&&Date.now()-Date.parse(record.attempts.at(-1)?.startedAt||'')>120000
 const validMessageId=(id:unknown):id is string=>typeof id==='string'&&/^<[^<>\s\x00-\x1f]{1,250}>$/.test(id)
@@ -116,7 +117,7 @@ function checkedReply(message:ReplyEnvelope){
   if(!message||!Number.isSafeInteger(message.uid)||message.uid<1||typeof message.validity!=='string'||message.validity.length>100||!(message.messageId===null||validMessageId(message.messageId))||typeof message.from!=='string'||message.from.length>254||message.to!==jeanneEmail||typeof message.subject!=='string'||message.subject.length>160||/[\r\n\x00]/.test(message.subject)||typeof message.body!=='string'||message.body.length>60000||!Array.isArray(message.references)||message.references.length>20||message.references.some(id=>!validMessageId(id))||!(message.inReplyTo===null||validMessageId(message.inReplyTo)))throw new EmailWorkflowError('Reply synchronization returned an invalid message. The saved cursor is kept.',409)
 }
 
-async function syncReplies(familyId?:string,initializeOnly=false){
+async function syncReplies(familyId?:string,initializeOnly=false,background=false){
   const provider=getMailProvider()
   if(!provider.capabilities.canSync)throw new EmailWorkflowError('Real mailbox reads are disabled. No existing message list, body or header was read.',403)
   const client=getOperatorClient()
@@ -124,11 +125,12 @@ async function syncReplies(familyId?:string,initializeOnly=false){
   const cursorId=liveWorkspaceEnabled()?familyMailCursorId(familyId!):provider.capabilities.provider==='pair'?privateRecordId('staffMailCursor','review-v1:owner-only-trial:INBOX'):mailCursorId
   await client.transaction().createIfNotExists({_id:cursorId,_type:'staffMailCursor',workspace:workspaceNamespace(),validity:'',lastUid:0,source:provider.capabilities.provider,syncToken:null,leaseUntil:0}).commit({visibility:'sync'})
   const cursor=await client.getDocument<SavedCursor>(cursorId)
+  if(background&&cursor&&(cursor.leaseUntil>Date.now()||Date.now()-(cursor.lastCheckedAt||0)<15000))return 'Automatic updates are active.'
   if(!cursor||cursor.leaseUntil>Date.now())throw new EmailWorkflowError('Reply synchronization is already running. Refresh its result before trying again.',409)
   if(cursor.validity&&cursor.source!==provider.capabilities.provider)throw new EmailWorkflowError('Reply provider changed. Review the saved cursor before switching providers.',409)
   if(initializeOnly&&cursor.validity)return 'Reply watermark already initialized.'
   const token=randomUUID()
-  try{await client.patch(cursorId).ifRevisionId(cursor._rev).set({syncToken:token,leaseUntil:Date.now()+90000}).commit({visibility:'sync'})}catch(error){if(conflict(error))throw new EmailWorkflowError('Another synchronization has claimed this mailbox. Refresh before continuing.',409);throw error}
+  try{await client.patch(cursorId).ifRevisionId(cursor._rev).set({syncToken:token,leaseUntil:Date.now()+90000,lastCheckedAt:Date.now()}).commit({visibility:'sync'})}catch(error){if(conflict(error))throw new EmailWorkflowError('Another synchronization has claimed this mailbox. Refresh before continuing.',409);throw error}
   let imported=0,skipped=0
   try{
     const outgoing=await client.fetch<OutgoingEmail[]>(liveWorkspaceEnabled()?'*[_type == "staffOutgoingEmail" && workspace == $workspace && familyId == $familyId] | order(createdAt desc)[0...101]':outgoingQuery,{workspace:workspaceNamespace(),familyId:familyId||null},{cache:'no-store'})
@@ -169,8 +171,8 @@ export async function performTransportAction(input:unknown,origin:string){
   requireWorkspace()
   if(!input||typeof input!=='object'||Array.isArray(input))throw new EmailWorkflowError('Choose a valid email action.')
   const action=input as TransportAction
-  const fields=action.type==='dispatch'?['type','reviewId','scenario','confirmed']:action.type==='resolve'?['type','outgoingId','attemptKey','decision','evidence','acknowledged']:action.type==='sync'?['type','familyId']:['type']
-  if(!['dispatch','sync','reconcile','resolve'].includes(action.type)||Object.keys(action).some(key=>!fields.includes(key)))throw new EmailWorkflowError('Choose a valid email action.')
+  const fields=action.type==='dispatch'?['type','reviewId','scenario','confirmed']:action.type==='resolve'?['type','outgoingId','attemptKey','decision','evidence','acknowledged']:['sync','refresh'].includes(action.type)?['type','familyId']:['type']
+  if(!['dispatch','sync','refresh','reconcile','resolve'].includes(action.type)||Object.keys(action).some(key=>!fields.includes(key)))throw new EmailWorkflowError('Choose a valid email action.')
   if(action.type==='dispatch'){
     if(typeof action.reviewId!=='string'||!/^private\.staffEmailReview\.[a-f0-9]{64}$/.test(action.reviewId))throw new EmailWorkflowError('Choose a saved review.')
     if(liveWorkspaceEnabled()&&action.confirmed!==true)throw new EmailWorkflowError('Confirm this saved email before sending it.',400)
@@ -183,6 +185,18 @@ export async function performTransportAction(input:unknown,origin:string){
     // Preserve the original uncertain attempt. A separately attributed review
     // changes eligibility, never causes a provider call or confirms delivery.
     await client.patch(record._id).ifRevisionId(record._rev).set({state:action.decision==='accepted'?'accepted':'failed',resolutions:[...(record.resolutions||[]),resolution],delivery:'unconfirmed'}).commit({visibility:'sync'})
+  }else if(action.type==='refresh'){
+    if(!validFamilyKey(action.familyId))throw new EmailWorkflowError('Choose a saved family conversation.')
+    await reconcileInterruptedAttempts()
+    let syncNotice=''
+    if(getMailCapabilities().canSync){
+      const cursor=await getOperatorClient().getDocument<SavedCursor>(liveWorkspaceEnabled()?familyMailCursorId(action.familyId):mailCursorId)
+      // Opening a conversation never starts a historical mailbox import. Only
+      // threads with an existing future-only watermark are eligible.
+      if(cursor?.validity)try{await syncReplies(action.familyId,false,true)}catch(error){syncNotice=error instanceof Error?error.message:'Automatic email updates are unavailable. Use Refresh to retry.'}
+    }
+    try{await refreshWorkspaceSms(action.familyId)}catch{syncNotice+=' Text delivery updates are temporarily unavailable; saved messages are still shown.'}
+    return {syncNotice}
   }else if(action.type==='sync')return {syncNotice:await syncReplies(action.familyId)}
   else await reconcileInterruptedAttempts()
   return {}

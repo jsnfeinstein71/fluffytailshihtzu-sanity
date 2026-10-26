@@ -12,7 +12,7 @@ export type MailResolution={attemptKey:string;decision:'accepted'|'not-accepted'
 export type OutgoingEmail={_id:string;_rev:string;_type:'staffOutgoingEmail';workspace:'review-v1'|'live-v1';reviewId:string;familyId:string;from:string;replyTo:string;to:string;subject:string;body:string;messageId:string;inReplyTo:string|null;references:string[];paymentRequestId:string|null;draftRevision:string;createdAt:string;state:OutgoingState;attempts:MailAttempt[];source:'fictional'|'pair'|'disabled';delivery:'unconfirmed';acceptedAt?:string;replyReceivedAt?:string;resolutions?:MailResolution[]}
 export type IncomingEmail=MailMessage&{_id:string;_type:'staffIncomingEmail';workspace:'review-v1'|'live-v1';source:'fictional'|'pair';matchedOutgoingId:string;uid:number;validity:string;importedAt:string}
 export type MailCapabilities={provider:'disabled'|'fictional'|'pair';canDispatch:boolean;canSync:boolean;ownerTestRecipient?:string}
-export type MailData={drafts:EmailDraft[];messages:MailMessage[];paymentRequests:PaymentRequest[];reviews:EmailReview[];sendingEnabled:false;live?:boolean;inventory?:import('./model').WorkspacePuppy[];testCheckoutEnabled?:boolean;outgoing?:OutgoingEmail[];capabilities?:MailCapabilities;syncNotice?:string}
+export type MailData={drafts:EmailDraft[];messages:MailMessage[];paymentRequests:PaymentRequest[];reviews:EmailReview[];sendingEnabled:false;live?:boolean;inventory?:import('./model').WorkspacePuppy[];testCheckoutEnabled?:boolean;outgoing?:OutgoingEmail[];capabilities?:MailCapabilities;syncNotice?:string;families?:import('./persistence').SavedFamily[]}
 export type MailAction=
   |{type:'checkout';familyId:string;paymentRequestId:string}
   |{type:'verify';familyId:string;paymentRequestId:string}
@@ -20,7 +20,7 @@ export type MailAction=
   |{type:'review';familyId:string;revision:string;requestId:string}
   |{type:'payment';familyId:string;puppyId:string;kind:'deposit'|'balance';requestId:string}
 export type MailResult=MailData & {error?:string;conflict?:EmailDraft;preparedPaymentId?:string;reviewId?:string}
-export type TransportAction={type:'dispatch';reviewId:string;confirmed?:boolean;scenario?:'accepted'|'rejected'|'uncertain'}|{type:'sync';familyId?:string}|{type:'reconcile'}|{type:'resolve';outgoingId:string;attemptKey:string;decision:'accepted'|'not-accepted';evidence:string;acknowledged:true}
+export type TransportAction={type:'refresh';familyId:string}|{type:'dispatch';reviewId:string;confirmed?:boolean;scenario?:'accepted'|'rejected'|'uncertain'}|{type:'sync';familyId?:string}|{type:'reconcile'}|{type:'resolve';outgoingId:string;attemptKey:string;decision:'accepted'|'not-accepted';evidence:string;acknowledged:true}
 export const sameEmail=(a:EmailValue,b:EmailValue)=>a.subject===b.subject&&a.body===b.body&&a.replyToId===b.replyToId&&a.paymentRequestId===b.paymentRequestId
 export const emptyEmail=(body=''):EmailValue=>({subject:'FluffyTail Shih Tzu inquiry',body,replyToId:null,paymentRequestId:null})
 export const mailMessages:MailMessage[]=families.flatMap(f=>f.messages.filter(m=>m.channel==='Email').map(m=>({
