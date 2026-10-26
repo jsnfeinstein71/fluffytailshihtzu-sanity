@@ -288,13 +288,13 @@ test('published queries hide drafts, releases, explicitly hidden records and hid
   }
 })
 
-test('waitlist only counts available males/females belonging to active litters', async () => {
+test('homepage availability excludes past litters and reserved puppies', async () => {
   dataset = [litter('active'), litter('past', 'past'), puppy('girl', 'active'), puppy('boy', 'past', 'available', {sex: 'male'})]
-  assert.match(await render(Home), /Waitlist open/)
+  assert.match(await render(Home), /1 available puppy/)
   dataset.find(x => x._id === 'boy').litter._ref = 'active'
-  assert.doesNotMatch(await render(Home), /Waitlist open/)
+  assert.match(await render(Home), /2 available puppies/)
   dataset.find(x => x._id === 'boy').status = 'reserved'
-  assert.match(await render(Home), /Waitlist open/)
+  assert.match(await render(Home), /1 available puppy/)
 })
 
 test('inquiry URL retains puppy, litter and canonical detail URL including encoded characters', () => {
@@ -408,10 +408,32 @@ test('About preserves Jeanne and the original photo without duplicate browsing a
   ]
   const html = await render(About)
   assert.match(html, /About Jeanne/)
-  assert.match(html, /Jeanne is at the heart of FluffyTail/)
+  assert.match(html, /Jeanne is the breeder behind FluffyTail/)
+  assert.doesNotMatch(html, /not a system|not about volume/)
   assert.match(html, /src="\/unchanged-adult.jpg"/)
   assert.match(html, /Synthetic service area/)
   assert.match(html, /At a glance/)
   assert.doesNotMatch(html, /Redundant sidebar copy/)
   assert.equal((html.match(/href="\/available-puppies"/g) || []).length, 1)
+})
+
+test('homepage communicates actual availability for one sex and pluralizes litter counts', async () => {
+  dataset = [litter('current', 'current', {girlsCount: 1, boysCount: 1}), puppy('only-girl', 'current')]
+  const one = await render(Home)
+  assert.match(one, /1 available puppy/)
+  assert.match(one, /1 girl • 1 boy/)
+  assert.doesNotMatch(one, /Waitlist open|1 girls|1 boys/)
+  dataset.push(puppy('second-girl', 'current'))
+  assert.match(await render(Home), /2 available puppies/)
+  dataset.filter(doc => doc._type === 'puppy').forEach(doc => {doc.status = 'reserved'})
+  assert.match(await render(Home), /Ask about future puppies/)
+})
+
+test('puppy detail omits a duplicate color note but retains distinct public notes and stored values', async () => {
+  dataset = [litter('current'), puppy('p', 'current', 'available', {color: 'Cream and White', notes: ' cream and white '})]
+  const renderDetail = () => render(Detail, {params: Promise.resolve({slug: 'p'})})
+  assert.doesNotMatch(await renderDetail(), /class="puppy-detail-notes"/)
+  assert.equal(dataset[1].notes, ' cream and white ')
+  dataset[1].notes = 'Ask Jeanne about this puppy.'
+  assert.match(await renderDetail(), /class="puppy-detail-notes">Ask Jeanne about this puppy\./)
 })

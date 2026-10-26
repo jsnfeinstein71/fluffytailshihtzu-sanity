@@ -45,7 +45,7 @@ export default async function PuppyDetailPage({params}: Props) {
           {age !== null ? <div><dt>Age</dt><dd>{age} week{age === 1 ? '' : 's'} old</dd></div> : null}
           {ready ? <div><dt>Ready from</dt><dd>{ready}</dd></div> : null}
         </dl>
-        {puppy.notes ? <p className="puppy-detail-notes">{puppy.notes}</p> : null}
+        {puppy.notes?.trim() && puppy.notes.trim().toLowerCase() !== puppy.color?.trim().toLowerCase() ? <p className="puppy-detail-notes">{puppy.notes}</p> : null}
 
         {typeof totalPrice === 'number' ? <dl className="puppy-price">
           <div className="price-total"><dt>Total puppy price</dt><dd>{formatCurrency(totalPrice, true)}</dd></div>

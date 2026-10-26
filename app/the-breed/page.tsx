@@ -74,13 +74,13 @@ export default async function TheBreedPage() {
             <div className="section">
               <h2>Size and daily life</h2>
               <p className="lead">
-                Shih Tzus are a toy breed, which is part of what makes them appealing for many
-                homes. Their size makes them easier to carry, groom, and manage day to day than
-                many larger breeds.
+                Shih Tzus are a toy breed with a substantial grooming commitment. Their small size
+                does not make their coat low-maintenance.
               </p>
               <p className="lead" style={{marginBottom: 0}}>
-                They usually do not need extreme amounts of exercise, but they still benefit from
-                daily attention, short walks, play, and regular interaction.
+                Short walks and play are useful daily activities. Their short muzzles make heat
+                and humidity a concern: choose cooler times for walks, provide water and a cool
+                place to rest, and avoid strenuous activity in hot weather.
               </p>
             </div>
           </div>
@@ -118,7 +118,8 @@ export default async function TheBreedPage() {
             <div>
               <div className="q">Regular brushing</div>
               <div className="a">
-                Their coat can mat if it is neglected, so brushing and routine maintenance matter.
+                Long coats need daily brushing to prevent mats. A shorter trim still needs regular
+                brushing and grooming; ask your groomer about care for your dog’s coat.
               </div>
             </div>
             <div>
@@ -130,8 +131,8 @@ export default async function TheBreedPage() {
             <div>
               <div className="q">Face and eye area</div>
               <div className="a">
-                Because of the breed’s facial structure and coat, this area benefits from regular
-                attention and cleanliness.
+                Keep the face and eye area clean, and ask your veterinarian about eye irritation
+                or breathing concerns. Read more about <a className="text-link" href="https://vcacanada.com/know-your-pet/shih-tzu" target="_blank" rel="noopener noreferrer">Shih Tzu care and heat sensitivity</a>.
               </div>
             </div>
           </div>

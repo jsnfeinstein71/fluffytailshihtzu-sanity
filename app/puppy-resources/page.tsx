@@ -32,22 +32,22 @@ export default async function PuppyResourcesPage() {
                 <div>
                   <div className="q">Set up a safe space</div>
                   <div className="a">
-                    Choose a quiet area with a crate, soft bedding, water, and a place for your puppy
-                    to settle in without too much chaos.
+                    Puppy-proof a small area, remove loose cords and unsafe objects, and provide
+                    water and a comfortable place to rest. Introduce a crate gently with positive experiences.
                   </div>
                 </div>
                 <div>
                   <div className="q">Pick up basic supplies</div>
                   <div className="a">
-                    Food and water bowls, a crate, collar, leash, grooming basics, puppy-safe toys,
-                    and cleaning supplies are a good place to start.
+                    Have bowls, a suitable collar or harness, leash, puppy-safe toys, cleaning
+                    supplies, and grooming basics ready.
                   </div>
                 </div>
                 <div>
-                  <div className="q">Plan the first few days</div>
+                  <div className="q">Plan food and travel</div>
                   <div className="a">
-                    Try to keep the first days calm and predictable. Puppies adjust better when home
-                    life feels steady and not overwhelming.
+                    Ask which food your puppy currently eats and discuss any changes with your
+                    veterinarian. Use a suitable carrier or restraint for the journey home.
                   </div>
                 </div>
               </div>
@@ -59,23 +59,24 @@ export default async function PuppyResourcesPage() {
               <h2>First week at home</h2>
               <div className="qa">
                 <div>
-                  <div className="q">Keep expectations realistic</div>
+                  <div className="q">Arrange veterinary follow-up</div>
                   <div className="a">
-                    A new puppy is learning a new home, new people, new sounds, and a new routine all
-                    at once.
+                    Arrange a veterinary visit and bring any available vaccination and deworming
+                    records. Your veterinarian can advise on feeding, preventive care, and safe activities.
                   </div>
                 </div>
                 <div>
                   <div className="q">Use a simple routine</div>
                   <div className="a">
-                    Regular potty breaks, meals, rest, and quiet time help puppies settle in much more
-                    smoothly.
+                    Keep meals, potty breaks, rest, and gentle play predictable. Reward the behavior
+                    you want and expect accidents while your puppy learns.
                   </div>
                 </div>
                 <div>
                   <div className="q">Go slow with introductions</div>
                   <div className="a">
-                    Let your puppy adjust gradually to new rooms, people, pets, and activity levels.
+                    Keep new experiences brief and positive. Ask your veterinarian how to balance
+                    early socialization with vaccination status and local infection risks.
                   </div>
                 </div>
               </div>
@@ -100,17 +101,17 @@ export default async function PuppyResourcesPage() {
           <div className="pad">
             <h2 className="panelTitle">Quick checklist</h2>
             <ul className="content-facts">
-              <li>Crate and bedding</li>
-              <li>Food and bowls</li>
-              <li>Puppy-safe toys</li>
-              <li>Brush and grooming basics</li>
-              <li>Patience and routine</li>
+              <li>Safe space and bedding</li>
+              <li>Current food and bowls</li>
+              <li>Safe travel carrier or restraint</li>
+              <li>Health records and veterinary visit</li>
+              <li>Grooming supplies and a calm routine</li>
             </ul>
 
             <div className="divider"></div>
 
             <p className="lead" style={{margin: 0}}>
-              A prepared home usually makes the transition easier for both the puppy and the family.
+              For more general guidance, see <a className="text-link" href="https://www.aaha.org/resources/what-to-do-when-you-first-bring-home-a-new-puppy/" target="_blank" rel="noopener noreferrer">AAHA’s advice for a new puppy’s first days</a>.
             </p>
           </div>
         </div>

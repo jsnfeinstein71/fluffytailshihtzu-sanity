@@ -12,8 +12,8 @@ export default function LitterSection({litter, puppies}: {litter: Litter; puppie
         <h2>{litter.title || 'Active litter'}</h2>
         <p className="lead" style={{margin: 0}}>
           {born ? `Born ${born}` : 'Birth date to be confirmed'}
-          {typeof litter.girlsCount === 'number' ? ` • ${litter.girlsCount} girls` : ''}
-          {typeof litter.boysCount === 'number' ? ` • ${litter.boysCount} boys` : ''}
+          {typeof litter.girlsCount === 'number' ? ` • ${litter.girlsCount} ${litter.girlsCount === 1 ? 'girl' : 'girls'}` : ''}
+          {typeof litter.boysCount === 'number' ? ` • ${litter.boysCount} ${litter.boysCount === 1 ? 'boy' : 'boys'}` : ''}
         </p>
         {pricing ? <p className="litter-price">
           Default puppy price: {formatCurrency(pricing.totalCents / 100)}

@@ -1,13 +1,15 @@
 import '../home.css'
 import './inquiry.css'
 import {notFound} from 'next/navigation'
+import Link from 'next/link'
 import InquiryForm from '../components/InquiryForm'
 import {legacyPuppySlug} from '@/lib/inquiry'
 import {getPuppy} from '@/sanity/lib/inventory'
+import {canInquireAboutPuppy, formatPuppyStatus} from '@/lib/inventory'
 
 export const metadata = {
   alternates: {canonical: '/puppy-inquiry'},
-  title: 'Puppy Inquiry | FluffyTail Shih Tzu',
+  title: 'Puppy Inquiry',
   description: 'Submit a puppy inquiry to FluffyTail Shih Tzu.',
 }
 
@@ -18,6 +20,7 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
   const slug = legacyPuppySlug(params)
   const puppy = slug ? await getPuppy(slug) : null
   if (slug && !puppy) notFound()
+  const unavailable = puppy && !canInquireAboutPuppy(puppy)
   const interest = slug ? 'puppy' : params.interest === 'waitlist' ? 'waitlist' : 'general'
 
   return (
@@ -25,10 +28,13 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
       <div className="inquiry-page-inner">
       <header className="page-intro">
       <p className="eyebrow">A conversation with Jeanne</p>
-      <h1 className="h1">{puppy ? `Ask about ${puppy.name || 'this puppy'}.` : interest === 'waitlist' ? 'Ask about future puppies.' : 'Say hello to Jeanne.'}</h1>
-      <p className="lead">Jeanne is happy to answer your questions.</p>
+      <h1 className="h1">{unavailable ? `${puppy.name || 'This puppy'} is unavailable.` : puppy ? `Ask about ${puppy.name || 'this puppy'}.` : interest === 'waitlist' ? 'Ask about future puppies.' : 'Say hello to Jeanne.'}</h1>
+      <p className="lead">{unavailable ? `${puppy.name || 'This puppy'} is not currently available for a new reservation. Status: ${formatPuppyStatus(puppy.status)}.` : interest === 'waitlist' ? 'Tell Jeanne what you are looking for. An inquiry does not reserve a puppy or guarantee future availability.' : 'Jeanne is happy to answer your questions.'}</p>
       </header>
-      <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppy?.photoUrl || ''} litterTitle={puppy?.litterTitle || ''} interest={interest} />
+      {unavailable ? <div className="inquiry-confirmation">
+        <p>Browse current puppies or ask Jeanne about other availability.</p>
+        <div className="ctaRow"><Link className="brand-button" href="/available-puppies">Meet our puppies</Link><Link className="text-link" href="/contact">Contact Jeanne</Link></div>
+      </div> : <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppy?.photoUrl || ''} litterTitle={puppy?.litterTitle || ''} interest={interest} />}
       </div>
     </main>
   )

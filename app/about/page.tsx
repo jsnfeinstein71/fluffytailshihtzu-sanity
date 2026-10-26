@@ -47,13 +47,12 @@ export default async function AboutPage() {
             <div className="section" style={{marginTop: 0}}>
               <h2>Our approach</h2>
               <p className="lead">
-                We raise our Shih Tzus in our home, where they are part of daily life from the
-                beginning. We care about temperament, socialization, and giving families a clear,
-                personal experience.
+                We work directly with families who are considering a puppy and welcome questions
+                about availability, timing, and next steps.
               </p>
               <p className="lead" style={{marginBottom: 0}}>
-                We are intentionally small. That lets us stay hands-on and keep the process direct
-                and personal.
+                Browse each puppy’s details, then contact Jeanne about the puppy or future litter
+                you are interested in.
               </p>
             </div>
 
@@ -62,18 +61,11 @@ export default async function AboutPage() {
             <div className="section">
               <h2>About Jeanne</h2>
               <p className="lead">
-                Jeanne is at the heart of FluffyTail Shih Tzu. She cares deeply about the dogs,
-                keeps them in the home as part of daily family life, and wants families to feel like
-                they are working with a real person, not a system.
+                Jeanne is the breeder behind FluffyTail Shih Tzu in the Mobile, Alabama area.
+                Her breeding dogs live in her home.
               </p>
               <p className="lead">
-                Her goal is to keep the process straightforward, personal, and comfortable. That
-                means clear communication, honest answers, and a home environment where the dogs are
-                raised with daily attention and care.
-              </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                For Jeanne, this is not about volume. It is about raising well-loved Shih Tzus and
-                placing them with families who truly value them.
+                She is your point of contact for questions about current puppies and upcoming litters.
               </p>
             </div>
 
@@ -83,23 +75,21 @@ export default async function AboutPage() {
               <h2>What matters to us</h2>
               <div className="qa">
                 <div>
-                  <div className="q">Home environment</div>
+                  <div className="q">Daily life</div>
                   <div className="a">
-                    Our dogs are raised in the home as family pets, with real daily interaction.
+                    Our dogs are part of the household.
                   </div>
                 </div>
                 <div>
-                  <div className="q">Straightforward communication</div>
+                  <div className="q">Questions welcome</div>
                   <div className="a">
-                    We want families to know what to expect and to feel comfortable asking
-                    questions.
+                    Ask about a puppy’s availability and the next step before making a decision.
                   </div>
                 </div>
                 <div>
-                  <div className="q">A personal process</div>
+                  <div className="q">Planning ahead</div>
                   <div className="a">
-                    FluffyTail is built around quality, care, and a direct connection with the
-                    families we work with.
+                    You can ask about future litters even if you are not choosing a puppy today.
                   </div>
                 </div>
               </div>

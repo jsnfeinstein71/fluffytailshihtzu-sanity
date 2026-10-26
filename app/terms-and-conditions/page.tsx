@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export const metadata = {
   alternates: {canonical: '/terms-and-conditions'},
-  title: 'Terms and Conditions | FluffyTail Shih Tzu',
+  title: 'Terms and Conditions',
   description: 'Terms and Conditions for FluffyTail Shih Tzu.',
 }
 

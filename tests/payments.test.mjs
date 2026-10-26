@@ -384,6 +384,16 @@ test('short deposit links reject expired, outdated and reserved quotes instead o
   await assert.rejects(render, error => error.digest === 'NEXT_HTTP_ERROR_FALLBACK;404')
 })
 
+test('invalid payment links keep rejecting while offering neutral contact recovery', async () => {
+  await assert.rejects(() => Pay({params: Promise.resolve({token: 'invalid'})}), error => error.digest === 'NEXT_HTTP_ERROR_FALLBACK;404')
+  const {default: Unavailable} = await import('../app/pay/[token]/not-found.tsx')
+  const html = renderToStaticMarkup(Unavailable())
+  assert.match(html, /This payment link is unavailable/)
+  assert.match(html, /href="\/contact"/)
+  assert.match(html, /check your receipt before trying again/)
+  assert.doesNotMatch(html, /Deposit received|checkout.stripe.com|fixture@example.test/)
+})
+
 test('success URL alone never claims payment; confirmation uses actual Stripe amount and exposes no customer data', async () => {
   const render = async id => renderToStaticMarkup(await Success({searchParams: Promise.resolve({session_id: id})}))
   assert.doesNotMatch(await render(undefined), /Deposit received/)

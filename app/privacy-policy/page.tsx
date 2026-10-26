@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export const metadata = {
   alternates: {canonical: '/privacy-policy'},
-  title: 'Privacy Policy | FluffyTail Shih Tzu',
+  title: 'Privacy Policy',
   description: 'Privacy Policy for FluffyTail Shih Tzu.',
 }
 

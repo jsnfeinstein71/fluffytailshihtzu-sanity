@@ -344,6 +344,36 @@ test('general and future-interest form presentation remains native without an in
   }
 })
 
+test('saved and legacy inquiry links show current unavailability before collecting customer details', async () => {
+  const puppy = docs.find(doc => doc._type === 'puppy')
+  for (const status of ['hold', 'reserved', 'sold', 'holdback', 'gone-home', 'unknown']) {
+    puppy.status = status
+    for (const params of [{puppySlug: 'puppy'}, {puppyPageUrl: 'https://www.fluffytailshihtzu.com/puppies/puppy'}]) {
+      const html = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve(params)}))
+      assert.match(html, /not currently available for a new reservation/)
+      assert.match(html, /href="\/contact"/)
+      assert.match(html, /href="\/available-puppies"/)
+      assert.doesNotMatch(html, /<form|Send inquiry|name="email"/)
+    }
+  }
+  puppy.status = 'available'
+  docs.find(doc => doc._type === 'litter').status = 'past'
+  assert.doesNotMatch(renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({puppySlug: 'puppy'})})), /<form/)
+  assert.equal(leads().length, 0)
+  assert.equal(notifications.length, 0)
+})
+
+test('inquiry policy links preserve the active draft by opening separately without browser storage', async () => {
+  const html = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({puppySlug: 'puppy'})}))
+  for (const route of ['privacy-policy', 'terms-and-conditions']) {
+    const link = html.match(new RegExp(`<a[^>]*href="/${route}"[^>]*>`))?.[0]
+    assert.ok(link)
+    assert.match(link, /target="_blank"/)
+    assert.match(link, /rel="noopener noreferrer"/)
+    assert.match(link, /your inquiry stays here/)
+  }
+})
+
 test('Contact starts empty with a placeholder while future-litter links retain their contextual message', async () => {
   const {default: Contact} = await import('../app/contact/page.tsx')
   docs.push({_id: 'settings', _type: 'siteSettings', goodDogUrl: 'https://www.gooddog.com/breeders/fixture'})

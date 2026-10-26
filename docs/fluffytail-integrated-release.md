@@ -2,6 +2,34 @@
 
 Status: integration and isolated verification in progress. Production is unchanged.
 
+## Focused Audit Corrections — 2026-10-26
+
+Owner-authorized correction pass, based on PR #4 at `2914c6a`. This is not another architecture review or design pass. All existing CSS, Adobe artwork, fonts, photos, price/payment rules, historical records, provider settings and production content remain unchanged.
+
+- Saved/direct/legacy puppy inquiry links render the current status and a contact/browse path instead of collecting details for unavailable puppies. Available puppies keep the existing contextual form.
+- Inquiry policy links open a separate tab, leaving all unfinished entries and reply preferences in the original form. No localStorage/sessionStorage, draft database, or extra consent persistence is introduced. Consent wording and requirements are unchanged.
+- Invalid/expired/unverifiable payment links retain the same rejection and validation rules, with a scoped helpful not-found page and contact option. No provider call or replacement link is created by this page.
+- Homepage availability counts current available puppies regardless of sex, avoiding a misleading waitlist-only signal when only females or only males are available. Future-interest copy explains that an inquiry does not reserve a puppy or guarantee availability. Litter singular/plural text, duplicate browser-title suffixes and repeated color-only puppy notes are corrected in presentation only.
+- About is shortened to public, substantiated facts: Jeanne, Mobile area, dogs living in her home, and direct inquiry contact. No biography, credentials, motivation, health-testing practice or additional service was invented.
+- Breed/resource copy removes the easy-grooming comparison, explains coat maintenance and heat sensitivity, and adds general food/travel preparation, veterinary follow-up and safe socialization advice. No medical schedule or FluffyTail-specific inclusion is promised.
+- Public-claim check used read-only `siteSettings` in `3glz6dkx/production` and the linked [Jeanne/FluffyTail GoodDog profile](https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama). General care sources: [VCA Shih Tzu guidance](https://vcacanada.com/know-your-pet/shih-tzu), [AAHA first-days guidance](https://www.aaha.org/resources/what-to-do-when-you-first-bring-home-a-new-puppy/), [AVMA selecting a dog](https://www.avma.org/resources/pet-owners/petcare/selecting-pet-dog). Public pages link the care sources. No production Sanity mutation or customer-record query was made.
+
+### Single Business Approval Queue
+
+These are questions/proposals, not implemented policy or CMS changes:
+
+1. **Deposit:** Is it non-refundable for direct website purchases, and can it transfer to another puppy/litter? Confirm exceptions. GoodDog's published terms are not automatically the direct-sale policy.
+2. **Payment:** How does Jeanne issue the approved payment link, when is the balance due, and which payment methods should the website describe?
+3. **Price/pickup/inclusions:** Are taxes or fees additional? Confirm pickup arrangements and exactly which registration/health records, supplies or other items are included. Do not infer shipping or guarantees.
+4. **Jeanne:** Approve/correct the minimal factual introduction (breeder in the Mobile area; breeding dogs live in her home; direct contact for puppy inquiries). Supply any additional biography/practices to publish; none are invented.
+5. **Historical status:** Identify which past-litter Reserved records should become Sold or Gone Home. Current public data has 18 Reserved puppies in March–June past litters; age alone does not establish the replacement status. Preserve original litter links and financial history.
+6. **Two typos:** Approve `girl-1-1` name `Girl.1` → `Girl 1` (document `6e181ad7-3340-4b2f-ba61-91fbd9155ca0`) and `girl-2-1` color `Creram and Whitr` → `Cream and White` (document `136dcb97-3aaf-41dd-9a5d-b5fe194d629e`). Keep slugs/IDs/photos/status/prices unchanged.
+7. **Policies:** Supply the actual approved effective/revision date for each legal policy. Existing body wording and date behavior stay unchanged pending that decision.
+
+Previously documented production gates below remain in force. This correction phase does not authorize paused privacy migration, legacy-link handling, live delivery checks or release.
+
+Local verification: all **120 tests pass** with Preview environment enabled (five new regressions plus the existing financial/privacy suite). Full lint has zero errors and the same 15 image advisories. The optimized synthetic-content build and TypeScript compilation pass. No stylesheet, photo, font, package/lockfile, pricing implementation, payment-success implementation or payment-link validation implementation changed. Hosted journey results are recorded after the matching Preview is ready.
+
 ## Sources And Scope
 
 - Consolidated branch: `codex/fluffytail-integrated-release`.
