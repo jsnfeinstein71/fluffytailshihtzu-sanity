@@ -1,7 +1,9 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import Stripe from 'stripe'
 import {stripe} from '@/sanity/lib/stripe'
 import {createClient} from '@sanity/client'
+import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +16,8 @@ const sanity = createClient({
 })
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   const signature = req.headers.get('stripe-signature')
 
   if (!signature) {
@@ -51,11 +55,13 @@ export async function POST(req: NextRequest) {
     if ((paymentType === 'deposit' || paymentType === 'manual-payment') && puppySlug) {
       const existing = await sanity.fetch<{_id: string} | null>(
         `*[_type == "paymentRecord" && stripeCheckoutSessionId == $sessionId][0]{_id}` as string,
-        {sessionId: session.id} as Record<string, string>
+        {sessionId: session.id} as Record<string, string>,
+        {cache: 'no-store'}
       )
 
       if (!existing) {
         await sanity.create({
+          _id: privateRecordId('paymentCheckout'),
           _type: 'paymentRecord',
           stripeCheckoutSessionId: session.id,
           stripePaymentIntentId:
@@ -85,7 +91,8 @@ export async function POST(req: NextRequest) {
       if (token && paymentType === 'deposit') {
         const depositLink = await sanity.fetch<{_id: string} | null>(
           `*[_type == "depositLink" && token == $token][0]{_id}` as string,
-          {token} as Record<string, string>
+          {token} as Record<string, string>,
+          {cache: 'no-store'}
         )
 
         if (depositLink?._id) {
@@ -110,11 +117,13 @@ export async function POST(req: NextRequest) {
     if (stripeInvoiceId && puppySlug && amountPaid > 0) {
       const existing = await sanity.fetch<{_id: string} | null>(
         `*[_type == "paymentRecord" && stripeInvoiceId == $invoiceId][0]{_id}` as string,
-        {invoiceId: stripeInvoiceId} as Record<string, string>
+        {invoiceId: stripeInvoiceId} as Record<string, string>,
+        {cache: 'no-store'}
       )
 
       if (!existing) {
         await sanity.create({
+          _id: privateRecordId('paymentInvoice'),
           _type: 'paymentRecord',
           stripeInvoiceId,
           paymentType: 'invoice',
@@ -131,7 +140,8 @@ export async function POST(req: NextRequest) {
 
       const existingInvoiceRecord = await sanity.fetch<{_id: string} | null>(
         `*[_type == "invoiceRecord" && stripeInvoiceId == $invoiceId][0]{_id}` as string,
-        {invoiceId: stripeInvoiceId} as Record<string, string>
+        {invoiceId: stripeInvoiceId} as Record<string, string>,
+        {cache: 'no-store'}
       )
 
       if (existingInvoiceRecord?._id) {

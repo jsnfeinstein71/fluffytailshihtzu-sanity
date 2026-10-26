@@ -1,4 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
 
 export const runtime = 'nodejs'
@@ -25,6 +26,8 @@ type PuppyInquiryRecord = {
 }
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const {phone} = await req.json()
 
@@ -42,13 +45,13 @@ export async function POST(req: NextRequest) {
           to,
           direction,
           source
-        }`
+        }`, {}, {cache: 'no-store'}
       ),
       sanity.fetch<PuppyInquiryRecord[]>(
         `*[_type == "puppyInquiry"]{
           _id,
           phone
-        }`
+        }`, {}, {cache: 'no-store'}
       ),
     ])
 

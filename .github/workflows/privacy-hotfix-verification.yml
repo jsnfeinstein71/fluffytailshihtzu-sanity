@@ -1,0 +1,36 @@
+name: Privacy Hotfix Verification
+on:
+  push:
+    branches: [codex/historical-sanity-privacy]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event_name == 'push' || github.head_ref == 'codex/historical-sanity-privacy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Isolated synthetic project only; no production data or write credentials.
+      NEXT_PUBLIC_SANITY_PROJECT_ID: gu1xkpsg
+      NEXT_PUBLIC_SANITY_DATASET: synthetic
+      STRIPE_SECRET_KEY: sk_test_build_only_not_a_real_key
+      TWILIO_ACCOUNT_SID: AC00000000000000000000000000000000
+      TWILIO_AUTH_TOKEN: build-only-not-a-real-token
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - run: node scripts/check-privacy-lint.mjs
+      - run: npx next typegen
+      - run: npm run typecheck
+      - run: npm run build

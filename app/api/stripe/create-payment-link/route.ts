@@ -1,4 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
 import {stripe} from '@/sanity/lib/stripe'
 
@@ -21,6 +22,8 @@ const puppyQuery = `*[_type == "puppy" && slug.current == $slug][0]{
 }`
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const body = await req.json()
 

@@ -1,4 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
 
 export const runtime = 'nodejs'
@@ -12,6 +13,8 @@ const sanity = createClient({
 })
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   try {
     const formData = await req.formData()
     const file = formData.get('file')

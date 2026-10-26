@@ -1,5 +1,7 @@
 import {NextRequest, NextResponse} from 'next/server'
+import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {createClient} from '@sanity/client'
+import {privateRecordId} from '@/sanity/lib/private-records'
 
 export const runtime = 'nodejs'
 
@@ -12,6 +14,8 @@ const sanity = createClient({
 })
 
 export async function POST(req: NextRequest) {
+  const frozen = operationalWriteFreeze()
+  if (frozen) return frozen
   const formData = await req.formData()
 
   const messageSid = String(formData.get('MessageSid') || '')
@@ -30,6 +34,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await sanity.create({
+      _id: privateRecordId('sms'),
       _type: 'smsMessage',
       messageSid,
       from,

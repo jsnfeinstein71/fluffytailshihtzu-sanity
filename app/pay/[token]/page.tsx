@@ -1,5 +1,5 @@
 import {redirect, notFound} from 'next/navigation'
-import {client} from '@/sanity/lib/client'
+import {getOperationalClient} from '@/sanity/lib/operational-client'
 
 export const revalidate = 0
 
@@ -19,10 +19,12 @@ export default async function DepositRedirectPage({
   params: Promise<{token: string}>
 }) {
   const {token} = await params
+  const client = getOperationalClient()
 
   const link = await client.fetch<DepositLink | null>(
     depositLinkQuery as string,
-    {token} as Record<string, string>
+    {token} as Record<string, string>,
+    {cache: 'no-store'}
   )
 
   if (!link || !link.active || !link.stripeCheckoutUrl) {
