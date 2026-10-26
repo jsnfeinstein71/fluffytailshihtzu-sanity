@@ -14,17 +14,26 @@ Owner-authorized correction pass, based on PR #4 at `2914c6a`. This is not anoth
 - Breed/resource copy removes the easy-grooming comparison, explains coat maintenance and heat sensitivity, and adds general food/travel preparation, veterinary follow-up and safe socialization advice. No medical schedule or FluffyTail-specific inclusion is promised.
 - Public-claim check used read-only `siteSettings` in `3glz6dkx/production` and the linked [Jeanne/FluffyTail GoodDog profile](https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama). General care sources: [VCA Shih Tzu guidance](https://vcacanada.com/know-your-pet/shih-tzu), [AAHA first-days guidance](https://www.aaha.org/resources/what-to-do-when-you-first-bring-home-a-new-puppy/), [AVMA selecting a dog](https://www.avma.org/resources/pet-owners/petcare/selecting-pet-dog). Public pages link the care sources. No production Sanity mutation or customer-record query was made.
 
-### Single Business Approval Queue
+### Confirmed Business Facts — Owner Follow-up
 
-These are questions/proposals, not implemented policy or CMS changes:
+The owner confirmed these facts in this chat after the audit-correction release:
 
-1. **Deposit:** Is it non-refundable for direct website purchases, and can it transfer to another puppy/litter? Confirm exceptions. GoodDog's published terms are not automatically the direct-sale policy.
-2. **Payment:** How does Jeanne issue the approved payment link, when is the balance due, and which payment methods should the website describe?
-3. **Price/pickup/inclusions:** Are taxes or fees additional? Confirm pickup arrangements and exactly which registration/health records, supplies or other items are included. Do not infer shipping or guarantees.
-4. **Jeanne:** Approve/correct the minimal factual introduction (breeder in the Mobile area; breeding dogs live in her home; direct contact for puppy inquiries). Supply any additional biography/practices to publish; none are invented.
-5. **Historical status:** Identify which past-litter Reserved records should become Sold or Gone Home. Current public data has 18 Reserved puppies in March–June past litters; age alone does not establish the replacement status. Preserve original litter links and financial history.
-6. **Two typos:** Approve `girl-1-1` name `Girl.1` → `Girl 1` (document `6e181ad7-3340-4b2f-ba61-91fbd9155ca0`) and `girl-2-1` color `Creram and Whitr` → `Cream and White` (document `136dcb97-3aaf-41dd-9a5d-b5fe194d629e`). Keep slugs/IDs/photos/status/prices unchanged.
-7. **Policies:** Supply the actual approved effective/revision date for each legal policy. Existing body wording and date behavior stay unchanged pending that decision.
+- Public deposit policy: deposits are non-refundable and count toward the total puppy price. Do not expand the published policy with discretionary exceptions or additional promises.
+- The remaining balance may be paid before pickup or at pickup.
+- Current listed prices have no added taxes or fees. This is the owner's current pricing policy, not a tax-law determination; do not alter historical amounts or payment configuration.
+- Pickup is normally in Mobile or at the airport, coordinated directly with Jeanne. Public copy makes no delivery, driving-distance or out-of-area meeting promise.
+- Direct purchases include a vet check, first vaccinations/deworming, CKC registration papers, written vaccination/deworming records, a starter kit with food/treats/toys/a scented blanket, early socialization and initial potty training. The owner approved the grouped list and then explicitly confirmed paperwork and CKC. Do not turn initial training into a house-trained guarantee.
+- Good Dog care-team support, Figo insurance discounts and Good Dog training/community benefits are platform benefits and are not advertised as direct-sale inclusions.
+
+These confirmed facts are presented on Pricing & Process using its existing section styles. No CSS, photos, branding, payment calculations or operational behavior is changed.
+
+### Remaining Business Approval Queue
+
+1. **Payment-link delivery:** The owner wants text and email. The existing Inbox has SMS sending, copy-link actions and a normal email reply link; automatic email-link delivery is not verified or promised. Confirm whether a prepared email in Jeanne's normal email app is sufficient or whether sending directly from Inbox is required. Do not provision an email service or send live messages without authorization. Accepted payment methods beyond existing Checkout still need confirmation if they are to be advertised.
+2. **Jeanne:** Supply any additional biography/practices to publish; none are invented. The minimal introduction remains based on substantiated public facts.
+3. **Historical status:** Identify which past-litter Reserved records should become Sold or Gone Home. Current public data has 18 Reserved puppies in March–June past litters; age alone does not establish the replacement status. Preserve original litter links and financial history.
+4. **Two typos:** Approve `girl-1-1` name `Girl.1` → `Girl 1` (document `6e181ad7-3340-4b2f-ba61-91fbd9155ca0`) and `girl-2-1` color `Creram and Whitr` → `Cream and White` (document `136dcb97-3aaf-41dd-9a5d-b5fe194d629e`). Keep slugs/IDs/photos/status/prices unchanged.
+5. **Policies:** Supply the actual approved effective/revision date for each legal policy. Existing body wording and date behavior stay unchanged pending that decision.
 
 Previously documented production gates below remain in force. This correction phase does not authorize paused privacy migration, legacy-link handling, live delivery checks or release.
 

@@ -24,8 +24,8 @@ export default async function PricingPage() {
     <main className="wrap content-page">
       <header className="content-intro"><p className="eyebrow">From hello to home</p><h1 className="h1">Pricing & Process</h1><p className="lead">We want the process to feel straightforward.</p></header>
       <section className="pricing-overview">
-        <div><h2>General pricing</h2><p>Current and upcoming litter pricing: <strong className="pricing-range">{priceText}</strong></p><p>Final pricing may vary by litter, timing, and individual puppy details.</p></div>
-        <div><h2>Deposit</h2><p>Current and upcoming litter deposits: <strong className="pricing-range">{depositText}</strong></p><p>The deposit is applied toward the total puppy price, not added on top. See each puppy page for its exact price and deposit.</p><p>Once a puppy is marked reserved, that means a deposit has typically been placed for that puppy.</p></div>
+        <div><h2>General pricing</h2><p>Current and upcoming litter pricing: <strong className="pricing-range">{priceText}</strong></p><p>Prices may vary by litter and individual puppy. Currently, no additional taxes or fees are added to the listed puppy price.</p></div>
+        <div><h2>Deposit</h2><p>Current and upcoming litter deposits: <strong className="pricing-range">{depositText}</strong></p><p>Deposits are non-refundable. The deposit is applied toward the total puppy price, not added on top. See each puppy page for its exact price and deposit.</p><p>A reserved puppy is not available for a new reservation.</p></div>
       </section>
       <section className="pricing-process">
         <h2>How the process works</h2>
@@ -34,6 +34,20 @@ export default async function PricingPage() {
           <li><h3>Ask questions</h3><p>We encourage families to ask about availability, timing, fit, and next steps before making a decision.</p></li>
           <li><h3>Reserve a puppy</h3><p>When a puppy is selected and the deposit is placed, that puppy will be marked reserved on the site.</p></li>
         </ol>
+      </section>
+      <section className="content-next">
+        <h2>Final payment and pickup</h2>
+        <p>The remaining balance can be paid before pickup or at pickup.</p>
+        <p>Pickup is usually in Mobile or at the airport. Coordinate the location and time directly with Jeanne.</p>
+      </section>
+      <section className="content-next">
+        <h2>What comes with your puppy</h2>
+        <ul className="content-facts">
+          <li>A veterinary check, first vaccinations, and deworming</li>
+          <li>CKC registration papers and written vaccination and deworming records</li>
+          <li>A puppy starter kit with food, treats, toys, and a blanket with mom and littermates’ scent</li>
+          <li>Early socialization and initial potty training</li>
+        </ul>
       </section>
       <section className="content-next">
         <h2>Ready to take the next step?</h2>
