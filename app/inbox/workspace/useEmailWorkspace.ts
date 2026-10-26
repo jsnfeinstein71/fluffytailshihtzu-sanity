@@ -28,11 +28,6 @@ export function useEmailWorkspace(ready:boolean){
         else if(sameEmail(local.base,draft.value))next[draft.familyId]={...local,revision:draft.revision}
         else next[draft.familyId]={...local,conflict:draft}
       }
-      for(const draft of result.drafts){
-        const entry=next[draft.familyId]
-        const latest=result.messages.filter(m=>m.familyId===draft.familyId&&m.direction==='in'&&m.messageId).sort((a,b)=>Date.parse(b.time)-Date.parse(a.time))[0]
-        if(entry&&!entry.conflict&&!entry.value.body&&!entry.value.paymentRequestId&&!explicitThread.current[draft.familyId]&&latest)next[draft.familyId]={...entry,value:{...entry.value,replyToId:latest.id,subject:/^re:/i.test(latest.subject)?latest.subject:`Re: ${latest.subject}`}}
-      }
       return next
     })
   },[])
@@ -58,8 +53,13 @@ export function useEmailWorkspace(ready:boolean){
   useEffect(()=>{if(ready)void request()},[ready,request])
   function edit(familyId:string,patch:Partial<EmailValue>){
     if(noticeFamily===familyId)setSendNotice('')
-    if('replyToId' in patch)explicitThread.current[familyId]=true
-    setEntries(previous=>{const entry=previous[familyId];return entry?{...previous,[familyId]:{...entry,value:{...entry.value,...patch}}}:previous})
+    if('replyToId' in patch||'subject' in patch)explicitThread.current[familyId]=true
+    const parent=data?.messages.filter(m=>m.familyId===familyId&&m.direction==='in'&&m.messageId).sort((a,b)=>Date.parse(b.time)-Date.parse(a.time))[0]
+    setEntries(previous=>{
+      const entry=previous[familyId];if(!entry)return previous
+      const thread=patch.body&&!entry.value.body&&!explicitThread.current[familyId]&&parent?{replyToId:parent.id,subject:/^re:/i.test(parent.subject)?parent.subject:`Re: ${parent.subject}`}:{}}
+      return {...previous,[familyId]:{...entry,value:{...entry.value,...thread,...patch}}}
+    })
   }
   async function save(familyId:string){
     const entry=entries[familyId];if(!entry||entry.conflict)return
