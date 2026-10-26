@@ -15,8 +15,12 @@ const sanity = createClient({projectId: 'gu1xkpsg', dataset: 'synthetic', apiVer
 const protection = process.env.PREVIEW_PROTECTION_BYPASS
   ? {'x-vercel-protection-bypass': process.env.PREVIEW_PROTECTION_BYPASS} : {}
 async function request(path, options = {}) {
+  const headers = new Headers({...protection, ...options.headers})
+  if (process.env.PREVIEW_ACCESS_COOKIE) {
+    headers.set('Cookie', [process.env.PREVIEW_ACCESS_COOKIE, headers.get('Cookie')].filter(Boolean).join('; '))
+  }
   return fetch(new URL(path, base), {...options, redirect: 'manual',
-    headers: {...protection, ...options.headers}})
+    headers})
 }
 const opened = await request('/api/inquiry')
 assert.equal(opened.status, 200, 'Preview form token must be available')

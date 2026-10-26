@@ -19,6 +19,7 @@ const puppy = (id, litterId, status = 'available', extra = {}) => ({_id: id, _ty
 
 test('approved homepage introduction appears locally without overriding the production CMS headline', async () => {
   const previousEnv = process.env.NODE_ENV
+  const previousVercelEnv = process.env.VERCEL_ENV
   try {
     dataset = [{_id: 'settings', _type: 'siteSettings', homepageHeadline: 'CMS-managed headline'}]
     process.env.NODE_ENV = 'development'
@@ -26,6 +27,10 @@ test('approved homepage introduction appears locally without overriding the prod
     assert.match(preview, /<h2>Raised With Love, Welcomed Into Your Family\.<\/h2>/)
     assert.doesNotMatch(preview, /CMS-managed headline/)
     process.env.NODE_ENV = 'production'
+    process.env.VERCEL_ENV = 'preview'
+    assert.match(await render(Home), /IMG_6731/)
+    assert.match(await render(Home), /<h2>Raised With Love, Welcomed Into Your Family\.<\/h2>/)
+    process.env.VERCEL_ENV = 'production'
     const production = await render(Home)
     assert.match(production, /<h2>CMS-managed headline<\/h2>/)
     assert.doesNotMatch(production, /IMG_6731/)
@@ -34,6 +39,8 @@ test('approved homepage introduction appears locally without overriding the prod
   } finally {
     if (previousEnv === undefined) delete process.env.NODE_ENV
     else process.env.NODE_ENV = previousEnv
+    if (previousVercelEnv === undefined) delete process.env.VERCEL_ENV
+    else process.env.VERCEL_ENV = previousVercelEnv
   }
 })
 
