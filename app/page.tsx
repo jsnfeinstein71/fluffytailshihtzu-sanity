@@ -6,8 +6,11 @@ import {client} from '@/sanity/lib/client'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus, shouldShowWaitlist} from '@/lib/inventory'
 import LitterSection from './components/LitterSection'
+import HomeHero from './components/HomeHero'
 
 export const metadata = {alternates: {canonical: '/'}}
+
+const approvedIntroHeadline = 'Raised With Love, Welcomed Into Your Family.'
 
 type SiteSettings = {
   title?: string
@@ -36,22 +39,16 @@ export default async function HomePage() {
   const activeLitters = getLittersByStatus(litters, 'current')
   const heroImageUrl = siteSettings?.heroImageUrl || activeLitters[0]?.groupPhotoUrl
   const showWaitlistIndicator = shouldShowWaitlist(litters, puppies)
+  // Preview approved copy without publishing a change to the live CMS document.
+  const introHeadline = process.env.NODE_ENV === 'development'
+    ? approvedIntroHeadline
+    : siteSettings?.homepageHeadline || approvedIntroHeadline
 
   return <main>
-    <section className="home-hero" aria-labelledby="home-title">
-      {heroImageUrl ? <img src={heroImageUrl} alt="A home-raised FluffyTail Shih Tzu puppy" fetchPriority="high" /> : null}
-      <div className="hero-content">
-        <h1 id="home-title">FluffyTail<span>Shih Tzu</span></h1>
-        <p className="hero-tagline">Tiny Paws, Big Love</p>
-        <div className="hero-actions">
-          <Link href="/available-puppies" className="brand-button brand-button-light">Meet our puppies <span aria-hidden="true">&rarr;</span></Link>
-          <Link className="hero-secondary" href="/about">Meet Jeanne</Link>
-        </div>
-      </div>
-    </section>
+    <HomeHero imageUrl={heroImageUrl} preview={process.env.NODE_ENV === 'development'} />
 
     <section className="brand-container home-intro">
-      <div><p className="eyebrow">Home-raised in Alabama</p><h2>{siteSettings?.homepageHeadline || 'Home-Raised Shih Tzu Puppies from FluffyTail Shih Tzu'}</h2></div>
+      <div><p className="eyebrow">Home-raised in Alabama</p><h2>{introHeadline}</h2></div>
       <div>
         <p>{siteSettings?.homepageIntro || 'FluffyTail Shih Tzu is a small, home-based breeder in Alabama. Our dogs live with us as family pets, and we work with families across the Southeast and beyond.'}</p>
         {siteSettings?.serviceArea ? <p>{siteSettings.serviceArea}</p> : null}

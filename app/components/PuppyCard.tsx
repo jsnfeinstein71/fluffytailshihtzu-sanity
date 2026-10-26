@@ -2,7 +2,7 @@ import Link from 'next/link'
 import {formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
 
-export default function PuppyCard({puppy}: {puppy: Puppy}) {
+export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; browsing?: boolean}) {
   const age = getAgeInWeeks(puppy.birthDate)
   const ready = getReadyDate(puppy.birthDate)
   const pricing = tryPricing(puppy)
@@ -20,10 +20,10 @@ export default function PuppyCard({puppy}: {puppy: Puppy}) {
         {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
       </p>
       {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
-      {ready && (puppy.status === 'available' || puppy.status === 'hold') ? <div style={{marginTop: '10px'}}><span className="badge">Ready {ready}</span></div> : null}
+      {ready && (browsing || puppy.status === 'available' || puppy.status === 'hold') ? <div style={{marginTop: '10px'}}><span className="badge">Ready {ready}</span></div> : null}
       <div className="puppy-card-footer">
-        <span>{pricing ? formatCurrency(pricing.totalCents / 100) : 'Ask Jeanne about pricing'}</span>
-        {puppy.slug ? <span>Meet {puppy.name || 'this puppy'} <span aria-hidden="true">&rarr;</span></span> : null}
+        <span>{browsing && pricing ? <span className="puppy-card-price-label">Total puppy price</span> : null}{pricing ? formatCurrency(pricing.totalCents / 100, browsing && pricing.totalCents % 100 !== 0) : 'Ask Jeanne about pricing'}</span>
+        {puppy.slug ? <span>{browsing ? 'View puppy' : `Meet ${puppy.name || 'this puppy'}`} <span aria-hidden="true">&rarr;</span></span> : null}
       </div>
     </div>
   </>

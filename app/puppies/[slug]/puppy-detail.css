@@ -1,0 +1,36 @@
+.puppy-detail-page .puppy-detail-layout { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: 'photo heading' 'photo info'; gap: 24px 56px; margin-top: 28px; }
+.puppy-detail-page .puppy-detail-heading { grid-area: heading; min-width: 0; }
+.puppy-detail-page .puppy-detail-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.puppy-detail-page .puppy-detail-title .h1 { margin: 0; min-width: 0; }
+.puppy-detail-page .puppy-detail-title .statusBadge { flex-shrink: 0; }
+.puppy-detail-page .puppy-detail-litter { margin: 12px 0 0; font-size: 15px; color: var(--brand-muted); overflow-wrap: anywhere; }
+.puppy-detail-page .puppy-detail-portrait { grid-area: photo; margin: 0; min-width: 0; }
+.puppy-detail-page .puppy-detail-photo { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: #fbf8f3; border-radius: 6px; }
+.puppy-detail-page .puppy-photo-pending { display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--brand-muted); }
+.puppy-detail-page .puppy-detail-info { grid-area: info; padding-top: 0; min-width: 0; }
+.puppy-detail-page .puppy-detail-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; margin: 0; }
+.puppy-detail-page .puppy-detail-facts dt { font-size: 12px; color: var(--brand-muted); }
+.puppy-detail-page .puppy-detail-facts dd { margin: 3px 0 0; font-size: 16px; color: var(--brand-brown); overflow-wrap: anywhere; }
+.puppy-detail-page .puppy-detail-notes { color: var(--brand-muted); margin: 22px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+.puppy-detail-page .puppy-price { margin: 24px 0 16px; border-top-color: var(--brand-champagne); padding-block: 18px; }
+.puppy-detail-page .puppy-price .price-total { font-size: 24px; }
+.puppy-detail-page .puppy-price dd { white-space: nowrap; }
+.puppy-detail-page .puppy-detail-payment-note { margin: 0; font-size: 14px; line-height: 1.65; color: var(--brand-muted); }
+.puppy-detail-page .puppy-detail-action { margin-top: 22px; }
+.puppy-detail-page .puppy-detail-action p { font-size: 15px; margin: 0 0 18px; color: var(--brand-muted); }
+.puppy-detail-page .puppy-detail-action .brand-button { margin: 0; }
+@media (max-width: 1000px) {
+  .puppy-detail-page .puppy-detail-layout { column-gap: 32px; }
+}
+@media (max-width: 820px) {
+  .puppy-detail-page .puppy-detail-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: 'heading' 'photo' 'info'; gap: 24px; }
+  .puppy-detail-page .puppy-detail-portrait { width: 100%; max-width: 600px; justify-self: center; }
+}
+@media (max-width: 600px) {
+  .brand-site .puppy-detail-page { padding-top: 24px; }
+  .puppy-detail-page .puppy-detail-layout { margin-top: 22px; gap: 22px; }
+  .puppy-detail-page .puppy-detail-title .h1 { font-size: 38px; }
+  .puppy-detail-page .puppy-detail-litter { margin-top: 10px; font-size: 14px; }
+  .puppy-detail-page .puppy-detail-facts { gap: 16px 24px; }
+  .puppy-detail-page .puppy-price .price-total { font-size: 22px; }
+}

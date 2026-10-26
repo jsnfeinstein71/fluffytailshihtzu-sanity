@@ -60,7 +60,7 @@ Public inventory excludes drafts, release versions, explicitly hidden records, a
 
 ## Native Inquiry Flow (Draft Release)
 
-- `/puppy-inquiry` and Contact's waitlist form share `app/components/InquiryForm.tsx`. Puppy context is prefilled from published inventory, then re-resolved server-side on submit.
+- `/puppy-inquiry` and Contact's general inquiry form share `app/components/InquiryForm.tsx`. General messages start empty with a helpful placeholder; explicit `/puppy-inquiry?interest=waitlist` links retain their future-litter message. Puppy context is prefilled from published inventory, then re-resolved server-side on submit.
 - `GET /api/inquiry` issues/reuses a cookie-bound signed token; `POST /api/inquiry` validates origin, body, fields, contact preference, SMS consent, honeypot, rate limits and duplicates.
 - The existing Sanity `puppyInquiry` record and Twilio operator alerts to `FLUFFYTAIL_ALERT_NUMBER` / optional `FLUFFYTAIL_ALERT_NUMBER_2` are reused. New inquiry/alert records require authenticated document reads.
 - Inbox retains phone-less Email inquiries, provides mailto follow-up and independently enforces native SMS preferences/consent in the send API.
@@ -130,7 +130,7 @@ Lead capture paths:
 
 - Puppy page inquiry button to `/puppy-inquiry` with puppy/litter/page context.
 - `/puppy-inquiry` native puppy/general inquiry form with conditional SMS consent.
-- `/contact` native future-interest form and `/puppy-inquiry?interest=waitlist` links.
+- `/contact` native general inquiry form and `/puppy-inquiry?interest=waitlist` future-interest links.
 - GoodDog profile fallback: `https://my.gooddog.com/fluffytail-shih-tzu-alabama`.
 - Native submission to `/api/inquiry`; retired Tally webhook returns 410 on the release branch.
 

@@ -1,6 +1,7 @@
 export const revalidate = 60
 
 import '../../home.css'
+import './puppy-detail.css'
 import Link from 'next/link'
 import {tryPricing} from '@/lib/pricing'
 import {notFound} from 'next/navigation'
@@ -23,26 +24,28 @@ export default async function PuppyDetailPage({params}: Props) {
   const canInquire = canInquireAboutPuppy(puppy)
   const puppyInquiryUrl = buildPuppyInquiryUrl(puppy)
   const age = getAgeInWeeks(puppy.birthDate)
+  const ready = canInquire ? getReadyDate(puppy.birthDate) : ''
   const pricing = tryPricing(puppy)
   const totalPrice = pricing ? pricing.totalCents / 100 : undefined
   const deposit = pricing ? pricing.depositCents / 100 : undefined
   const finalPayment = pricing ? pricing.remainingCents / 100 : undefined
 
-  return <main className="wrap">
+  return <main className="wrap puppy-detail-page">
     <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
     <div className="puppy-detail-layout">
-      <div>{puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} fetchPriority="high" /> : <div className="puppy-detail-photo" role="img" aria-label="Puppy photo to come" />}</div>
+      <header className="puppy-detail-heading">
+        <div className="puppy-detail-title"><h1 className="h1">{puppy.name || 'Unnamed puppy'}</h1><span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>{formatPuppyStatus(puppy.status)}</span></div>
+        {puppy.litterTitle ? <p className="puppy-detail-litter">Litter: {puppy.litterTitle}</p> : null}
+      </header>
+      <figure className="puppy-detail-portrait">{puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" decoding="async" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Puppy photo to come">Photo to come</div>}</figure>
       <div className="puppy-detail-info">
-        <span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>{formatPuppyStatus(puppy.status)}</span>
-        <h1 className="h1">{puppy.name || 'Unnamed puppy'}</h1>
-        {puppy.litterTitle ? <p className="lead">Litter: {puppy.litterTitle}</p> : null}
-        <ul className="puppy-facts">
-          <li>{puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}</li>
-          {age !== null ? <li>{age} week{age === 1 ? '' : 's'} old</li> : null}
-          {puppy.color ? <li>{puppy.color}</li> : null}
-          {canInquire && getReadyDate(puppy.birthDate) ? <li>Ready {getReadyDate(puppy.birthDate)}</li> : null}
-        </ul>
-        {puppy.notes ? <p className="lead">{puppy.notes}</p> : null}
+        <dl className="puppy-detail-facts">
+          <div><dt>Sex</dt><dd>{puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'To be confirmed'}</dd></div>
+          {puppy.color ? <div><dt>Color</dt><dd>{puppy.color}</dd></div> : null}
+          {age !== null ? <div><dt>Age</dt><dd>{age} week{age === 1 ? '' : 's'} old</dd></div> : null}
+          {ready ? <div><dt>Ready from</dt><dd>{ready}</dd></div> : null}
+        </dl>
+        {puppy.notes ? <p className="puppy-detail-notes">{puppy.notes}</p> : null}
 
         {typeof totalPrice === 'number' ? <dl className="puppy-price">
           <div className="price-total"><dt>Total puppy price</dt><dd>{formatCurrency(totalPrice, true)}</dd></div>
@@ -51,11 +54,11 @@ export default async function PuppyDetailPage({params}: Props) {
             <div><dt>Final payment</dt><dd>{formatCurrency(finalPayment!, true)}</dd></div>
           </> : null}
         </dl> : null}
-        <p className="lead">{pricing ? 'The deposit is applied toward the total puppy price, not added on top.' : 'Please contact FluffyTail to confirm pricing before payment.'}</p>
-        {canInquire ? <Link className="brand-button" href={puppyInquiryUrl}>Request Info About This Puppy <span aria-hidden="true">&rarr;</span></Link> : <>
-          <p className="lead">This puppy is not currently available for a new reservation. Contact us about other availability.</p>
+        <p className="puppy-detail-payment-note">{pricing ? 'The deposit is applied toward the total puppy price, not added on top.' : 'Please contact FluffyTail to confirm pricing before payment.'}</p>
+        <div className="puppy-detail-action">{canInquire ? <Link className="brand-button" href={puppyInquiryUrl}>Request Info About This Puppy <span aria-hidden="true">&rarr;</span></Link> : <>
+          <p>This puppy is not currently available for a new reservation. Contact us about other availability.</p>
           <Link className="brand-button" href="/contact">Contact FluffyTail</Link>
-        </>}
+        </>}</div>
       </div>
     </div>
   </main>

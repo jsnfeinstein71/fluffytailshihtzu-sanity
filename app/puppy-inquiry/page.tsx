@@ -1,4 +1,5 @@
 import '../home.css'
+import './inquiry.css'
 import {notFound} from 'next/navigation'
 import InquiryForm from '../components/InquiryForm'
 import {legacyPuppySlug} from '@/lib/inquiry'
@@ -20,17 +21,14 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
   const interest = slug ? 'puppy' : params.interest === 'waitlist' ? 'waitlist' : 'general'
 
   return (
-    <main className="wrap">
+    <main className="wrap inquiry-page">
+      <div className="inquiry-page-inner">
       <header className="page-intro">
       <p className="eyebrow">A conversation with Jeanne</p>
-      <h1 className="h1">{puppy ? `Ask about ${puppy.name || 'this puppy'}.` : 'Let us get to know you.'}</h1>
-      <p className="lead">
-        Ask Jeanne about a puppy or future availability. Choose how you would like us to follow up.
-      </p>
+      <h1 className="h1">{puppy ? `Ask about ${puppy.name || 'this puppy'}.` : interest === 'waitlist' ? 'Ask about future puppies.' : 'Say hello to Jeanne.'}</h1>
+      <p className="lead">Jeanne is happy to answer your questions.</p>
       </header>
-      <div className="inquiry-layout">
-      <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} litterTitle={puppy?.litterTitle || ''} interest={interest} />
-      <aside className="inquiry-aside"><h2>Small breeder. Personal connection.</h2><p>Jeanne can answer your questions about timing, temperament and life with a Shih Tzu.</p><p>Email is always an option. Choose Text or Either only if you would like SMS follow-up.</p></aside>
+      <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppy?.photoUrl || ''} litterTitle={puppy?.litterTitle || ''} interest={interest} />
       </div>
     </main>
   )

@@ -1,19 +1,39 @@
 'use client'
 
 import Link from 'next/link'
-import {useEffect, useState, type FormEvent} from 'react'
+import {useEffect, useRef, useState, type FormEvent} from 'react'
 import type {ContactMethod} from '@/lib/inquiry'
 import './inquiry-form.css'
 
-export default function InquiryForm({puppySlug = '', puppyName = '', litterTitle = '', interest = 'general'}: {
-  puppySlug?: string; puppyName?: string; litterTitle?: string; interest?: 'puppy' | 'waitlist' | 'general'
+function fitMessage(field: HTMLTextAreaElement | null) {
+  if (!field) return
+  field.style.height = 'auto'
+  field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`
+}
+
+export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoUrl = '', litterTitle = '', interest = 'general'}: {
+  puppySlug?: string; puppyName?: string; puppyPhotoUrl?: string; litterTitle?: string; interest?: 'puppy' | 'waitlist' | 'general'
 }) {
   const [method, setMethod] = useState<ContactMethod>('Email')
   const [token, setToken] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  const messageRef = useRef<HTMLTextAreaElement>(null)
+  const feedbackRef = useRef<HTMLDivElement>(null)
   const textRequested = method !== 'Email'
+
+  useEffect(() => {
+    const fit = () => fitMessage(messageRef.current)
+    fit()
+    void document.fonts.ready.then(fit)
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+
+  useEffect(() => {
+    if (confirmation || error) feedbackRef.current?.focus()
+  }, [confirmation, error])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -50,26 +70,31 @@ export default function InquiryForm({puppySlug = '', puppyName = '', litterTitle
     } finally { setBusy(false) }
   }
 
-  if (confirmation) return <div className="inquiry-confirmation" role="status"><h2>Inquiry received</h2><p>{confirmation}</p><Link href="/available-puppies">Back to puppies</Link></div>
+  const puppyContext = puppySlug ? <div className="inquiry-context">
+    {puppyPhotoUrl ? <img src={puppyPhotoUrl} width={72} height={72} alt="" decoding="async" /> : null}
+    <div><strong>{puppyName}</strong>{litterTitle ? <span>Litter: {litterTitle}</span> : null}</div>
+  </div> : null
+
+  if (confirmation) return <div className="inquiry-confirmation" role="status" tabIndex={-1} ref={feedbackRef}>{puppyContext}<h2>Inquiry received</h2><p>{confirmation}</p><Link className="text-link" href="/available-puppies">Back to puppies <span aria-hidden="true">&rarr;</span></Link></div>
 
   return (
-    <form className="inquiry-form" onSubmit={submit} aria-label="Puppy inquiry">
-      {puppySlug ? <div className="inquiry-context"><strong>{puppyName}</strong>{litterTitle ? <span>Litter: {litterTitle}</span> : null}</div> : null}
+    <form className="inquiry-form" onSubmit={submit} aria-label="Puppy inquiry" aria-busy={busy}>
+      {puppyContext}
       <div className="inquiry-fields">
-        <label>Name<input name="name" autoComplete="name" maxLength={100} minLength={2} required /></label>
-        <label>Email<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
+        <label>Your name<input name="name" autoComplete="name" maxLength={100} minLength={2} required /></label>
+        <label>Email address<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
       </div>
-      <fieldset><legend>Preferred contact method</legend><div className="inquiry-methods">{(['Email', 'Text', 'Either'] as const).map((value) => (
-        <label key={value}><input type="radio" name="preferredContactMethod" value={value} checked={method === value} onChange={() => setMethod(value)} />{value}</label>
+      <fieldset><legend>How should Jeanne reply?</legend><div className="inquiry-methods">{(['Email', 'Text', 'Either'] as const).map((value) => (
+        <label key={value} className={method === value ? 'inquiry-method-selected' : undefined}><input type="radio" name="preferredContactMethod" value={value} checked={method === value} onChange={() => setMethod(value)} />{value}</label>
       ))}</div></fieldset>
-      <label>Phone {textRequested ? '' : '(optional)'}<input name="phone" type="tel" autoComplete="tel" maxLength={40} required={textRequested} /></label>
-      <label>Message<textarea name="message" rows={5} minLength={5} maxLength={2000} defaultValue={puppySlug ? `Hi, I'm interested in ${puppyName}. Please send me more information.` : interest === 'waitlist' ? 'I would like to hear about future puppies and upcoming litters.' : ''} required /></label>
+      <label>Phone number {textRequested ? '' : '(optional)'}<input name="phone" type="tel" autoComplete="tel" maxLength={40} required={textRequested} /></label>
+      <label>Message<textarea name="message" rows={4} ref={messageRef} onInput={event => fitMessage(event.currentTarget)} onFocus={event => fitMessage(event.currentTarget)} minLength={5} maxLength={2000} placeholder={!puppySlug && interest === 'general' ? 'Tell Jeanne how she can help.' : undefined} defaultValue={puppySlug ? `Hi, I'm interested in ${puppyName}. Please send me more information.` : interest === 'waitlist' ? 'I would like to hear about future puppies and upcoming litters.' : ''} required /></label>
       {textRequested ? <label className="inquiry-consent"><input type="checkbox" name="smsConsent" required />
         <span>By checking this box and submitting this puppy inquiry form, I agree to receive conversational and customer-care SMS messages from FluffyTail Shih Tzu at the phone number provided about my puppy inquiry, puppy availability, scheduling, and next steps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out and HELP for help. Consent is not a condition of purchase. See our <Link href="/privacy-policy">Privacy Policy</Link> and <Link href="/terms-and-conditions">Terms and Conditions</Link>.</span>
       </label> : null}
-      {!textRequested ? <p>See our <Link href="/privacy-policy">Privacy Policy</Link> and <Link href="/terms-and-conditions">Terms and Conditions</Link>.</p> : null}
+      {!textRequested ? <p className="inquiry-policy-links">See our <Link href="/privacy-policy">Privacy Policy</Link> and <Link href="/terms-and-conditions">Terms and Conditions</Link>.</p> : null}
       <div className="inquiry-honeypot" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
-      {error ? <p className="inquiry-error" role="alert">{error}</p> : null}
+      {error ? <div className="inquiry-error" role="alert" tabIndex={-1} ref={feedbackRef}>{error}</div> : null}
       <button type="submit" className="btn btnPrimary" disabled={busy || !token}>{busy ? 'Submitting...' : 'Send inquiry'}</button>
     </form>
   )

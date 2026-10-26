@@ -1,4 +1,6 @@
 import '../home.css'
+import '../content.css'
+import Link from 'next/link'
 import {getInventory} from '@/sanity/lib/inventory'
 import {formatCurrency, normalizeLitterStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
@@ -15,116 +17,29 @@ export default async function PricingPage() {
   const prices = quotes.flatMap(quote => quote ? [quote.totalCents / 100] : [])
   const range = prices.length ? [Math.min(...prices), Math.max(...prices)] : []
   const priceText = range.length ? range[0] === range[1] ? formatCurrency(range[0], true) : range.map(value => formatCurrency(value, true)).join(' to ') : 'Please contact FluffyTail to confirm pricing'
+  const deposits = quotes.flatMap(quote => quote ? [quote.depositCents / 100] : [])
+  const depositRange = deposits.length ? [Math.min(...deposits), Math.max(...deposits)] : []
+  const depositText = depositRange.length ? depositRange[0] === depositRange[1] ? formatCurrency(depositRange[0], true) : depositRange.map(value => formatCurrency(value, true)).join(' to ') : 'Please contact FluffyTail to confirm the deposit'
   return (
-    <main className="wrap">
-
-      <div className="topbar">
-        <div className="pill">
-          <span className="dot"></span>
-          Pricing, deposits, and next steps
-        </div>
-      </div>
-
-      <h1 className="h1">Pricing & Process</h1>
-
-      <p className="lead">
-        We want the process to feel straightforward. This page gives a general overview of pricing,
-        deposits, and what to expect when you are interested in a FluffyTail puppy.
-      </p>
-
-      <div className="grid">
-        <div className="card">
-          <div className="pad">
-            <div className="section" style={{marginTop: 0}}>
-              <h2>General pricing</h2>
-              <p className="lead">
-                Current and upcoming litter pricing: <strong>{priceText}</strong>.
-              </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                Final pricing may vary by litter, timing, and individual puppy details.
-              </p>
-            </div>
-
-            <div className="divider"></div>
-
-            <div className="section">
-              <h2>Deposit</h2>
-              <p className="lead">
-                The <strong>deposit shown on each puppy page</strong> is included as part of the overall puppy price.
-              </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                Once a puppy is marked reserved, that means a deposit has typically been placed for that puppy.
-              </p>
-            </div>
-
-            <div className="divider"></div>
-
-            <div className="section">
-              <h2>How the process works</h2>
-              <div className="qa">
-                <div>
-                  <div className="q">1. Browse or inquire</div>
-                  <div className="a">
-                    Start by browsing active litters and puppy pages, then request info if a puppy catches your eye.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">2. Ask questions</div>
-                  <div className="a">
-                    We encourage families to ask about availability, timing, fit, and next steps before making a decision.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">3. Reserve a puppy</div>
-                  <div className="a">
-                    When a puppy is selected and the deposit is placed, that puppy will be marked reserved on the site.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="pad">
-            <h2 className="panelTitle">At a glance</h2>
-            <div className="meta">
-              <span>Current prices: {priceText}</span>
-              <span>📌 Deposit: See the individual puppy page</span>
-              <span>🐶 Reserved status shown on puppy listings</span>
-              <span>📬 Questions welcome before committing</span>
-            </div>
-
-            <div className="divider"></div>
-
-            <p className="lead" style={{margin: 0}}>
-              If you are interested in a specific puppy, the best next step is to use that puppy’s inquiry button.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="card section" style={{marginTop: '18px'}}>
-        <div className="pad">
-          <h2 style={{marginTop: 0}}>Ready to take the next step?</h2>
-          <p className="lead">
-            Browse current puppies, review active litters, or contact us with questions.
-          </p>
-
-          <div className="ctaRow">
-            <a className="btn" href="/available-puppies">
-              View Available Puppies
-            </a>
-            <a className="btn" href="/upcoming-litters">
-              View Upcoming Litters
-            </a>
-            <a className="btn btnPrimary" href="/contact">
-              Contact
-            </a>
-          </div>
-        </div>
-      </div>
-
+    <main className="wrap content-page">
+      <header className="content-intro"><p className="eyebrow">From hello to home</p><h1 className="h1">Pricing & Process</h1><p className="lead">We want the process to feel straightforward.</p></header>
+      <section className="pricing-overview">
+        <div><h2>General pricing</h2><p>Current and upcoming litter pricing: <strong className="pricing-range">{priceText}</strong></p><p>Final pricing may vary by litter, timing, and individual puppy details.</p></div>
+        <div><h2>Deposit</h2><p>Current and upcoming litter deposits: <strong className="pricing-range">{depositText}</strong></p><p>The deposit is applied toward the total puppy price, not added on top. See each puppy page for its exact price and deposit.</p><p>Once a puppy is marked reserved, that means a deposit has typically been placed for that puppy.</p></div>
+      </section>
+      <section className="pricing-process">
+        <h2>How the process works</h2>
+        <ol className="pricing-steps">
+          <li><h3>Browse or inquire</h3><p>Start by browsing active litters and puppy pages, then request info if a puppy catches your eye.</p></li>
+          <li><h3>Ask questions</h3><p>We encourage families to ask about availability, timing, fit, and next steps before making a decision.</p></li>
+          <li><h3>Reserve a puppy</h3><p>When a puppy is selected and the deposit is placed, that puppy will be marked reserved on the site.</p></li>
+        </ol>
+      </section>
+      <section className="content-next">
+        <h2>Ready to take the next step?</h2>
+        <p>Browse current puppies, review active litters, or contact us with questions.</p>
+        <div className="ctaRow"><Link className="brand-button" href="/available-puppies">Meet our puppies <span aria-hidden="true">&rarr;</span></Link><Link className="text-link" href="/upcoming-litters">Upcoming litters <span aria-hidden="true">&rarr;</span></Link><Link className="text-link" href="/contact">Contact Jeanne <span aria-hidden="true">&rarr;</span></Link></div>
+      </section>
     </main>
   )
 }

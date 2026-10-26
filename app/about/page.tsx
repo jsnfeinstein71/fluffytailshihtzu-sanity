@@ -1,32 +1,32 @@
 import '../home.css'
+import '../content.css'
+import {getInventory} from '@/sanity/lib/inventory'
+import {getLittersByStatus} from '@/lib/inventory'
 
 export const revalidate = 60
 export const metadata = {title: 'About', alternates: {canonical: '/about'}}
 import {client} from '@/sanity/lib/client'
 
 type SiteSettings = {
-  homepageIntro?: string
   serviceArea?: string
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  homepageIntro,
   serviceArea
 }`
 
 export default async function AboutPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}})
+  const [siteSettings, {litters}] = await Promise.all([
+    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}),
+    getInventory(),
+  ])
+  const photo = getLittersByStatus(litters, 'current').find(litter => litter.groupPhotoUrl)?.groupPhotoUrl
 
   return (
-    <main className="wrap">
+    <main className="wrap content-page">
 
-      <div className="topbar">
-        <div className="pill">
-          <span className="dot"></span>
-          Small home-based breeder
-        </div>
-      </div>
-
+      <header className="content-intro">
+      <p className="eyebrow">Small home-based breeder</p>
       <h1 className="h1">About FluffyTail Shih Tzu</h1>
 
       <p className="lead">
@@ -39,8 +39,10 @@ export default async function AboutPage() {
           'Primarily serving the Southeast, with approved homes beyond the region.'}
       </p>
 
-      <div className="grid">
-        <div className="card">
+      </header>
+      <div className={`grid${photo ? ' content-has-photo' : ''}`}>
+        {photo ? <figure className="content-photo"><img src={photo} alt="A FluffyTail Shih Tzu" loading="eager" decoding="async" /><figcaption>From our FluffyTail family.</figcaption></figure> : null}
+        <div className="card content-copy">
           <div className="pad">
             <div className="section" style={{marginTop: 0}}>
               <h2>Our approach</h2>
@@ -105,31 +107,16 @@ export default async function AboutPage() {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card content-aside">
           <div className="pad">
             <h2 className="panelTitle">At a glance</h2>
-            <div className="meta">
-              <span>📍 Mobile, Alabama area</span>
-              <span>🏠 In-home raised</span>
-              <span>🐶 Small breeder, not a kennel</span>
-              <span>🌎 Southeast and beyond</span>
-            </div>
+            <ul className="content-facts">
+              <li>Mobile, Alabama area</li>
+              <li>In-home raised</li>
+              <li>Small breeder, not a kennel</li>
+              <li>Southeast and beyond</li>
+            </ul>
 
-            <div className="ctaRow">
-              <a className="btn btnPrimary" href="/available-puppies">
-                View Available Puppies
-              </a>
-              <a className="btn" href="/contact">
-                Contact
-              </a>
-            </div>
-
-            <div className="divider"></div>
-
-            <p className="lead" style={{margin: 0}}>
-              {siteSettings?.homepageIntro ||
-                'FluffyTail Shih Tzu is a small, home-based breeder in Alabama.'}
-            </p>
           </div>
         </div>
       </div>
@@ -142,13 +129,13 @@ export default async function AboutPage() {
             questions.
           </p>
           <div className="ctaRow">
-            <a className="btn btnPrimary" href="/available-puppies">
+            <a className="brand-button" href="/available-puppies">
               View Available Puppies
             </a>
-            <a className="btn" href="/the-breed">
+            <a className="text-link" href="/the-breed">
               About the Breed
             </a>
-            <a className="btn" href="/contact">
+            <a className="text-link" href="/contact">
               Contact FluffyTail
             </a>
           </div>

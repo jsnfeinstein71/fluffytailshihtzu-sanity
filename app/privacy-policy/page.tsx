@@ -1,4 +1,5 @@
 import '../home.css'
+import '../content.css'
 import Link from 'next/link'
 
 export const metadata = {
@@ -9,7 +10,7 @@ export const metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="wrap">
+    <main className="wrap legal-page">
 
       <div className="card">
         <div className="pad">

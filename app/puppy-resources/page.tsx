@@ -1,27 +1,30 @@
 import '../home.css'
+import '../content.css'
+import {getInventory} from '@/sanity/lib/inventory'
+import {getLittersByStatus, getPuppiesForLitter} from '@/lib/inventory'
 
 export const metadata = {title: 'Puppy Resources', alternates: {canonical: '/puppy-resources'}}
 
-export default function PuppyResourcesPage() {
+export default async function PuppyResourcesPage() {
+  const {litters, puppies} = await getInventory()
+  const current = getLittersByStatus(litters, 'current')[0]
+  const members = current ? getPuppiesForLitter(puppies, current._id) : []
+  const featured = members.find(puppy => puppy.status === 'available' && puppy.photoUrl) || members.find(puppy => puppy.photoUrl)
   return (
-    <main className="wrap">
-
-      <div className="topbar">
-        <div className="pill">
-          <span className="dot"></span>
-          Helpful puppy information
-        </div>
-      </div>
+    <main className="wrap content-page">
+      <header className="content-intro">
+      <p className="eyebrow">A happy start at home</p>
 
       <h1 className="h1">Puppy Resources</h1>
 
       <p className="lead">
-        Bringing home a puppy is exciting, and a little preparation goes a long way. This page is
-        here to help families think through the basics before pickup and during the first days at home.
+        Bringing home a puppy is exciting, and a little preparation goes a long way.
       </p>
+      </header>
 
-      <div className="grid">
-        <div className="card">
+      <div className={`grid${featured?.photoUrl ? ' content-has-photo' : ''}`}>
+        {featured?.photoUrl ? <figure className="content-photo"><img src={featured.photoUrl} alt={featured.name || 'A FluffyTail puppy'} loading="eager" decoding="async" /></figure> : null}
+        <div className="card content-copy">
           <div className="pad">
             <div className="section" style={{marginTop: 0}}>
               <h2>Before your puppy comes home</h2>
@@ -93,16 +96,16 @@ export default function PuppyResourcesPage() {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card content-aside">
           <div className="pad">
             <h2 className="panelTitle">Quick checklist</h2>
-            <div className="meta">
-              <span>🛏️ Crate and bedding</span>
-              <span>🍽️ Food and bowls</span>
-              <span>🧸 Puppy-safe toys</span>
-              <span>🪮 Brush and grooming basics</span>
-              <span>🦴 Patience and routine</span>
-            </div>
+            <ul className="content-facts">
+              <li>Crate and bedding</li>
+              <li>Food and bowls</li>
+              <li>Puppy-safe toys</li>
+              <li>Brush and grooming basics</li>
+              <li>Patience and routine</li>
+            </ul>
 
             <div className="divider"></div>
 
@@ -122,13 +125,13 @@ export default function PuppyResourcesPage() {
           </p>
 
           <div className="ctaRow">
-            <a className="btn" href="/available-puppies">
+            <a className="brand-button" href="/available-puppies">
               View Available Puppies
             </a>
-            <a className="btn" href="/upcoming-litters">
+            <a className="text-link" href="/upcoming-litters">
               View Upcoming Litters
             </a>
-            <a className="btn btnPrimary" href="/contact">
+            <a className="text-link" href="/contact">
               Contact
             </a>
           </div>

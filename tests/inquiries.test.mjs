@@ -319,6 +319,47 @@ test('legacy puppy links resolve native context without loading user-supplied UR
   await assert.rejects(() => InquiryPage({searchParams: Promise.resolve({puppySlug: 'missing'})}), error => error.digest === 'NEXT_HTTP_ERROR_FALLBACK;404')
 })
 
+test('native form presents server-selected puppy/photo context and defaults to email without requiring SMS', async () => {
+  docs.push({_id: 'portrait', _type: 'sanity.imageAsset', url: '/original-fixture-puppy.jpg'})
+  docs.find(doc => doc._type === 'puppy').mainImage = {asset: {_ref: 'portrait'}}
+  const html = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({puppySlug: 'puppy', puppy: 'Forged name', litter: 'Forged litter', puppyPhotoUrl: 'https://attacker.test/image.jpg'})}))
+  for (const text of ['Fixture Puppy', 'Litter: Fixture Litter', '/original-fixture-puppy.jpg', 'How should Jeanne reply?', 'Privacy Policy', 'Terms and Conditions']) assert.ok(html.includes(text), text)
+  for (const field of ['name', 'email', 'phone', 'message', 'preferredContactMethod', 'website']) assert.ok(html.includes(`name="${field}"`), field)
+  assert.match(html, /<input(?=[^>]*name="preferredContactMethod")(?=[^>]*value="Email")(?=[^>]*checked="")[^>]*>/)
+  assert.doesNotMatch(html.match(/<input[^>]*name="phone"[^>]*>/)[0], /required/)
+  assert.doesNotMatch(html, /name="smsConsent"|<aside|<iframe|Forged|attacker.test/)
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""/)
+})
+
+test('general and future-interest form presentation remains native without an invented puppy selection', async () => {
+  const future = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({interest: 'waitlist'})}))
+  assert.match(future, /Ask about future puppies\./)
+  assert.match(future, /I would like to hear about future puppies and upcoming litters\./)
+  const general = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({})}))
+  assert.match(general, /Say hello to Jeanne\./)
+  for (const html of [future, general]) {
+    assert.doesNotMatch(html, /class="inquiry-context"|name="smsConsent"|<iframe|<aside/)
+    for (const method of ['Email', 'Text', 'Either']) assert.ok(html.includes(`value="${method}"`), method)
+  }
+})
+
+test('Contact starts empty with a placeholder while future-litter links retain their contextual message', async () => {
+  const {default: Contact} = await import('../app/contact/page.tsx')
+  docs.push({_id: 'settings', _type: 'siteSettings', goodDogUrl: 'https://www.gooddog.com/breeders/fixture'})
+  const html = renderToStaticMarkup(await Contact())
+  assert.match(html, /Contact Jeanne/)
+  assert.equal((html.match(/<form\b/g) || []).length, 1)
+  assert.match(html, /placeholder="Tell Jeanne how she can help\."/)
+  assert.match(html, /<textarea[^>]*name="message"[^>]*required=""><\/textarea>/)
+  assert.doesNotMatch(html, /I would like to hear about future puppies and upcoming litters/)
+  assert.match(html, /href="https:\/\/www.gooddog.com\/breeders\/fixture"/)
+  assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
+  assert.doesNotMatch(html, /name="smsConsent"|<iframe|class="inquiry-context"/)
+  const future = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({interest: 'waitlist'})}))
+  assert.match(future, /I would like to hear about future puppies and upcoming litters\.<\/textarea>/)
+  assert.doesNotMatch(future, /placeholder="Tell Jeanne how she can help/)
+})
+
 test('retired Tally callback returns 410 and performs no record or notification work', async () => {
   assert.equal((await retired(inquiryRequest())).status, 410)
   assert.equal(leads().length, 0)

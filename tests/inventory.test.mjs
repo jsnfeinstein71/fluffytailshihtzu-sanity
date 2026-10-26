@@ -17,6 +17,26 @@ const render = async (Component, props = {}) => renderToStaticMarkup(await Compo
 const litter = (id, status = 'current', extra = {}) => ({_id: id, _type: 'litter', title: id, status, birthDate: '2026-10-01', ...extra})
 const puppy = (id, litterId, status = 'available', extra = {}) => ({_id: id, _type: 'puppy', name: id, slug: {current: id}, litter: {_ref: litterId}, status, sex: 'female', ...extra})
 
+test('approved homepage introduction appears locally without overriding the production CMS headline', async () => {
+  const previousEnv = process.env.NODE_ENV
+  try {
+    dataset = [{_id: 'settings', _type: 'siteSettings', homepageHeadline: 'CMS-managed headline'}]
+    process.env.NODE_ENV = 'development'
+    const preview = await render(Home)
+    assert.match(preview, /<h2>Raised With Love, Welcomed Into Your Family\.<\/h2>/)
+    assert.doesNotMatch(preview, /CMS-managed headline/)
+    process.env.NODE_ENV = 'production'
+    const production = await render(Home)
+    assert.match(production, /<h2>CMS-managed headline<\/h2>/)
+    assert.doesNotMatch(production, /IMG_6731/)
+    dataset = []
+    assert.match(await render(Home), /<h2>Raised With Love, Welcomed Into Your Family\.<\/h2>/)
+  } finally {
+    if (previousEnv === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = previousEnv
+  }
+})
+
 test('zero, one and three active litters render in oldest-first order, with only their own puppies', async () => {
   for (const size of [0, 1, 3]) {
     dataset = Array.from({length: size}, (_, i) => litter('l' + i, i % 2 ? 'active' : 'current', {birthDate: `2026-10-0${3 - i}`}))
@@ -38,6 +58,62 @@ test('manual sort overrides the date, unnumbered litters stay oldest first, and 
   const litters = [litter('new', 'current', {birthDate: '2026-10-20'}), litter('old', 'current', {birthDate: '2026-10-01'}), litter('manual', 'current', {birthDate: '2026-10-25', sortOrder: 0})]
   assert.deepEqual(rules.sortLitters(litters).map(x => x._id), ['manual', 'old', 'new'])
   assert.equal(litters[0]._id, 'new')
+})
+
+test('browsing keeps three current litters separate, with all statuses and server-managed default/override prices', async () => {
+  dataset = [
+    ...Array.from({length: 3}, (_, i) => litter('litter-' + i, i === 1 ? 'active' : 'current', {price: 1600 + i * 100, deposit: i === 1 ? 500 : 400})),
+    ...Array.from({length: 3}, (_, i) => ['available', 'hold', 'reserved'].map(status => puppy(`${i}-${status}`, 'litter-' + i, status, {overridePrice: status === 'available' ? 2000 + i * 100 : null, color: 'Cream and White'}))).flat(),
+    litter('old', 'past'), puppy('old-available', 'old'),
+    litter('future', 'planned'), puppy('future-available', 'future'),
+  ]
+  const html = await render(Available)
+  assert.match(html, /3 active litters/)
+  assert.match(html, /3 available puppies/)
+  const sections = [...html.matchAll(/<section class="available-litter"[^>]*data-litter-id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)]
+  assert.equal(sections.length, 3)
+  for (const [index, [, id, section]] of sections.entries()) {
+    assert.equal(id, 'litter-' + index)
+    for (const status of ['available', 'hold', 'reserved']) assert.equal((section.match(new RegExp(`data-puppy-id="${index}-${status}"`, 'g')) || []).length, 1)
+    assert.equal((section.match(/View puppy/g) || []).length, 3)
+    assert.match(section, /The deposit is included in the total/)
+    assert.match(section, /Ready from Nov 26/)
+    assert.ok(section.includes(index === 1 ? '$500' : '$400'))
+    assert.ok(section.includes(['$2,000', '$2,100', '$2,200'][index]))
+  }
+  assert.doesNotMatch(html, /data-puppy-id="future-available"/)
+})
+
+test('past litters retain photos, metadata and original puppy relationships in closed native disclosures', async () => {
+  dataset = [
+    {_id: 'archive-image', _type: 'sanity.imageAsset', url: '/original-archive.jpg'},
+    litter('archive', 'past', {title: 'Historical litter', price: 1500, deposit: 300, summary: 'Historical summary', groupPhoto: {asset: {_ref: 'archive-image'}}}),
+    puppy('past-reserved', 'archive', 'reserved'), puppy('past-home', 'archive', 'gone-home'),
+  ]
+  const html = await render(Available)
+  assert.match(html, /<details class="available-past-litter"[^>]*data-past-litter-id="archive"/)
+  assert.doesNotMatch(html, /<details[^>]*\bopen(?:=|\s|>)/)
+  for (const text of ['/original-archive.jpg', 'Historical summary', '$1,500', '$300', 'Past litters']) assert.ok(html.includes(text), text)
+  for (const id of ['past-reserved', 'past-home']) assert.equal((html.match(new RegExp(`data-puppy-id="${id}"`, 'g')) || []).length, 1)
+  assert.doesNotMatch(html, /available-count/)
+})
+
+test('browsing handles empty litters and invalid pricing without invented dates or amounts', async () => {
+  dataset = [litter('empty', 'current', {birthDate: null}), litter('invalid', 'current', {birthDate: null, price: 0, deposit: 400}), puppy('invalid-price', 'invalid')]
+  const html = await render(Available)
+  assert.match(html, /No puppies listed yet for this litter/)
+  assert.match(html, /Birth date to be confirmed/)
+  assert.match(html, /Ask Jeanne about pricing/)
+  assert.match(html, /href="\/puppies\/invalid-price"/)
+  assert.doesNotMatch(html, /\$0|\$400|Ready from|Total puppy price/)
+  dataset = [litter('exact-cents', 'current', {price: 1600.5, deposit: 400.25}), puppy('exact-cents-puppy', 'exact-cents')]
+  const cents = await render(Available)
+  assert.match(cents, /\$1,600\.50/)
+  assert.match(cents, /\$400\.25/)
+  dataset = []
+  const empty = await render(Available)
+  assert.match(empty, /No active litters listed/)
+  assert.match(empty, /href="\/upcoming-litters"/)
 })
 
 test('every puppy status stays once in its original litter; only available accepts an inquiry', async () => {
@@ -72,7 +148,7 @@ test('expected litter appears before birth with image/summary fallbacks, parents
     litter('expected', 'planned', {birthDate: null, expectedBirthDate: '2026-11-12', heroImage: {asset: {_ref: 'image'}}, description: 'Expected summary', expectedAvailability: 'Ready early January', sire: {_ref: 'sire'}, dam: {_ref: 'dam'}}),
   ]
   const html = await render(Upcoming)
-  for (const text of ['expected', 'Expected Nov 12', '/fixture-photo.png', 'Expected summary', 'Ready early January', 'Sire Name', 'Dam Name']) assert.ok(html.includes(text), text)
+  for (const text of ['expected', 'Expected birth', 'November 12, 2026', '/fixture-photo.png', 'Expected summary', 'Ready early January', 'Sire Name', 'Dam Name', 'Mother', 'Father']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /Born Nov 12/)
   dataset.find(x => x._id === 'expected').status = 'current'
   dataset.find(x => x._id === 'expected').birthDate = '2026-11-10'
@@ -82,10 +158,115 @@ test('expected litter appears before birth with image/summary fallbacks, parents
 
 test('legacy expected dates work, but are not treated as actual puppy birthdays', async () => {
   dataset = [litter('legacy', 'upcoming', {birthDate: '2026-11-12'}), puppy('not-born', 'legacy')]
-  assert.match(await render(Upcoming), /Expected Nov 12/)
+  assert.match(await render(Upcoming), /Expected birth[\s\S]*November 12, 2026/)
   const inventory = await getInventory()
   assert.equal(inventory.puppies[0].birthDate, null)
   assert.equal(rules.canInquireAboutPuppy(inventory.puppies[0]), false)
+})
+
+test('upcoming page features sorted expected litters before a separate active group and preserves image sources', async () => {
+  dataset = [
+    {_id: 'announcement', _type: 'sanity.imageAsset', url: '/original-announcement.png'},
+    litter('late', 'planned', {birthDate: null, expectedBirthDate: '2026-12-01', heroImage: {asset: {_ref: 'announcement'}}}),
+    litter('early', 'upcoming', {birthDate: '2026-11-01'}),
+    litter('manual', 'planned', {expectedBirthDate: '2027-01-01', sortOrder: 0}),
+    litter('born', 'current'), litter('born-legacy', 'active'), litter('past', 'past'),
+    litter('hidden-expected', 'planned', {isVisible: false}), litter('drafts.expected', 'planned'),
+  ]
+  const html = await render(Upcoming)
+  const expectedIds = [...html.matchAll(/<section class="expected-litter"[^>]*data-litter-id="([^"]+)"/g)].map(x => x[1])
+  assert.deepEqual(expectedIds, ['manual', 'early', 'late'])
+  assert.ok(html.indexOf('data-litter-id="late"') < html.indexOf('data-litter-id="born"'))
+  assert.match(html, /class="upcoming-current"[^>]*aria-labelledby="current-litters-title"/)
+  assert.match(html, /data-litter-id="born-legacy"/)
+  assert.match(html, /src="\/original-announcement.png"/)
+  assert.match(html, /<dt>Expected birth<\/dt><dd>November 1, 2026<\/dd>/)
+  assert.match(html, /Active/)
+  assert.doesNotMatch(html, /data-litter-id="(?:past|hidden-expected|drafts.expected)"/)
+})
+
+test('upcoming missing content remains honest and inquiry links use the existing native waitlist', async () => {
+  dataset = [litter('pending', 'planned', {birthDate: null, expectedBirthDate: null, price: 0, deposit: 400})]
+  const html = await render(Upcoming)
+  for (const text of ['Date to be confirmed', 'Announcement coming soon']) assert.ok(html.includes(text), text)
+  assert.doesNotMatch(html, /class="expected-parents"|The parents|Parent details to come/)
+  assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
+  assert.doesNotMatch(html, /\$0|\$400|Ready |Default puppy price|<iframe|tally.so|class="upcoming-current"/)
+  dataset = []
+  const empty = await render(Upcoming)
+  assert.match(empty, /No upcoming litters listed yet/)
+  assert.match(empty, /href="\/puppy-inquiry\?interest=waitlist"/)
+  dataset = [litter('current-only')]
+  const currentOnly = await render(Upcoming)
+  assert.match(currentOnly, /No upcoming litters listed yet/)
+  assert.match(currentOnly, /Our current litters/)
+  assert.match(currentOnly, /href="\/available-puppies"/)
+})
+
+test('upcoming pricing and partial parent details come from Sanity without invented availability', async () => {
+  dataset = [
+    {_id: 'mother', _type: 'dog', name: 'Synthetic Mother'},
+    litter('quoted', 'planned', {price: 1800.5, deposit: 500.25, dam: {_ref: 'mother'}, expectedAvailability: 'Expected homecoming in February'}),
+  ]
+  const html = await render(Upcoming)
+  for (const text of ['$1,800.50', '$500.25', 'The deposit is included in the total.', 'Synthetic Mother', 'Expected homecoming in February']) assert.ok(html.includes(text), text)
+  assert.doesNotMatch(html, /\$400|Parent details to come|Name to be confirmed|<dt>Father<\/dt>/)
+  dataset[1].expectedAvailability = null
+  assert.doesNotMatch(await render(Upcoming), /Expected homecoming in February/)
+})
+
+test('upcoming parent section renders only available names/photos and hides empty references', async () => {
+  dataset = [
+    {_id: 'parent-image', _type: 'sanity.imageAsset', url: '/original-parent.jpg'},
+    {_id: 'parent', _type: 'dog', mainImage: {asset: {_ref: 'parent-image'}}},
+    litter('parents', 'planned', {dam: {_ref: 'parent'}}),
+  ]
+  const photoOnly = await render(Upcoming)
+  assert.match(photoOnly, /class="expected-parents"/)
+  assert.match(photoOnly, /<dt>Mother<\/dt>/)
+  assert.match(photoOnly, /src="\/original-parent.jpg"/)
+  assert.match(photoOnly, /alt="Mother"/)
+  assert.doesNotMatch(photoOnly, /Name to be confirmed|<dt>Father<\/dt>/)
+  dataset[1].mainImage = null
+  dataset[1].name = '   '
+  assert.doesNotMatch(await render(Upcoming), /class="expected-parents"|The parents/)
+  dataset[1].name = 'Synthetic Mother'
+  const nameOnly = await render(Upcoming)
+  assert.match(nameOnly, /class="expected-parents"/)
+  assert.match(nameOnly, /Synthetic Mother/)
+  assert.doesNotMatch(nameOnly, /Name to be confirmed|<dt>Father<\/dt>|original-parent.jpg/)
+})
+
+test('puppy detail presents original photo, labeled facts, exact override pricing and native inquiry context', async () => {
+  dataset = [
+    {_id: 'portrait', _type: 'sanity.imageAsset', url: '/original-puppy.jpg'},
+    litter('detail-litter', 'current', {title: 'Synthetic litter', birthDate: '2026-10-17', price: 1600, deposit: 400}),
+    puppy('detail-puppy', 'detail-litter', 'available', {name: 'Synthetic puppy', color: 'Cream and White', summary: 'A Sanity note.', overridePrice: 2000.5, mainImage: {asset: {_ref: 'portrait'}}}),
+  ]
+  const html = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
+  for (const text of ['Synthetic puppy', 'Litter: Synthetic litter', '/original-puppy.jpg', 'A Sanity note.', '$2,000.50', '$400.00', '$1,600.50', 'The deposit is applied toward the total puppy price, not added on top.']) assert.ok(html.includes(text), text)
+  assert.match(html, /<dt>Sex<\/dt><dd>Female<\/dd>/)
+  assert.match(html, /<dt>Color<\/dt><dd>Cream and White<\/dd>/)
+  assert.match(html, /<dt>Ready from<\/dt><dd>Dec 12<\/dd>/)
+  assert.match(html, /loading="eager" fetchPriority="high" decoding="async"/)
+  const href = html.match(/href="([^\"]*\/puppy-inquiry\?[^\"]*)"/)[1].replaceAll('&amp;', '&')
+  const query = new URL(href, 'https://example.test').searchParams
+  assert.equal(query.get('puppySlug'), 'detail-puppy')
+  assert.equal(query.get('puppy'), 'Synthetic puppy')
+  assert.equal(query.get('litter'), 'Synthetic litter')
+  assert.equal((html.match(/Request Info About This Puppy/g) || []).length, 1)
+})
+
+test('puppy detail retains the reservation gate and does not invent missing facts or prices', async () => {
+  dataset = [litter('detail-litter', 'current', {birthDate: null, price: 0, deposit: 400}), puppy('detail-puppy', 'detail-litter', 'reserved', {sex: null, name: null})]
+  const html = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
+  for (const text of ['Reserved', 'Unnamed puppy', 'Photo to come', 'To be confirmed', 'Please contact FluffyTail to confirm pricing before payment.', 'not currently available for a new reservation']) assert.ok(html.includes(text), text)
+  assert.match(html, /href="\/contact"/)
+  assert.doesNotMatch(html, /Request Info About This Puppy|Total puppy price|Final payment|\$0|\$400|<dt>Age<\/dt>|<dt>Ready from<\/dt>|<dt>Color<\/dt>/)
+  dataset[1].status = 'available'
+  const available = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
+  assert.match(available, /Request Info About This Puppy/)
+  assert.doesNotMatch(available, /Total puppy price|\$0/)
 })
 
 test('published queries hide drafts, releases, explicitly hidden records and hidden/unpublished parents', async () => {
@@ -149,4 +330,81 @@ test('public routes render and only Contact offers waitlist and GoodDog actions'
       assert.doesNotMatch(html, /<iframe|tally.so/)
     }
   }
+})
+
+test('remaining editorial pages reuse published Sanity photography and handle empty inventory', async () => {
+  const {default: About} = await import('../app/about/page.tsx')
+  const {default: Breed} = await import('../app/the-breed/page.tsx')
+  const {default: Resources} = await import('../app/puppy-resources/page.tsx')
+  dataset = [
+    {_id: 'adult-image', _type: 'sanity.imageAsset', url: '/original-adult.jpg'},
+    {_id: 'puppy-image', _type: 'sanity.imageAsset', url: '/original-puppy.jpg'},
+    litter('current-photo', 'current', {groupPhoto: {asset: {_ref: 'adult-image'}}}),
+    puppy('featured', 'current-photo', 'available', {mainImage: {asset: {_ref: 'puppy-image'}}}),
+  ]
+  for (const Page of [About, Breed]) {
+    const html = await render(Page)
+    assert.match(html, /class="content-photo"/)
+    assert.match(html, /src="\/original-adult.jpg"/)
+  }
+  assert.match(await render(Resources), /src="\/original-puppy.jpg"/)
+  dataset = []
+  for (const Page of [About, Breed, Resources]) {
+    const html = await render(Page)
+    assert.match(html, /class="wrap content-page"/)
+    assert.doesNotMatch(html, /class="content-photo"|src="undefined"/)
+    assert.match(html, /href="\/available-puppies"/)
+  }
+})
+
+test('pricing overview retains Sanity ranges, puppy overrides and invalid-price fallback', async () => {
+  const {default: Pricing} = await import('../app/pricing/page.tsx')
+  dataset = [
+    litter('current', 'current', {price: 1600, deposit: 400}),
+    litter('expected', 'planned', {price: 1800, deposit: 500}),
+    litter('past', 'past', {price: 9000, deposit: 300}),
+    puppy('override', 'current', 'available', {overridePrice: 2100.25}),
+  ]
+  const html = await render(Pricing)
+  assert.match(html, /\$1,600\.00 to \$2,100\.25/)
+  assert.doesNotMatch(html, /\$9,000/)
+  assert.match(html, /\$400\.00 to \$500\.00/)
+  assert.match(html, /The deposit is applied toward the total puppy price, not added on top/)
+  assert.doesNotMatch(html, /\$300/)
+  assert.match(html, /<ol class="pricing-steps">/)
+  dataset = [litter('invalid', 'current', {price: 0, deposit: 400})]
+  const invalid = await render(Pricing)
+  assert.match(invalid, /Please contact FluffyTail to confirm pricing/)
+  assert.doesNotMatch(invalid, /\$0|\$400/)
+  assert.match(invalid, /Please contact FluffyTail to confirm the deposit/)
+})
+
+test('pricing shows the configured litter deposit beside its price without hardcoded amounts', async () => {
+  const {default: Pricing} = await import('../app/pricing/page.tsx')
+  dataset = [litter('current', 'current', {price: 1600, deposit: 400})]
+  const html = await render(Pricing)
+  assert.match(html, /General pricing[\s\S]*\$1,600\.00[\s\S]*<h2>Deposit<\/h2>[\s\S]*\$400\.00/)
+  assert.equal((html.match(/<li><h3>/g) || []).length, 3)
+  dataset = [litter('updated', 'current', {price: 1850.5, deposit: 450.25})]
+  const updated = await render(Pricing)
+  assert.match(updated, /\$1,850\.50/)
+  assert.match(updated, /\$450\.25/)
+  assert.doesNotMatch(updated, /\$1,600|\$400/)
+})
+
+test('About preserves Jeanne and the original photo without duplicate browsing actions or sidebar introduction', async () => {
+  const {default: About} = await import('../app/about/page.tsx')
+  dataset = [
+    {_id: 'photo', _type: 'sanity.imageAsset', url: '/unchanged-adult.jpg'},
+    litter('current', 'current', {groupPhoto: {asset: {_ref: 'photo'}}}),
+    {_id: 'settings', _type: 'siteSettings', homepageIntro: 'Redundant sidebar copy.', serviceArea: 'Synthetic service area'},
+  ]
+  const html = await render(About)
+  assert.match(html, /About Jeanne/)
+  assert.match(html, /Jeanne is at the heart of FluffyTail/)
+  assert.match(html, /src="\/unchanged-adult.jpg"/)
+  assert.match(html, /Synthetic service area/)
+  assert.match(html, /At a glance/)
+  assert.doesNotMatch(html, /Redundant sidebar copy/)
+  assert.equal((html.match(/href="\/available-puppies"/g) || []).length, 1)
 })

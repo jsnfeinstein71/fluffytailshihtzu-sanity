@@ -1,0 +1,47 @@
+.available-page .available-intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; padding-bottom: 30px; }
+.available-page .available-intro .h1 { margin: 0 0 14px; }
+.available-page .available-intro .lead { margin: 0; max-width: 52ch; color: var(--brand-muted); }
+.available-page .available-count { display: grid; gap: 3px; flex-shrink: 0; margin: 0 0 3px; padding-left: 22px; border-left: 2px solid var(--brand-champagne); font-size: 14px; color: var(--brand-brown); }
+.available-page .available-count span + span { color: var(--brand-muted); }
+.available-page .available-litter { padding-top: 26px; margin-bottom: 52px; border-top: 1px solid var(--brand-champagne); }
+.available-page .available-litter-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 40px; align-items: start; }
+.available-page .available-litter h2 { font-size: 34px; margin: 0 0 12px; }
+.available-page .available-litter-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; padding: 0; margin: 0; color: var(--brand-muted); font-size: 14px; }
+.available-page .available-litter-summary { margin: 14px 0 0; max-width: 64ch; color: var(--brand-muted); }
+.available-page .available-litter-pricing { padding-left: 26px; border-left: 1px solid var(--brand-line); }
+.available-page .available-litter-pricing dl { display: flex; gap: 28px; margin: 0; }
+.available-page .available-litter-pricing dt { font-size: 12px; color: var(--brand-muted); }
+.available-page .available-litter-pricing dd { margin: 2px 0 0; color: var(--brand-brown); font-size: 22px; line-height: 1.4; }
+.available-page .available-litter-pricing p { margin: 8px 0 0; font-size: 12px; color: var(--brand-muted); }
+.available-page .puppy-card-footer > span:first-child { font-size: 20px; line-height: 1.4; }
+.available-page .puppy-card-price-label { display: block; font-size: 12px; color: var(--brand-muted); margin-bottom: 3px; }
+.available-page .puppy-card-footer > span:last-child { white-space: nowrap; }
+.available-page .available-empty, .available-page .available-archive { border-top: 1px solid var(--brand-line); padding-top: 28px; }
+.available-page .available-empty h2, .available-page .available-archive > h2 { font-size: 32px; margin: 0 0 18px; }
+.available-page .available-empty p, .available-page .available-empty-litter { color: var(--brand-muted); }
+.available-page .available-past-litter { border-bottom: 1px solid var(--brand-line); padding: 0 0 2px; }
+.available-page .available-past-litter > summary { list-style-position: inside; padding: 18px 0; color: var(--brand-brown); }
+.available-page .available-past-summary { display: inline-flex; justify-content: space-between; align-items: center; gap: 14px; width: calc(100% - 24px); vertical-align: middle; padding-left: 6px; }
+.available-page .available-past-summary > span:last-child { color: var(--brand-muted); font-size: 13px; flex-shrink: 0; }
+.available-page .available-past-overview { max-width: 340px; margin-top: 10px; }
+.available-page .available-past-litter > .puppyGrid { margin-bottom: 28px; }
+@media (max-width: 900px) {
+  .available-page .available-litter-heading { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .available-page .available-litter-pricing { border: 0; padding-left: 0; }
+  .available-page .available-litter-pricing dl { gap: 40px; }
+}
+@media (max-width: 600px) {
+  .brand-site .available-page { padding-top: 28px; }
+  .available-page .available-intro { flex-direction: column; align-items: flex-start; gap: 18px; padding-bottom: 24px; }
+  .available-page .available-intro .h1 { margin-bottom: 12px; }
+  .available-page .available-intro .eyebrow { margin-bottom: 10px; }
+  .available-page .available-intro .lead { font-size: 15px; }
+  .available-page .available-count { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-left: 12px; font-size: 13px; }
+  .available-page .available-litter { padding-top: 22px; margin-bottom: 36px; }
+  .available-page .available-litter h2 { font-size: 30px; margin-bottom: 10px; }
+  .available-page .available-litter-facts { gap: 4px 14px; font-size: 13px; }
+  .available-page .available-litter-pricing dl { gap: 32px; }
+  .available-page .available-litter-pricing dd { font-size: 20px; }
+  .available-page .available-litter-pricing p { margin-top: 5px; }
+  .available-page .available-past-summary { align-items: flex-start; }
+}

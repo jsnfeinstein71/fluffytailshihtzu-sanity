@@ -1,17 +1,17 @@
 import '../home.css'
+import '../content.css'
+import {getInventory} from '@/sanity/lib/inventory'
+import {getLittersByStatus} from '@/lib/inventory'
 
 export const metadata = {title: 'The Breed', alternates: {canonical: '/the-breed'}}
 
-export default function TheBreedPage() {
+export default async function TheBreedPage() {
+  const {litters} = await getInventory()
+  const photo = getLittersByStatus(litters, 'current').find(litter => litter.groupPhotoUrl)?.groupPhotoUrl
   return (
-    <main className="wrap">
-
-      <div className="topbar">
-        <div className="pill">
-          <span className="dot"></span>
-          Learn more about the breed
-        </div>
-      </div>
+    <main className="wrap content-page">
+      <header className="content-intro">
+      <p className="eyebrow">Life with a Shih Tzu</p>
 
       <h1 className="h1">About the Shih Tzu Breed</h1>
 
@@ -20,9 +20,11 @@ export default function TheBreedPage() {
         personality. They were bred to live closely with people, and that shows in how connected
         they tend to be with their families.
       </p>
+      </header>
 
-      <div className="grid">
-        <div className="card">
+      <div className={`grid${photo ? ' content-has-photo' : ''}`}>
+        {photo ? <figure className="content-photo"><img src={photo} alt="A FluffyTail Shih Tzu" loading="eager" decoding="async" /></figure> : null}
+        <div className="card content-copy">
           <div className="pad">
             <div className="section" style={{marginTop: 0}}>
               <h2>Why families love Shih Tzus</h2>
@@ -84,16 +86,16 @@ export default function TheBreedPage() {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card content-aside">
           <div className="pad">
             <h2 className="panelTitle">At a glance</h2>
-            <div className="meta">
-              <span>🐶 Small companion breed</span>
-              <span>🏠 Often well-suited to indoor family life</span>
-              <span>💕 Known for affectionate temperament</span>
-              <span>✂️ Regular grooming needed</span>
-              <span>🚶 Moderate daily activity</span>
-            </div>
+            <ul className="content-facts">
+              <li>Small companion breed</li>
+              <li>Often well-suited to indoor family life</li>
+              <li>Known for affectionate temperament</li>
+              <li>Regular grooming needed</li>
+              <li>Moderate daily activity</li>
+            </ul>
 
             <div className="divider"></div>
 
@@ -181,13 +183,13 @@ export default function TheBreedPage() {
           </p>
 
           <div className="ctaRow">
-            <a className="btn" href="/available-puppies">
+            <a className="brand-button" href="/available-puppies">
               View Available Puppies
             </a>
-            <a className="btn" href="/upcoming-litters">
+            <a className="text-link" href="/upcoming-litters">
               View Upcoming Litters
             </a>
-            <a className="btn btnPrimary" href="/contact">
+            <a className="text-link" href="/contact">
               Contact
             </a>
           </div>

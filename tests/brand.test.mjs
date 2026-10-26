@@ -8,6 +8,7 @@ import {renderToStaticMarkup} from 'react-dom/server'
 import {PathnameContext} from 'next/dist/shared/lib/hooks-client-context.shared-runtime.js'
 const {default: SiteChrome} = await import('../app/components/SiteChrome.tsx')
 const {default: PuppyCard} = await import('../app/components/PuppyCard.tsx')
+const {default: HomeHero} = await import('../app/components/HomeHero.tsx')
 
 const renderChrome = path => renderToStaticMarkup(createElement(PathnameContext.Provider, {value: path}, createElement(SiteChrome, {}, createElement('main', {}, 'Page content'))))
 
@@ -50,6 +51,28 @@ test('puppy card displays the Sanity override price and keeps reserved detail li
   assert.doesNotMatch(invalid, /\$0/)
 })
 
+test('browsing cards have one detail link, explicit total pricing and ready dates without changing home cards', () => {
+  for (const status of ['available', 'hold', 'reserved']) {
+    const puppy = {
+      _id: 'synthetic', slug: 'synthetic', name: 'Synthetic puppy', status, sex: 'female',
+      color: 'Cream and White', birthDate: '2026-10-17', photoUrl: '/original-photo.jpg',
+      litterStatus: 'current', litterPrice: 1600, litterDeposit: 400, overridePrice: 1900,
+    }
+    const html = renderToStaticMarkup(createElement(PuppyCard, {puppy, browsing: true}))
+    assert.equal((html.match(/<a\b/g) || []).length, 1)
+    assert.match(html, /href="\/puppies\/synthetic"/)
+    assert.match(html, /src="\/original-photo.jpg"/)
+    for (const text of ['Synthetic puppy', 'Female', 'Cream and White', 'Ready Dec 12', 'Total puppy price', '$1,900', 'View puppy']) assert.ok(html.includes(text), text)
+    assert.doesNotMatch(html, /<button|\/puppy-inquiry/)
+    const home = renderToStaticMarkup(createElement(PuppyCard, {puppy}))
+    assert.match(home, /Meet Synthetic puppy/)
+    assert.doesNotMatch(home, /Total puppy price|View puppy/)
+    if (status === 'reserved') assert.doesNotMatch(home, /Ready Dec 12/)
+    const fractional = renderToStaticMarkup(createElement(PuppyCard, {puppy: {...puppy, overridePrice: 1900.5}, browsing: true}))
+    assert.match(fractional, /\$1,900\.50/)
+  }
+})
+
 test('brand tokens and the development kit use only the approved colors and font families', () => {
   const css = readFileSync(new URL('../app/brand.css', import.meta.url), 'utf8')
   const layout = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8')
@@ -59,4 +82,42 @@ test('brand tokens and the development kit use only the approved colors and font
   assert.match(css, /font-family: 'cormorant-garamond'/)
   assert.match(css, /font-synthesis: none/)
   assert.match(layout, /https:\/\/use\.typekit\.net\/mun1gwi\.css/)
+})
+
+test('the hero proposal preserves the original JPEG and requests it eagerly without recompression', () => {
+  const bytes = readFileSync(new URL('../public/design-preview/IMG_6731.JPEG', import.meta.url))
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), 'e0d9a68a5e4b67daf2e8f810b438a32b1f72f7e27ea2dc7cc9cd927c1e2ec62b')
+  const html = renderToStaticMarkup(createElement(HomeHero, {imageUrl: 'https://example.com/cms.jpg', preview: true}))
+  assert.match(html, /home-hero-proposal/)
+  assert.match(html, /src="\/design-preview\/IMG_6731.JPEG"/)
+  assert.match(html, /width="2048" height="1536"/)
+  assert.match(html, /loading="eager" fetchPriority="high" decoding="async"/)
+  assert.match(html, /Two cream-colored FluffyTail Shih Tzu puppies/)
+  assert.doesNotMatch(html, /https:\/\/example.com\/cms.jpg/)
+})
+
+test('normal hero rendering retains the Sanity source and the proposal is development-only', () => {
+  const html = renderToStaticMarkup(createElement(HomeHero, {imageUrl: 'https://example.com/cms.jpg'}))
+  assert.match(html, /src="https:\/\/example.com\/cms.jpg"/)
+  assert.doesNotMatch(html, /home-hero-proposal|IMG_6731/)
+  const empty = renderToStaticMarkup(createElement(HomeHero))
+  assert.doesNotMatch(empty, /<img/)
+  assert.match(empty, /Meet our puppies/)
+  const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8')
+  assert.match(page, /preview=\{process.env.NODE_ENV === 'development'\}/)
+  assert.match(page, /"heroImageUrl": heroImage.asset->url/)
+})
+
+test('legal page bodies and links remain unchanged during the presentation-only pass', () => {
+  const expected = {
+    'privacy-policy': 'c67a8cf25855a7c902a4725a155f357b7cdbbc971d38fdf0dd120d7e09e7c557',
+    'terms-and-conditions': '6190a3744da189ca6716fcc9374f1d0a42d30b8a9dfd04f567cba59772250473',
+  }
+  for (const [page, digest] of Object.entries(expected)) {
+    const source = readFileSync(new URL(`../app/${page}/page.tsx`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+    const start = source.indexOf('<div className="card">')
+    assert.ok(start > 0)
+    assert.equal(createHash('sha256').update(source.slice(start)).digest('hex'), digest)
+    assert.match(source, /className="wrap legal-page"/)
+  }
 })
