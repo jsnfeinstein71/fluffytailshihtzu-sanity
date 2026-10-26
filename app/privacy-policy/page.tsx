@@ -10,11 +10,6 @@ export const metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <Link className="btn" href="/available-puppies">Available Puppies</Link>
-        <Link className="btn" href="/contact">Contact</Link>
-      </div>
 
       <div className="card">
         <div className="pad">
@@ -164,9 +159,6 @@ export default function PrivacyPolicyPage() {
         </div>
       </div>
 
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
     </main>
   )
 }

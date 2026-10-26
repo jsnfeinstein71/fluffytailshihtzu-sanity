@@ -1,9 +1,11 @@
 import Link from 'next/link'
-import {formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
+import {formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
+import {tryPricing} from '@/lib/pricing'
 
 export default function PuppyCard({puppy}: {puppy: Puppy}) {
   const age = getAgeInWeeks(puppy.birthDate)
   const ready = getReadyDate(puppy.birthDate)
+  const pricing = tryPricing(puppy)
   const content = <>
     <div className="puppyImageWrap">
       {puppy.photoUrl ? <img className="puppyImage" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} /> : null}
@@ -19,6 +21,10 @@ export default function PuppyCard({puppy}: {puppy: Puppy}) {
       </p>
       {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
       {ready && (puppy.status === 'available' || puppy.status === 'hold') ? <div style={{marginTop: '10px'}}><span className="badge">Ready {ready}</span></div> : null}
+      <div className="puppy-card-footer">
+        <span>{pricing ? formatCurrency(pricing.totalCents / 100) : 'Ask Jeanne about pricing'}</span>
+        {puppy.slug ? <span>Meet {puppy.name || 'this puppy'} <span aria-hidden="true">&rarr;</span></span> : null}
+      </div>
     </div>
   </>
 

@@ -1,5 +1,7 @@
 # Native Inquiry And Phase 1 Security Finalization
 
+Priority reset: branding/UX is active separately on `codex/fluffytail-brand-ux`, preserving this PR #2 implementation. See [existing Adobe brand integration](fluffytail-brand-ux.md). Stage 2 privacy preparation is paused, not resolved or waived. Historical exposure and remaining operational checks stay production-release gates; redesign does not authorize provider/backup/migration work.
+
 Date: 2026-10-25. Branch: `codex/phase-1-pricing-reliability`. PR #2 stays draft.
 Status: code implemented; NOT approved for production. Production, provider settings, datasets and historical records are unchanged.
 

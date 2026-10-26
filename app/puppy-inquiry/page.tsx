@@ -1,5 +1,4 @@
 import '../home.css'
-import Link from 'next/link'
 import {notFound} from 'next/navigation'
 import InquiryForm from '../components/InquiryForm'
 import {legacyPuppySlug} from '@/lib/inquiry'
@@ -22,17 +21,17 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
 
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <Link className="btn" href="/available-puppies">Available Puppies</Link>
-        <Link className="btn" href="/contact">Contact</Link>
-      </div>
-      <h1 className="h1">FluffyTail Shih Tzu Puppy Inquiry</h1>
+      <header className="page-intro">
+      <p className="eyebrow">A conversation with Jeanne</p>
+      <h1 className="h1">{puppy ? `Ask about ${puppy.name || 'this puppy'}.` : 'Let us get to know you.'}</h1>
       <p className="lead">
         Ask Jeanne about a puppy or future availability. Choose how you would like us to follow up.
       </p>
+      </header>
+      <div className="inquiry-layout">
       <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} litterTitle={puppy?.litterTitle || ''} interest={interest} />
-      <div className="footer">&copy; {new Date().getFullYear()} FluffyTail Shih Tzu - In-home raised as family pets</div>
+      <aside className="inquiry-aside"><h2>Small breeder. Personal connection.</h2><p>Jeanne can answer your questions about timing, temperament and life with a Shih Tzu.</p><p>Email is always an option. Choose Text or Either only if you would like SMS follow-up.</p></aside>
+      </div>
     </main>
   )
 }

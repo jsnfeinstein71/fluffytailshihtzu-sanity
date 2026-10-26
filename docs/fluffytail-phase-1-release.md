@@ -87,7 +87,9 @@ Old operator paths intentionally return 404. Update external operator automation
 - Stripe success followed by Sanity/network failure may need event retry or manual invoice-record reconciliation. Deposit retries are idempotent; invoice/manual-link retry behavior remains operator-driven.
 - New validation does not repair invalid live content; audit before publication. Past litters need not be migrated just for display.
 
-## Phase 2 Handoff (Not Implemented)
+## Phase 2 Handoff
+
+Branding/UX development is now authorized on isolated `codex/fluffytail-brand-ux`; see [verified existing Adobe brand integration](fluffytail-brand-ux.md). Production remains unchanged. The original handoff below describes the approved identity, not permission to invent a new brand or resume paused privacy tasks.
 
 After Phase 1 verification/approval: "FluffyTail Website - Brand Integration & UX Redesign".
 Use the existing Shih Tzu silhouette logo; Warm Brown #58493D; Champagne #D8BD9D; Cormorant Garamond SemiBold headings; Acumin Pro Regular body; "Tiny Paws, Big Love"; real FluffyTail photography; mobile-first layouts; simpler navigation and direct inquiry. No visual redesign is included now.

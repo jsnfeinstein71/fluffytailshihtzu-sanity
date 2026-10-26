@@ -22,6 +22,13 @@ FluffyTail Shih Tzu is a production Next.js and Sanity site for a small breeder.
 - Native Next.js puppy inquiry and waitlist forms, Sanity storage and existing Twilio operator alerts. Tally is retired on the Phase 1 release branch; preserve historical submissions.
 - New operational records must use authenticated-only `private.<kind>.<hash>` document IDs via `sanity/lib/private-records.ts`. Do not migrate historical records or change dataset visibility without explicit approval.
 
+## Current Priority
+
+- Website branding/UX is active on `codex/fluffytail-brand-ux`, based on PR #2. Merging or changing Production requires explicit approval.
+- Existing Adobe `FluffyTail Brand` is the authoritative design reference: approved artwork, Brown `#58493D`, Champagne `#D8BD9D`, Cormorant Garamond SemiBold headings and Acumin Pro Regular body. No replacement logo or proprietary font redistribution. See `docs/fluffytail-brand-ux.md` for provenance and the development web kit.
+- Stage 2 privacy preparation is paused by the owner. Preserve its work on `codex/stage-2-privacy-preparation` at `d2bfd3e`; do not resume backup, Twilio, Stripe or migration tasks without new authorization. The last confirmed 54 anonymously readable historical records remain an unresolved security issue and separate production-release gate.
+- Local-only browser QA is authorized for this development branch. Do not revisit the earlier Vercel browser-origin permission problem or attempt repairs/workarounds.
+
 ## Commands
 
 - Install: `npm install`

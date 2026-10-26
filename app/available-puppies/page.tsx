@@ -1,7 +1,6 @@
 export const revalidate = 60
 
 import '../home.css'
-import Link from 'next/link'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus, getPuppiesForLitter} from '@/lib/inventory'
 import LitterSection from '../components/LitterSection'
@@ -17,21 +16,14 @@ export default async function AvailablePuppiesPage() {
 
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <Link className="btn" href="/about">About</Link>
-        <Link className="btn" href="/the-breed">The Breed</Link>
-        <Link className="btn" href="/puppy-resources">Puppy Resources</Link>
-        <Link className="btn" href="/pricing">Pricing</Link>
-        <Link className="btn" href="/upcoming-litters">Upcoming Litters</Link>
-        <Link className="btn" href="/contact">Contact</Link>
-      </div>
 
+      <header className="page-intro"><p className="eyebrow">Find your little companion</p>
+      <h1 className="h1">Available Puppies</h1>
+      <p className="lead">Meet our current litters. Open a puppy&apos;s page for their photos, pricing and a direct way to ask Jeanne for more information.</p>
       <div className="topbar"><div className="pill"><span className="dot"></span>
         {activeLitters.length ? `${activeLitters.length} active litter${activeLitters.length === 1 ? '' : 's'}` : 'No active litters listed'}
       </div></div>
-      <h1 className="h1">Available Puppies</h1>
-      <p className="lead">Current and recent litters from FluffyTail Shih Tzu. We update this page as litters arrive and as individual puppy photos become available.</p>
+      </header>
 
       {activeLitters.map((litter) => <LitterSection key={litter._id} litter={litter} puppies={puppies} />)}
       {!activeLitters.length ? <div className="card section"><div className="pad">
@@ -48,7 +40,6 @@ export default async function AvailablePuppiesPage() {
         </details>)}
       </> : null}
 
-      <div className="footer">&copy; {new Date().getFullYear()} FluffyTail Shih Tzu - In-home raised as family pets</div>
     </main>
   )
 }

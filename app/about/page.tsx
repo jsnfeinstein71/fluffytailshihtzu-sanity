@@ -1,5 +1,4 @@
 import '../home.css'
-import Link from 'next/link'
 
 export const revalidate = 60
 export const metadata = {title: 'About', alternates: {canonical: '/about'}}
@@ -20,15 +19,6 @@ export default async function AboutPage() {
 
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <a className="btn" href="/the-breed">The Breed</a>
-        <a className="btn" href="/puppy-resources">Puppy Resources</a>
-        <a className="btn" href="/pricing">Pricing</a>
-        <a className="btn" href="/available-puppies">Available Puppies</a>
-        <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
-        <a className="btn" href="/contact">Contact</a>
-      </div>
 
       <div className="topbar">
         <div className="pill">
@@ -165,9 +155,6 @@ export default async function AboutPage() {
         </div>
       </div>
 
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
     </main>
   )
 }

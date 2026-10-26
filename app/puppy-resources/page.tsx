@@ -1,20 +1,10 @@
 import '../home.css'
-import Link from 'next/link'
 
 export const metadata = {title: 'Puppy Resources', alternates: {canonical: '/puppy-resources'}}
 
 export default function PuppyResourcesPage() {
   return (
     <main className="wrap">
-      <div className="nav" style={{marginBottom: '16px'}}>
-        <Link className="btn" href="/">Home</Link>
-        <a className="btn" href="/about">About</a>
-        <a className="btn" href="/the-breed">The Breed</a>
-        <a className="btn" href="/pricing">Pricing</a>
-        <a className="btn" href="/available-puppies">Available Puppies</a>
-        <a className="btn" href="/upcoming-litters">Upcoming Litters</a>
-        <a className="btn" href="/contact">Contact</a>
-      </div>
 
       <div className="topbar">
         <div className="pill">
@@ -145,9 +135,6 @@ export default function PuppyResourcesPage() {
         </div>
       </div>
 
-      <div className="footer">
-        © {new Date().getFullYear()} FluffyTail Shih Tzu • In-home raised as family pets
-      </div>
     </main>
   )
 }
