@@ -121,6 +121,9 @@ test('one Text Send saves automatically, enforces consent, deduplicates, and cle
  store.documents.set('stop',{_id:'stop',_type:'smsMessage',from:legacy.phone,direction:'inbound',source:'fluffytail',body:'STOP',signatureVerified:true,receivedAt:'2026-10-26T23:00:00Z'})
  await assert.rejects(()=>sendTextDraft(id,'Keep this stopped text','',save,submit));assert.equal(smsCalls,1)
  const data=await load();assert.equal(data.families[0].drafts.Text,'Keep this stopped text');assert.match(data.families[0].profile.smsBlockedReason,/opted out/)
+ store.documents.set('start',{_id:'start',_type:'smsMessage',from:legacy.phone,direction:'inbound',source:'fluffytail',body:'START',optOutType:'START',signatureVerified:true,receivedAt:'2026-10-26T23:01:00Z'})
+ store.documents.set('help',{_id:'help',_type:'smsMessage',from:legacy.phone,direction:'inbound',source:'fluffytail',body:'HELP',optOutType:'HELP',signatureVerified:true,receivedAt:'2026-10-26T23:02:00Z'})
+ assert.equal((await load()).families[0].profile.smsBlockedReason,undefined)
 })
 test('refresh retrieves only saved SMS submission statuses and never converts acceptance into delivery',async()=>{
  const family=(await load()).families[0],id=family.familyKey
