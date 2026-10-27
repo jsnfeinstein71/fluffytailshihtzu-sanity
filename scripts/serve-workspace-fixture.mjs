@@ -10,13 +10,25 @@ import {workspaceStoreFixture} from '../tests/workspace-store-fixture.mjs'
 
 if(process.env.VERCEL)throw new Error('This fixture helper is local-only.')
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..')
-const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview','families.json')
+const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview',process.env.FLUFFYTAIL_LAYOUT_QA==='1'?'layout-qa.json':'families.json')
 const allowed=['PATH','Path','SystemRoot','SYSTEMROOT','SystemDrive','WINDIR','windir','COMSPEC','ComSpec','PATHEXT','TEMP','TMP','LOCALAPPDATA','APPDATA','USERPROFILE','HOME']
 const childEnv=Object.fromEntries(allowed.filter(key=>process.env[key]).map(key=>[key,process.env[key]]))
 Object.assign(childEnv,{NEXT_PUBLIC_SANITY_PROJECT_ID:'gu1xkpsg',NEXT_PUBLIC_SANITY_DATASET:'synthetic',VERCEL_ENV:'preview',FLUFFYTAIL_LOCAL_MAIL_UI:'1',FLUFFYTAIL_MAIL_MODE:'fictional',FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'fixture-operator',INBOX_BASIC_AUTH_PASS:'fixture-only-password'})
 Object.assign(process.env,childEnv)
 let initial=[]
 try{initial=JSON.parse(await readFile(storage,'utf8'))}catch(error){if(error.code!=='ENOENT')throw new Error('The local fixture could not be read; refusing to replace it.')}
+if(process.env.FLUFFYTAIL_LAYOUT_QA==='1'&&!initial.length){
+  // Disposable local stress fixture only; existing saved review files stay intact.
+  const {createHash}=await import('node:crypto')
+  const {families}=await import('../app/inbox/workspace/model.ts')
+  const digest=value=>createHash('sha256').update(value).digest('hex')
+  initial.push({_id:'private.staffMailCursor.'+digest('review-v1:INBOX'),_rev:'layout-cursor',_type:'staffMailCursor',workspace:'review-v1',validity:'fictional-v1',lastUid:0,source:'fictional',syncToken:null,leaseUntil:0})
+  for(let index=0;index<44;index++){
+    const example=families[index%families.length],key=index<4?example.id:'inquiry-'+digest('layout-'+index)
+    const profile={...example,id:key,name:index<4?example.name:`Layout family ${index+1}`,email:index<4?example.email:`layout-${index+1}@example.test`,messages:Array.from({length:80},(_,n)=>({id:`layout-${index}-${n}`,direction:n%2?'out':'in',channel:n%3?'Email':'Text',body:`Local layout check ${n+1}. `+'A longer conversation stays readable while the composer remains accessible. '.repeat(n%5+1),time:new Date(Date.UTC(2026,9,26,8,n)).toISOString()}))}
+    initial.push({_id:'private.staffFamily.'+digest('review-v1:'+key),_rev:'layout-initial',_type:'staffFamily',workspace:'review-v1',schemaVersion:1,familyKey:key,profile,drafts:{Email:'',Text:''},notes:Array.from({length:10},(_,n)=>({_key:`layout-note-${n}`,text:`Local private note ${n+1}. No customer information.`,createdAt:'2026-10-26T20:00:00Z'})),checks:[]})
+  }
+}
 await mkdir(dirname(storage),{recursive:true})
 globalThis.fixtureOperatorClient=workspaceStoreFixture(initial,async documents=>{
   await writeFile(storage+'.next',JSON.stringify(documents,null,2),{mode:0o600})
