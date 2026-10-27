@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {tryPricing} from '@/lib/pricing'
 import {notFound} from 'next/navigation'
 import {getPuppy} from '@/sanity/lib/inventory'
+import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
 import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass} from '@/lib/inventory'
 
 type Props = {params: Promise<{slug: string}>}
@@ -29,6 +30,7 @@ export default async function PuppyDetailPage({params}: Props) {
   const totalPrice = pricing ? pricing.totalCents / 100 : undefined
   const deposit = pricing ? pricing.depositCents / 100 : undefined
   const finalPayment = pricing ? pricing.remainingCents / 100 : undefined
+  const profilePortrait = getPuppyProfilePortrait(puppy)
 
   return <main className="wrap puppy-detail-page">
     <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
@@ -37,7 +39,12 @@ export default async function PuppyDetailPage({params}: Props) {
         <div className="puppy-detail-title"><h1 className="h1">{puppy.name || 'Unnamed puppy'}</h1><span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>{formatPuppyStatus(puppy.status)}</span></div>
         {puppy.litterTitle ? <p className="puppy-detail-litter">Litter: {puppy.litterTitle}</p> : null}
       </header>
-      <figure className="puppy-detail-portrait">{puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" decoding="async" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Puppy photo to come">Photo to come</div>}</figure>
+      <figure className={`puppy-detail-portrait${profilePortrait ? ' puppy-detail-portrait-cutout' : ''}`}>
+        {profilePortrait ? <>
+          <span className="puppy-detail-ground-shadow" aria-hidden="true" />
+          <img className="puppy-detail-photo" src={profilePortrait} width={2048} height={2048} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="eager" fetchPriority="high" decoding="async" />
+        </> : puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" decoding="async" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Puppy photo to come">Photo to come</div>}
+      </figure>
       <div className="puppy-detail-info">
         <dl className="puppy-detail-facts">
           <div><dt>Sex</dt><dd>{puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'To be confirmed'}</dd></div>
