@@ -1,0 +1,1 @@
+export const testSmsConsentText='I am the owner-controlled test recipient and agree to receive FluffyTail puppy and payment test texts at the displayed number. Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase.'

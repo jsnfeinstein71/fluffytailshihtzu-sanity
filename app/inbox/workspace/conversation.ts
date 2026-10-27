@@ -19,6 +19,7 @@ export function conversationEvents(family:Family,data:MailData|null){
  for(const message of data?.outgoing||[])if(message.familyId===family.id&&message.attempts.length){
   events.push({id:message._id,time:message.attempts[0].startedAt,body:message.body,direction:'out',channel:'Email',label:'Email',status:emailStatus[message.state],subject:message.subject,replyId:''})
  }
+ for(const payment of data?.paymentRequests||[])if(payment.familyId===family.id){events.push({id:payment._id,time:payment.createdAt,body:`${payment.puppyName}: $${(payment.amountCents/100).toFixed(2)} ${payment.kind==='deposit'?'deposit':'final payment'} requested. A request is not payment.`,direction:'out',channel:'Email',label:'Payment request',status:'',subject:'',replyId:''});if(payment.webhookVerifiedAt)events.push({id:payment._id+':paid',time:payment.webhookVerifiedAt,body:`$${(payment.amountCents/100).toFixed(2)} payment confirmed for ${payment.puppyName}.`,direction:'in',channel:'Email',label:'Verified payment',status:'',subject:'',replyId:''})}
  return events.sort((a,b)=>{
   const at=Date.parse(a.time),bt=Date.parse(b.time)
   return (Number.isFinite(at)?at:0)-(Number.isFinite(bt)?bt:0)||a.id.localeCompare(b.id)

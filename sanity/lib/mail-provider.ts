@@ -1,3 +1,4 @@
+import {testCustomerContacts} from '@/lib/test-customer'
 import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import 'server-only'
@@ -19,7 +20,7 @@ export function ownerTestConfigured(){return process.env.FLUFFYTAIL_MAIL_MODE===
 export function emailRecipient(profileEmail:string){return ownerTestConfigured()?jeanneEmail:profileEmail}
 
 export function getMailCapabilities():MailCapabilities{
-  if(paymentTestWorkspaceEnabled())return {provider:'disabled',canDispatch:false,canSync:false}
+  if(paymentTestWorkspaceEnabled()){const contacts=testCustomerContacts(),credentials=!!contacts&&process.env.FLUFFYTAIL_MAIL_MODE==='pair-test-customer'&&!!process.env.FLUFFYTAIL_TEST_PAIR_MAIL_PASSWORD;return {provider:credentials?'pair':'disabled',canDispatch:credentials&&process.env.FLUFFYTAIL_TEST_PAIR_SEND_ENABLED==='1',canSync:credentials&&process.env.FLUFFYTAIL_TEST_PAIR_READ_ENABLED==='1',...(contacts?{approvedTestEmail:contacts.email}:{})}}
   if(liveWorkspaceEnabled()&&process.env.FLUFFYTAIL_MAIL_MODE==='pair'){const credentials=!!process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD;return {provider:'pair',canDispatch:credentials&&process.env.FLUFFYTAIL_PAIR_SEND_ENABLED==='1',canSync:credentials&&process.env.FLUFFYTAIL_PAIR_READ_ENABLED==='1'}}
   if(process.env.FLUFFYTAIL_MAIL_MODE==='fictional'){
     requireSyntheticWorkspace()
@@ -38,6 +39,7 @@ export function getMailCapabilities():MailCapabilities{
 export function getMailProvider():MailProvider{
   const capabilities=getMailCapabilities()
   if(capabilities.provider==='pair'){
+    if(paymentTestWorkspaceEnabled()){const contacts=testCustomerContacts();if(!contacts)throw new Error('Test recipient unavailable');const adapter=createPairAdapter({password:process.env.FLUFFYTAIL_TEST_PAIR_MAIL_PASSWORD,sendEnabled:capabilities.canDispatch,readEnabled:capabilities.canSync,recipientAllowlist:[contacts.email]});return {capabilities,send:async message=>await adapter.send(message) as SendResult,sync:async input=>await adapter.sync(input) as SyncBatch}}
     const adapter=createPairAdapter({password:process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD,sendEnabled:capabilities.canDispatch,readEnabled:capabilities.canSync,recipientAllowlist:[jeanneEmail]})
     return {capabilities,send:async message=>await (liveWorkspaceEnabled()?createPairAdapter({password:process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD,sendEnabled:capabilities.canDispatch,readEnabled:capabilities.canSync,recipientAllowlist:[message.to]}):adapter).send(message) as SendResult,sync:async input=>await (liveWorkspaceEnabled()?createPairAdapter({password:process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD,sendEnabled:false,readEnabled:capabilities.canSync,recipientAllowlist:[...new Set(input.threads.map(t=>t.to))]}):adapter).sync(input) as SyncBatch}
   }

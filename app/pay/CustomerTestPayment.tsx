@@ -1,0 +1,21 @@
+'use client'
+import Image from 'next/image'
+import {useEffect,useState} from 'react'
+import type {customerTestPayment} from '@/sanity/lib/customer-test-payment'
+import {money} from '@/app/inbox/workspace/model'
+type Receipt=Awaited<ReturnType<typeof customerTestPayment>>
+export default function CustomerTestPayment({token,initial,error,canceled}:{token:string;initial:Receipt|null;error:string;canceled:boolean}){
+ const [receipt,setReceipt]=useState(initial),[problem,setProblem]=useState(error)
+ useEffect(()=>{
+  if(!/^[a-f0-9]{48}$/.test(token))return
+  let stopped=false,timer:ReturnType<typeof setTimeout>;const abort=new AbortController()
+  async function update(){try{const response=await fetch('/api/test-payment/'+token,{cache:'no-store',signal:abort.signal});const data=await response.json();if(!response.ok)throw new Error(data.error);if(!stopped){setReceipt(data);setProblem('')}}catch{if(!stopped)setProblem('We could not refresh your payment. Please wait or contact Jeanne before trying to pay again.')}if(!stopped)timer=setTimeout(update,5000)}
+  timer=setTimeout(update,3000);return()=>{stopped=true;abort.abort();clearTimeout(timer)}
+ },[token])
+ const paid=receipt?.state==='confirmed',complete=paid&&receipt.remainingCents===0
+ return <main className="ops-workspace ops-payment-preview"><section className="ops-panel ops-payment-detail"><p className="ops-eyebrow">TEST — no real charges or inventory changes</p><Image src="/brand/fluffytail-logo-color.svg" alt="FluffyTail Shih Tzu" width={80} height={80}/><p>FluffyTail Shih Tzu · Jeanne</p><h1>{complete?'Paid in full':paid?'Deposit received':receipt?.state==='pending'?'Confirming your payment':receipt?.state==='expired'?'This payment link has expired':'A payment request from Jeanne'}</h1>
+ {receipt?<><h2>{receipt.puppyName}</h2><dl><dt>Total puppy price</dt><dd>{money(receipt.totalCents)}</dd><dt>{paid?'This payment received':'Amount requested'}</dt><dd>{money(receipt.amountCents)}</dd><dt>Total paid</dt><dd>{money(receipt.paidCents)}</dd><dt>Remaining balance</dt><dd>{money(receipt.remainingCents)}</dd>{!paid?<><dt>Balance after this payment</dt><dd>{money(Math.max(0,receipt.remainingCents-receipt.amountCents))}</dd></>:null}<dt>Test puppy reservation</dt><dd>{receipt.reserved?'Reserved':'Awaiting a verified deposit'}</dd></dl>
+ <p>The {money(receipt.depositCents)} deposit is non-refundable and is applied toward the total puppy price.</p>
+ {paid?<><p>{complete?'Thank you. Your puppy is paid in full. Coordinate pickup timing and location with Jeanne.':'Thank you. Your deposit has been confirmed and your fictional puppy is reserved. Jeanne will coordinate the remaining balance and pickup with you.'}</p><p>{receipt.confirmation==='submitted'?'A payment confirmation was submitted from Jeanne’s email. Check your inbox and spam folder; this page cannot confirm email delivery.':receipt.confirmation==='failed'||receipt.confirmation==='uncertain'?'Your payment is confirmed. The email confirmation needs Jeanne’s attention; please contact her if it does not arrive.':'Your payment is confirmed. Your email confirmation is being prepared.'}</p></>:receipt.state==='pending'?<p>Please wait while we confirm the payment. Do not pay again. This page updates automatically.</p>:receipt.state==='expired'?<p>No new payment can be made using this link. Ask Jeanne for a replacement; any previously confirmed payment remains recorded.</p>:<><p>{canceled?'Checkout was canceled. This request has not been paid; you can return to checkout when ready.':'Jeanne is requesting the payment shown above. A request alone does not reserve a puppy.'}</p>{!problem?<a className="ops-button" href={'/api/test-payment/'+token+'/checkout'}>Continue to secure test checkout · {money(receipt.amountCents)}</a>:null}<p>Use a Stripe test card only. A declined payment can be corrected in checkout; an unpaid or canceled checkout does not reserve the puppy.</p></>}
+ </>:null}{problem?<p role="alert">{problem}</p>:null}<p>Questions or a payment problem? <a href="mailto:jeanne@fluffytailshihtzu.com">Email Jeanne</a> or reply to the email or text that brought you here.</p><p>This is an owner-operated test. No customer account is needed.</p></section></main>
+}
