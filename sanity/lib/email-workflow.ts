@@ -1,3 +1,4 @@
+import {samePaymentEmail} from '@/lib/mail/payment-email'
 import {approvedTestCustomer,testCustomerContacts} from '@/lib/test-customer'
 import {testConfirmationSnapshot} from './test-payment-confirmation'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
@@ -38,7 +39,7 @@ export async function ensureOutgoing(reviewId:string,origin:string){
   const id=outgoingId(snapshot)
   const existing=await client.getDocument<OutgoingEmail>(id)
   if(existing){
-    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body||existing.html!==snapshot.html||JSON.stringify(existing.paymentEmail)!==JSON.stringify(snapshot.paymentEmail))throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
+    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body||existing.html!==snapshot.html||!samePaymentEmail(existing.paymentEmail,snapshot.paymentEmail))throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
     return existing
   }
   const review=await validateSavedEmailReview(reviewId,origin)
@@ -227,7 +228,7 @@ async function sendPreparedTestConfirmations(familyId:string){
 }
 async function dispatchTestConfirmation(record:OutgoingEmail){
  const snapshot=await testConfirmationSnapshot(record.paymentConfirmationSessionId||'')
- if(!snapshot||Object.entries(snapshot).some(([key,value])=>JSON.stringify(record[key as keyof OutgoingEmail])!==JSON.stringify(value)))throw new EmailWorkflowError('This payment confirmation needs review. No email was sent.',409)
+ if(!snapshot||Object.entries(snapshot).some(([key,value])=>key==='paymentEmail'&&'paymentEmail' in snapshot?!samePaymentEmail(record.paymentEmail,snapshot.paymentEmail):JSON.stringify(record[key as keyof OutgoingEmail])!==JSON.stringify(value)))throw new EmailWorkflowError('This payment confirmation needs review. No email was sent.',409)
  const provider=getMailProvider();if(provider.capabilities.provider!=='pair'||!provider.capabilities.canDispatch)throw new EmailWorkflowError('Pair test confirmations are unavailable.',503)
  if(!['prepared','failed'].includes(record.state))return
  await initializeFamilyMailbox(record.familyId)

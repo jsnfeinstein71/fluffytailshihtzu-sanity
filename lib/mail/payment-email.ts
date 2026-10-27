@@ -2,6 +2,8 @@
 // application before creating a confirmation. Never accept HTML from a browser.
 export type PaymentEmailKind='deposit-request'|'balance-request'|'deposit-confirmation'|'paid-confirmation'
 export type PaymentEmail={version:1;kind:PaymentEmailKind;name:string;message:string;puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;url:string;testOnly:boolean}
+// Sanity may reorder object keys during storage; compare field values, not insertion order.
+export const samePaymentEmail=(a:PaymentEmail|undefined,b:PaymentEmail|undefined)=>JSON.stringify(a,Object.keys(a||{}).sort())===JSON.stringify(b,Object.keys(b||{}).sort())
 export const confirmationMessage='Thank you for your payment. Please reply if you have any questions about your puppy or pickup.'
 export const paymentEmailLabels:Record<PaymentEmailKind,{title:string;button:string}>={
   'deposit-request':{title:'A little closer to bringing your puppy home',button:'View deposit request'},

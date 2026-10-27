@@ -140,3 +140,14 @@ test('historical plaintext confirmations remain immutable and cannot be resent b
  const historical=JSON.stringify(record);await ok(await settle(payment));await ok(await action({type:'dispatch',reviewId:record.reviewId,confirmed:true}))
  assert.equal(mailSent.length,1);assert.equal(JSON.stringify(store.documents.get(record._id)),historical);assert.equal(record.html,undefined)
 })
+
+
+test('HTML review and confirmation validation survives Sanity reordering snapshot object keys',async()=>{
+ const deposit=await create('deposit'),get=store.getDocument.bind(store)
+ const reorder=value=>Array.isArray(value)?value.map(reorder):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,reorder(value[key])])):value
+ store.getDocument=async id=>reorder(await get(id))
+ const draft={familyId,revision:null,value:{subject:'Deposit details',body:'Your personal message.',replyToId:null,paymentRequestId:deposit._id}}
+ const sent=await sendEmailDraft(familyId,draft,'00000000-0000-4000-8000-000000000053',async body=>ok(await action(body)))
+ assert.equal(sent.state,'accepted');assert.equal(mailSent.length,1);assert.match(mailSent[0].html,/View deposit request/)
+ await ok(await settle(deposit));await ok(await settle(deposit));assert.equal(mailSent.length,2);assert.match(mailSent[1].html,/Your deposit is confirmed/)
+})
