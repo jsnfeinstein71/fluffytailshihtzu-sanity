@@ -17,7 +17,7 @@ export async function customerTestPayment(token:string){
  if(!approvedTestCustomer(family.profile)||session.metadata?.customerPaymentToken!==token)throw new Error('This payment link is unavailable. Ask Jeanne for a current link.')
  const receipt=await readTestPaymentReceipt(session.id)
  const confirmation=await client.getDocument<OutgoingEmail>(confirmationId(session.id))
- const state=request.webhookVerifiedAt?'confirmed':receipt.providerPaid||session.status==='complete'?'pending':session.status==='expired'||Date.parse(request.expiresAt)<=Date.now()?'expired':'ready'
+ const state=request.webhookVerifiedAt?'confirmed':receipt.providerPaid?'pending':request.checkoutOutcome==='failed'?'failed':session.status==='expired'||Date.parse(request.expiresAt)<=Date.now()?'expired':session.status==='complete'?'pending':'ready'
  const checkout=new URL(request.stripeCheckoutUrl||'https://invalid.example')
  if(checkout.protocol!=='https:'||checkout.hostname!=='checkout.stripe.com'||!checkout.pathname.includes(session.id))throw new Error('This payment link needs to be replaced. Contact Jeanne before paying.')
  // Explicit public projection: never expose contacts, family IDs, conversation,

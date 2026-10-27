@@ -23,7 +23,7 @@ beforeEach(()=>{
  const messages=sid=>({fetch:async()=>({sid,from:business,to:contacts.phone,status:'delivered'})});messages.create=async value=>{smsSent.push(value);return {sid:'SM'+'a'.repeat(32),status:'queued'}};messages.list=async scope=>{assert.equal(scope.from,contacts.phone);assert.equal(scope.to,business);assert.ok(scope.dateSentAfter instanceof Date);return incoming};globalThis.fixtureTwilio={messages}
 })
 async function create(kind,number=1){const data=await ok(await action({type:'payment',familyId,puppyId:'test-puppy',kind,requestId:`00000000-0000-4000-8000-${String(number).padStart(12,'0')}`}));await ok(await action({type:'checkout',familyId,paymentRequestId:data.preparedPaymentId}));return (await ok(await email.GET(request('/inbox/workspace/api/email')))).paymentRequests.find(p=>p._id===data.preparedPaymentId)}
-async function settle(payment,paid=true){const session=sessions.get(payment.checkoutSessionId);session.payment_status=paid?'paid':'unpaid';session.status='complete';const payload=JSON.stringify({id:'evt_fixture'+sequence,type:'checkout.session.completed',livemode:false,data:{object:session}});return webhook.POST(new Request(origin+'/api/stripe/test-webhook',{method:'POST',headers:{'stripe-signature':globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret})},body:payload}))}
+async function settle(payment,paid=true,type='checkout.session.completed'){const session=sessions.get(payment.checkoutSessionId);session.payment_status=paid?'paid':'unpaid';session.status='complete';const payload=JSON.stringify({id:'evt_fixture'+sequence,type,livemode:false,data:{object:session}});return webhook.POST(new Request(origin+'/api/stripe/test-webhook',{method:'POST',headers:{'stripe-signature':globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret})},body:payload}))}
 
 test('public customer journey uses real handlers: editable request, provider submission, verified deposit and final confirmation, with no duplicate sends',async()=>{
  const deposit=await create('deposit');assert.match(deposit.publicToken,/^[a-f0-9]{48}$/);assert.equal(deposit.checkoutUrl,origin+'/pay/'+deposit.publicToken);assert.match(sessions.get(deposit.checkoutSessionId).success_url,/\/pay\//);assert.doesNotMatch(sessions.get(deposit.checkoutSessionId).success_url,/inbox/)
@@ -80,4 +80,18 @@ test('a failed confirmation is retained, never retried by duplicate callbacks, a
  const outgoing=[...store.documents.values()].find(d=>d.paymentConfirmationSessionId===payment.checkoutSessionId);assert.equal(outgoing.state,'failed');mailOutcome='accepted'
  await Promise.all([action({type:'dispatch',reviewId:outgoing.reviewId,confirmed:true}),action({type:'dispatch',reviewId:outgoing.reviewId,confirmed:true})]);assert.equal(mailSent.length,2)
  const stored=store.documents.get(outgoing._id);assert.equal(stored.state,'accepted');assert.equal(stored.delivery,'unconfirmed');assert.equal(stored.attempts.length,2);assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,1)
+})
+
+
+test('Twilio opt-out rejection keeps the saved draft and explains START without retrying',async()=>{
+ await mutate({type:'test-sms-consent',familyId,acknowledged:true});await mutate({type:'draft',familyId,channel:'Text',body:'Owner test text',base:''})
+ globalThis.fixtureTwilio.messages.create=async()=>{throw Object.assign(new Error('Fixture opted out'),{status:400,code:21610})}
+ const response=await sms.POST(request('/inbox/workspace/api/sms',{familyId,body:'Owner test text',confirmed:true}));assert.equal(response.status,403);assert.match((await response.json()).error,/START/);assert.equal(store.documents.get(workspaceId(familyId)).drafts.Text,'Owner test text');assert.equal([...store.documents.values()].find(d=>d._type==='smsMessage').status,'failed')
+})
+
+
+test('a signed delayed-payment failure releases only its unpaid test request, never creates a receipt, and allows a new request',async()=>{
+ const payment=await create('deposit');await ok(await settle(payment,false,'checkout.session.async_payment_failed'));await ok(await settle(payment,false,'checkout.session.async_payment_failed'))
+ const receipt=await ok(await publicReceipt(payment.publicToken));assert.equal(receipt.state,'failed');assert.equal(receipt.paidCents,0);assert.equal(receipt.checkoutUrl,null);assert.equal(mailSent.length,0);assert.equal(store.documents.get('test-puppy').status,'available')
+ const next=await create('deposit',2);assert.notEqual(next.checkoutSessionId,payment.checkoutSessionId);assert.equal(next.amountCents,40000)
 })

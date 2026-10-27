@@ -56,6 +56,7 @@ export async function submitWorkspaceSms(input:unknown){
  }catch(error){
   const code=(error as {status?:number}).status,status=code&&code>=400&&code<500&&code!==408?'failed':'uncertain'
   try{await client.patch(id).set({status,delivery:'unconfirmed'}).commit({visibility:'sync'})}catch{/* A durable sending claim still prevents duplicate submission. */}
+  if(!liveWorkspaceEnabled()&&(error as {code?:number}).code===21610)throw new WorkspaceError('Twilio reports this number has opted out. Use email, or have the recipient text START before trying again. Your draft is kept.',403)
   throw new WorkspaceError(status==='failed'?'Twilio did not accept this text. Your saved draft is retained.':'The text outcome is uncertain. Do not resend; review the provider record first.',409)
  }
 }

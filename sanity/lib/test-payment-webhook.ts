@@ -24,6 +24,16 @@ export async function testPaymentContext(session:Stripe.Checkout.Session){
 export async function applyTestPayment(event:Stripe.Event){
  requirePaymentTestConfiguration()
  if(event.livemode!==false)throw new Error('Live events are forbidden in the test workspace.')
+ if(['checkout.session.async_payment_failed','checkout.session.expired'].includes(event.type)){
+  const session=event.data.object as Stripe.Checkout.Session,{client,request}=await testPaymentContext(session)
+  if(request.webhookVerifiedAt||session.payment_status==='paid')return {ignored:true}
+  const outcome=event.type==='checkout.session.expired'?'expired':'failed'
+  if(request.checkoutOutcome===outcome)return {ignored:true}
+  const now=new Date().toISOString(),tx=client.transaction().patch(request._id,p=>p.ifRevisionId((request as PaymentRequest&{_rev:string})._rev).set({checkoutOutcome:outcome,checkoutOutcomeAt:now,expiresAt:now}))
+  const link=await client.fetch<{_id:string}|null>('*[_type == "depositLink" && stripeCheckoutSessionId == $sessionId][0]{_id}',{sessionId:session.id},{cache:'no-store'})
+  if(link)tx.patch(link._id,{set:{active:false,expiresAt:now}})
+  await tx.commit({visibility:'sync'});return {updated:true}
+ }
  if(!['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type))return {ignored:true}
  const session=event.data.object as Stripe.Checkout.Session
  if(session.payment_status!=='paid')return {ignored:true}
