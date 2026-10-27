@@ -38,14 +38,14 @@ export async function ensureOutgoing(reviewId:string,origin:string){
   const id=outgoingId(snapshot)
   const existing=await client.getDocument<OutgoingEmail>(id)
   if(existing){
-    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body)throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
+    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body||existing.html!==snapshot.html||JSON.stringify(existing.paymentEmail)!==JSON.stringify(snapshot.paymentEmail))throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
     return existing
   }
   const review=await validateSavedEmailReview(reviewId,origin)
-  const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
+  const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,...(review.paymentEmail?{paymentEmail:review.paymentEmail,html:review.html}:{}),messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
   const stored=await client.getDocument<OutgoingEmail>(id)
-  if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
+  if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.html!==record.html)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
   return stored
 }
 

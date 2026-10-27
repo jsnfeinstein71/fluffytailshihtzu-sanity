@@ -1,5 +1,7 @@
 'use client'
 
+import {paymentRequestEmail} from '@/lib/mail/payment-email'
+import {PaymentEmailPreview,PaymentEmailTools} from './PaymentEmailPreview'
 import {useState} from 'react'
 import {createPortal} from 'react-dom'
 import AutoGrowMessage from './AutoGrowMessage'
@@ -56,6 +58,7 @@ export default function EmailComposer({family,email,detailsTarget}:{family:Famil
   const eligible=!!puppy&&(kind==='deposit'?['Available','Hold'].includes(puppy.status)&&paid===0:family.puppyId===puppy.id&&paid<puppy.price*100)
   const requests=email.data?.paymentRequests.filter(p=>p.familyId===family.id)||[]
   const attached=requests.find(p=>p._id===value.paymentRequestId)
+  const formatted=email.data?.paymentTesting&&attached?paymentRequestEmail(attached,family.name,value.body):null
   const pending=(email.data?.outgoing||[]).filter(o=>o.familyId===family.id)
   const blocked=entry.conflict?'Resolve the draft change below before sending.':!family.email?'This family has no email address.':email.data?.paymentTesting&&!family.testCommunicationsAllowed?'Email sending is limited to the approved test family.':!email.data?.capabilities?.canDispatch?'Email sending is unavailable. Your draft can still be saved.':pending.some(o=>['sending','uncertain'].includes(o.state))?'A previous send needs review before another email can be sent.':pending.some(o=>o.state==='accepted'&&o.draftRevision===entry.revision&&!dirty)?'This draft has already been sent. Clear or edit it to write another message.':!value.subject.trim()?'Enter an email subject.':!value.body.trim()?'Write a message to send.':''
   const replies=(email.data?.messages||[]).filter(m=>m.familyId===family.id&&m.direction==='in'&&m.messageId)
@@ -65,6 +68,7 @@ export default function EmailComposer({family,email,detailsTarget}:{family:Famil
     <label htmlFor="email-subject">Subject</label><input id="email-subject" value={value.subject} maxLength={160} onChange={event=>email.edit(family.id,{subject:event.target.value})}/>
     <label htmlFor="email-body">Email message to {family.name}</label><AutoGrowMessage id="email-body" value={value.body} maxLength={10000} rows={2} placeholder="Write an email reply…" onChange={event=>email.edit(family.id,{body:event.target.value})}/>
     {attached?<p className="ops-attachment-summary">Includes {attached.puppyName} {attached.kind} link · {money(attached.amountCents)} <button className="ops-button secondary" onClick={()=>email.edit(family.id,{paymentRequestId:null,body:attached.checkoutUrl?value.body.replace(attached.checkoutUrl,''):value.body})}>Remove payment link</button></p>:null}
+    {formatted?<PaymentEmailPreview email={formatted}/>:null}
     {entry.conflict?<section className="ops-draft-conflict" role="alert"><strong>This email changed in another tab.</strong><p>Your entries are kept above. Saved subject: {entry.conflict.value.subject}</p><pre>{entry.conflict.value.body||'(Empty saved message)'}</pre><p>Saved reply: {entry.conflict.value.replyToId||'New email'} · Payment request: {entry.conflict.value.paymentRequestId?'Attached':'None'}</p><div><button className="ops-button secondary" onClick={()=>email.resolve(family.id,true)}>Use saved email</button><button className="ops-button secondary" onClick={()=>email.resolve(family.id,false)}>Keep my email</button></div></section>:null}
     {email.error?<p className="ops-error" role="alert">{email.error}</p>:null}
     {blocked?<p className="ops-consent-note" role="status">{blocked}</p>:null}
@@ -83,6 +87,7 @@ export default function EmailComposer({family,email,detailsTarget}:{family:Famil
     </details>
     {attached?<div className="ops-email-attachment"><p>Attached: {attached.puppyName} {attached.kind} · {money(attached.amountCents)} · <Link href={paymentPreviewPath(attached.requestId)} target="_blank" rel="noopener noreferrer">{email.data?.live?'Open request details ↗':'Open staff test link ↗'}</Link>. Expires {new Date(attached.expiresAt).toLocaleString()}. Send includes the exact amount and link in the message.</p>{family.source==='inquiry'?<><button className="ops-button secondary" disabled={email.busy||!email.data?.testCheckoutEnabled||!!attached.checkoutSessionId} onClick={()=>void email.checkout(family.id,attached._id)}>{email.data?.live?'Create Stripe checkout link':'Create Stripe test checkout'}</button>{attached.checkoutUrl?<><p><a href={attached.checkoutUrl} target="_blank" rel="noopener noreferrer">{email.data?.live?'Open payment link ↗':'Open Stripe test payment link ↗'}</a></p><button className="ops-button secondary" disabled={email.busy} onClick={()=>void email.verifyPayment(family.id,attached._id)}>{email.data?.live?'Check payment with Stripe':'Verify test payment with Stripe'}</button></>:null}<p>Payment verification: {attached.paymentVerification==='paid'?'Stripe reports payment paid; check the confirmed ledger in the payment snapshot':attached.paymentVerification==='unpaid'?'Stripe reports unpaid':attached.paymentVerification==='test-paid'?'Stripe verified paid in test mode':attached.paymentVerification==='test-unpaid'?'Stripe verified unpaid in test mode':'Not verified'}. Email delivery and reservation status are separate.</p></>:null}</div>:null}
 </>:null}
+{email.data?.paymentTesting?<PaymentEmailTools family={family} email={email}/>:null}
 <details><summary>Sending history and attempt review</summary><EmailDelivery familyId={family.id} email={email}/></details></section>,detailsTarget):null}
   </div>
 }

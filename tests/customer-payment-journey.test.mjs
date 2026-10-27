@@ -31,12 +31,12 @@ test('public customer journey uses real handlers: editable request, provider sub
  const html=renderToStaticMarkup(React.createElement(Customer,{token:deposit.publicToken,initial:receipt,error:'',canceled:false}));assert.match(html,/non-refundable/);assert.match(html,/Jeanne/);assert.match(html,/\$1,200.00/);assert.doesNotMatch(html,/\/inbox|signed webhook|customer@example.test|inquiry-/)
  assert.equal((await checkout.GET(new Request(origin+'/checkout'),{params:Promise.resolve({token:deposit.publicToken})})).status,303)
  const draft={familyId,revision:null,value:{subject:'Your puppy deposit',body:'My unfinished friendly message.\n\n'+deposit.checkoutUrl,replyToId:null,paymentRequestId:deposit._id}}
- const result=await sendEmailDraft(familyId,draft,'00000000-0000-4000-8000-000000000031',async body=>ok(await action(body)));assert.equal(result.state,'accepted');assert.equal(mailSent.length,1);assert.equal(mailSent[0].body,draft.value.body);assert.equal(mailSent[0].body.split(deposit.checkoutUrl).length,2);assert.equal(store.documents.get('test-puppy').status,'available')
+ const result=await sendEmailDraft(familyId,draft,'00000000-0000-4000-8000-000000000031',async body=>ok(await action(body)));assert.equal(result.state,'accepted');assert.equal(mailSent.length,1);assert.ok(mailSent[0].body.includes(draft.value.body));assert.match(mailSent[0].html,/View deposit request/);assert.match(mailSent[0].html,/My unfinished friendly message/);assert.equal(mailSent[0].paymentEmail.kind,'deposit-request');assert.equal(mailSent[0].body.split(deposit.checkoutUrl).length,2);assert.equal(store.documents.get('test-puppy').status,'available')
  globalThis.fixtureMailProvider.sync=async ({cursor})=>({validity:'fixture-mailbox',lastUid:2,messages:cursor.lastUid<2?[{uid:2,validity:'fixture-mailbox',messageId:'<customer-reply@example.test>',from:contacts.email,to:'jeanne@fluffytailshihtzu.com',subject:'Re: Your puppy deposit',body:'I received your request, Jeanne.',inReplyTo:mailSent[0].messageId,references:[mailSent[0].messageId],time:new Date().toISOString()}]:[]});await ok(await action({type:'sync',familyId}));const replies=await ok(await action({type:'sync',familyId}));assert.equal(replies.messages.filter(m=>m.messageId==='<customer-reply@example.test>').length,1)
- await ok(await settle(deposit));assert.equal(mailSent.length,2);assert.match(mailSent[1].body,/Total paid: \$400.00/);assert.match(mailSent[1].body,/Remaining balance: \$1200.00/);assert.equal(mailSent[1].paymentConfirmationSessionId,deposit.checkoutSessionId)
+ await ok(await settle(deposit));assert.equal(mailSent.length,2);assert.match(mailSent[1].body,/Total paid: \$400.00/);assert.match(mailSent[1].body,/Remaining balance: \$1200.00/);assert.equal(mailSent[1].paymentConfirmationSessionId,deposit.checkoutSessionId);assert.equal(mailSent[1].paymentEmail.kind,'deposit-confirmation');assert.match(mailSent[1].html,/Your deposit is confirmed/)
  await ok(await settle(deposit));assert.equal(mailSent.length,2)
  receipt=await ok(await publicReceipt(deposit.publicToken));assert.equal(receipt.state,'confirmed');assert.equal(receipt.reserved,true);assert.equal(receipt.remainingCents,120000);assert.equal(receipt.confirmation,'submitted')
- const final=await create('balance',2);assert.equal(final.amountCents,120000);await ok(await settle(final));await ok(await settle(final));assert.equal(mailSent.length,3);assert.match(mailSent[2].body,/Paid in full/);assert.match(mailSent[2].body,/Remaining balance: \$0.00/)
+ const final=await create('balance',2);assert.equal(final.amountCents,120000);await ok(await settle(final));await ok(await settle(final));assert.equal(mailSent.length,3);assert.match(mailSent[2].body,/Paid in full/);assert.equal(mailSent[2].paymentEmail.kind,'paid-confirmation');assert.match(mailSent[2].html,/View payment confirmation/);assert.match(mailSent[2].body,/Remaining balance: \$0.00/)
  receipt=await ok(await publicReceipt(final.publicToken));assert.equal(receipt.paidCents,160000);assert.equal(receipt.remainingCents,0);assert.equal(store.documents.get('test-puppy').status,'reserved');assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,2)
  const old=await ok(await publicReceipt(deposit.publicToken));assert.equal(old.checkoutUrl,null);assert.equal(old.remainingCents,0);assert.equal((await checkout.GET(new Request(origin+'/checkout'),{params:Promise.resolve({token:deposit.publicToken})})).headers.get('location'),origin+'/pay/'+deposit.publicToken)
 })
@@ -101,4 +101,42 @@ test('an earlier Stripe-paid payment awaiting its callback blocks replacement re
  const payment=await create('deposit');sessions.get(payment.checkoutSessionId).payment_status='paid';sessions.get(payment.checkoutSessionId).status='complete'
  store.documents.get(payment._id).expiresAt=new Date(0).toISOString();for(const link of store.documents.values())if(link._type==='depositLink')link.expiresAt=new Date(0).toISOString()
  const response=await action({type:'payment',familyId,puppyId:'test-puppy',kind:'deposit',requestId:'00000000-0000-4000-8000-000000000099'});assert.equal(response.status,409);assert.match((await response.json()).error,/awaiting confirmation/);assert.equal(sessions.size,1);assert.equal(mailSent.length,0);assert.equal(store.documents.get('test-puppy').status,'available')
+})
+
+
+test('branded final request preserves custom text and failed draft; confirmation note saves with conflict checks and freezes at preparation',async()=>{
+ const deposit=await create('deposit');await ok(await settle(deposit));mailSent=[]
+ const before=await ok(await email.GET(request('/inbox/workspace/api/email')))
+ const note='Thank you, Alex. I look forward to seeing you at pickup.'
+ await ok(await action({type:'confirmation-message',familyId,message:note,base:''}))
+ assert.equal(mailSent.length,0)
+ assert.equal((await action({type:'confirmation-message',familyId,message:'Stale edit',base:''})).status,409)
+ const final=await create('balance',2),draft=before.drafts.find(d=>d.familyId===familyId)
+ draft.value={subject:'Your final payment',body:'My exact personal note <with punctuation>.',replyToId:null,paymentRequestId:final._id}
+ mailOutcome='rejected'
+ const result=await sendEmailDraft(familyId,draft,'00000000-0000-4000-8000-000000000051',async body=>ok(await action(body)))
+ assert.equal(result.state,'failed');assert.equal(mailSent.length,1);assert.equal(mailSent[0].paymentEmail.kind,'balance-request');assert.match(mailSent[0].html,/View final payment request/);assert.match(mailSent[0].html,/&lt;with punctuation&gt;/)
+ const retained=(await ok(await email.GET(request('/inbox/workspace/api/email')))).drafts.find(d=>d.familyId===familyId);assert.deepEqual(retained.value,draft.value)
+ mailOutcome='rejected';await ok(await settle(final));const receipt=[...store.documents.values()].find(d=>d.paymentConfirmationSessionId===final.checkoutSessionId);assert.equal(receipt.state,'failed');assert.ok(receipt.body.includes(note));const snapshot=receipt.html
+ await ok(await action({type:'confirmation-message',familyId,message:'A newer note for future receipts.',base:note}))
+ mailOutcome='accepted';await ok(await action({type:'dispatch',reviewId:receipt.reviewId,confirmed:true}));assert.equal(mailSent.at(-1).html,snapshot);assert.equal(mailSent.at(-1).paymentEmail.message,note)
+ await ok(await settle(final));assert.equal(mailSent.filter(m=>m.paymentConfirmationSessionId===final.checkoutSessionId).length,2)
+ assert.deepEqual((await ok(await email.GET(request('/inbox/workspace/api/email')))).drafts.find(d=>d.familyId===familyId).value,draft.value)
+})
+
+test('tampered formatted snapshots cannot bypass review validation or submit different HTML',async()=>{
+ const payment=await create('deposit')
+ const saved=await ok(await action({type:'save',familyId,revision:null,value:{subject:'Deposit details',body:'A personal note.',replyToId:null,paymentRequestId:payment._id}}))
+ const reviewed=await ok(await action({type:'review',familyId,revision:saved.drafts.find(d=>d.familyId===familyId).revision,requestId:'00000000-0000-4000-8000-000000000052'}))
+ assert.equal(mailSent.length,0);const snapshot=store.documents.get(reviewed.reviewId);snapshot.html='<b>Forged content</b>'
+ assert.equal((await action({type:'dispatch',reviewId:reviewed.reviewId,confirmed:true})).status,409);assert.equal(mailSent.length,0)
+})
+
+
+test('historical plaintext confirmations remain immutable and cannot be resent by duplicate callbacks',async()=>{
+ const payment=await create('deposit');await ok(await settle(payment));const record=[...store.documents.values()].find(d=>d.paymentConfirmationSessionId===payment.checkoutSessionId)
+ delete record.paymentEmail;delete record.html
+ const {testConfirmationSnapshot}=await import('../sanity/lib/test-payment-confirmation.ts');Object.assign(record,await testConfirmationSnapshot(payment.checkoutSessionId))
+ const historical=JSON.stringify(record);await ok(await settle(payment));await ok(await action({type:'dispatch',reviewId:record.reviewId,confirmed:true}))
+ assert.equal(mailSent.length,1);assert.equal(JSON.stringify(store.documents.get(record._id)),historical);assert.equal(record.html,undefined)
 })

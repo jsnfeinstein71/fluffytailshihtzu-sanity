@@ -1,3 +1,4 @@
+import type {PaymentEmail} from '@/lib/mail/payment-email'
 import {families,puppies} from './model'
 
 export const jeanneEmail='jeanne@fluffytailshihtzu.com'
@@ -5,15 +6,16 @@ export type EmailValue={subject:string;body:string;replyToId:string|null;payment
 export type EmailDraft={familyId:string;revision:string|null;value:EmailValue;updatedAt?:string}
 export type MailMessage={id:string;familyId:string;from:string;to:string;subject:string;body:string;messageId:string;references:string[];direction:'in'|'out';time:string}
 export type PaymentRequest={_id:string;_type:'staffPaymentRequest';workspace:'review-v1'|'live-v1';checkoutOutcome?:'expired'|'failed';publicToken?:string;stripeCheckoutUrl?:string;checkoutSessionId?:string;checkoutUrl?:string;paymentVerification?:'unverified'|'test-paid'|'test-unpaid'|'paid'|'unpaid';paymentVerifiedAt?:string;requestId:string;familyId:string;puppyId:string;puppyName:string;kind:'deposit'|'balance';amountCents:number;totalCents:number;depositCents:number;paidCents:number;expiresAt:string;createdAt:string;testOnly:boolean;webhookVerifiedAt?:string;stripeEventId?:string}
-export type EmailReview={_id:string;_type:'staffEmailReview';workspace:'review-v1'|'live-v1';requestId:string;familyId:string;draftRevision:string;from:string;replyTo:string;to:string;subject:string;body:string;inReplyTo:string|null;references:string[];paymentRequestId:string|null;createdAt:string;status:'held';testOnly:boolean}
+export type EmailReview={_id:string;_type:'staffEmailReview';workspace:'review-v1'|'live-v1';requestId:string;familyId:string;draftRevision:string;from:string;replyTo:string;to:string;subject:string;body:string;html?:string;paymentEmail?:PaymentEmail;inReplyTo:string|null;references:string[];paymentRequestId:string|null;createdAt:string;status:'held';testOnly:boolean}
 export type OutgoingState='prepared'|'sending'|'accepted'|'failed'|'uncertain'
 export type MailAttempt={_key:string;number:number;startedAt:string;finishedAt?:string;state:OutgoingState;code?:string}
 export type MailResolution={attemptKey:string;decision:'accepted'|'not-accepted';evidence:string;operator:string;at:string}
-export type OutgoingEmail={_id:string;_rev:string;_type:'staffOutgoingEmail';workspace:'review-v1'|'live-v1';reviewId:string;familyId:string;from:string;replyTo:string;to:string;subject:string;body:string;messageId:string;inReplyTo:string|null;references:string[];paymentRequestId:string|null;draftRevision:string;paymentConfirmationSessionId?:string;createdAt:string;state:OutgoingState;attempts:MailAttempt[];source:'fictional'|'pair'|'disabled';delivery:'unconfirmed';acceptedAt?:string;replyReceivedAt?:string;resolutions?:MailResolution[]}
+export type OutgoingEmail={_id:string;_rev:string;_type:'staffOutgoingEmail';workspace:'review-v1'|'live-v1';reviewId:string;familyId:string;from:string;replyTo:string;to:string;subject:string;body:string;html?:string;paymentEmail?:PaymentEmail;messageId:string;inReplyTo:string|null;references:string[];paymentRequestId:string|null;draftRevision:string;paymentConfirmationSessionId?:string;createdAt:string;state:OutgoingState;attempts:MailAttempt[];source:'fictional'|'pair'|'disabled';delivery:'unconfirmed';acceptedAt?:string;replyReceivedAt?:string;resolutions?:MailResolution[]}
 export type IncomingEmail=MailMessage&{_id:string;_type:'staffIncomingEmail';workspace:'review-v1'|'live-v1';source:'fictional'|'pair';matchedOutgoingId:string;uid:number;validity:string;importedAt:string}
 export type MailCapabilities={provider:'disabled'|'fictional'|'pair';canDispatch:boolean;canSync:boolean;ownerTestRecipient?:string;approvedTestEmail?:string}
 export type MailData={drafts:EmailDraft[];messages:MailMessage[];paymentRequests:PaymentRequest[];reviews:EmailReview[];sendingEnabled:false;paymentTesting?:boolean;live?:boolean;inventory?:import('./model').WorkspacePuppy[];testCheckoutEnabled?:boolean;outgoing?:OutgoingEmail[];capabilities?:MailCapabilities;syncNotice?:string;families?:import('./persistence').SavedFamily[]}
 export type MailAction=
+  |{type:'confirmation-message';familyId:string;message:string;base:string}
   |{type:'checkout';familyId:string;paymentRequestId:string}
   |{type:'verify';familyId:string;paymentRequestId:string}
   |{type:'save';familyId:string;revision:string|null;value:EmailValue}

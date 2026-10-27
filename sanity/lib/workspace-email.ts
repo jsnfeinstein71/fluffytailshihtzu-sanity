@@ -1,3 +1,4 @@
+import {paymentRequestEmail,renderPaymentEmail} from '@/lib/mail/payment-email'
 import {randomBytes} from 'node:crypto'
 import {approvedTestCustomer} from '@/lib/test-customer'
 import {createBalanceCheckout} from './balance-checkout'
@@ -40,9 +41,13 @@ function validate(input:unknown):MailAction{
   const data=input as Record<string,unknown>
   // No configuration or forged client request can enable customer delivery in this phase.
   if(data.type==='send'||data.type==='deliver')throw new EmailWorkflowError('Customer sending is disabled. Emails can be saved and reviewed, but nothing can be sent from this workspace.',403)
-  const fields:Record<string,string[]>={checkout:['type','familyId','paymentRequestId'],verify:['type','familyId','paymentRequestId'],save:['type','familyId','revision','value'],review:['type','familyId','revision','requestId'],payment:['type','familyId','puppyId','kind','requestId']}
+  const fields:Record<string,string[]>={'confirmation-message':['type','familyId','message','base'],checkout:['type','familyId','paymentRequestId'],verify:['type','familyId','paymentRequestId'],save:['type','familyId','revision','value'],review:['type','familyId','revision','requestId'],payment:['type','familyId','puppyId','kind','requestId']}
   if(typeof data.type!=='string'||!fields[data.type]||Object.keys(data).some(key=>!fields[data.type as string].includes(key)))throw new EmailWorkflowError('Invalid email action.')
   if(!validFamilyKey(data.familyId))throw new EmailWorkflowError('Choose a known family.',404)
+  if(data.type==='confirmation-message'){
+    if(typeof data.message!=='string'||data.message.length>4000||typeof data.base!=='string'||data.base.length>4000)throw new EmailWorkflowError('Use a confirmation message up to 4,000 characters.')
+    return {type:'confirmation-message',familyId:data.familyId,message:data.message,base:data.base}
+  }
   if(data.type==='checkout'||data.type==='verify'){
     if(typeof data.paymentRequestId!=='string'||!/^private\.staffPaymentRequest\.[a-f0-9]{64}$/.test(data.paymentRequestId))throw new EmailWorkflowError('Choose a saved payment request.')
     return {type:data.type,familyId:data.familyId,paymentRequestId:data.paymentRequestId}
@@ -139,6 +144,12 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const action=validate(input)
   const family=await familyRecord(action.familyId)
   const client=getOperatorClient()
+  if(action.type==='confirmation-message'){
+    if(!paymentTestWorkspaceEnabled())throw new EmailWorkflowError('Confirmation editing is available in payment testing only.',403)
+    if((family.profile.paymentConfirmationMessage||'')!==action.base)throw new EmailWorkflowError('This confirmation message changed in another tab. Reload the saved message before replacing it.',409)
+    try{await client.patch(family._id).ifRevisionId(family._rev).set({'profile.paymentConfirmationMessage':action.message}).commit({visibility:'sync'})}catch(error){if((error as {statusCode?:number}).statusCode===409)throw new EmailWorkflowError('The family changed in another tab. Your message is kept; refresh and save again.',409);throw error}
+    return {}
+  }
   if(action.type==='checkout'||action.type==='verify')return await paymentTransport(action,family,origin)
   if(action.type==='payment'){
     if(paymentTestWorkspaceEnabled()){
@@ -193,10 +204,12 @@ export async function prepareEmailAction(input:unknown,origin:string){
   if(liveWorkspaceEnabled()&&payment&&!payment.checkoutUrl)throw new EmailWorkflowError('Create and verify the payment checkout link before reviewing this email.',409)
   const testUrl=payment?(payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${testUrl}`:value.body
-  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body,inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
+  const paymentEmail=paymentTestWorkspaceEnabled()&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
+  const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
+  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
   const stored=await client.getDocument<EmailReview>(record._id)
-  if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject)throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
+  if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject||stored.html!==record.html||JSON.stringify(stored.paymentEmail)!==JSON.stringify(record.paymentEmail))throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
   return {reviewId:record._id}
 }
 export async function getPaymentPreview(requestId:string){
@@ -221,7 +234,10 @@ export async function validateSavedEmailReview(id:string,origin:string){
   const parent=await checkReply(family,value)
   const payment=value.paymentRequestId?await checkedPayment(value.paymentRequestId,family):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href}`:value.body
-  if(review.from!==jeanneEmail||review.replyTo!==jeanneEmail||review.to!==emailRecipient(family.profile.email)||review.subject!==value.subject||review.body!==body||review.inReplyTo!==(parent?.messageId||null)||JSON.stringify(review.references)!==JSON.stringify(parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[])||review.paymentRequestId!==(payment?._id||null))throw new EmailWorkflowError('The saved review no longer matches this family, draft or payment context. Prepare a fresh review.',409)
+  const paymentEmail=review.paymentEmail&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
+  const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
+  if(review.html!==formatted?.html||JSON.stringify(review.paymentEmail)!==JSON.stringify(paymentEmail||undefined))throw new EmailWorkflowError('The formatted payment email changed. Prepare a fresh review.',409)
+  if(review.from!==jeanneEmail||review.replyTo!==jeanneEmail||review.to!==emailRecipient(family.profile.email)||review.subject!==value.subject||review.body!==(formatted?.text||body)||review.inReplyTo!==(parent?.messageId||null)||JSON.stringify(review.references)!==JSON.stringify(parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[])||review.paymentRequestId!==(payment?._id||null))throw new EmailWorkflowError('The saved review no longer matches this family, draft or payment context. Prepare a fresh review.',409)
   return review
 }
 
