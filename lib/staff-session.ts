@@ -7,7 +7,7 @@ export function staffWorkspaceAvailable(){return isolatedStaffPreview()||liveWor
 function signature(body:string){const key=process.env.INBOX_BASIC_AUTH_PASS;if(!key)throw new Error('Staff authentication unavailable.');return createHmac('sha256',key).update('preview-staff-v1:'+body).digest('base64url')}
 export function makeStaffSession(origin:string){const body=Buffer.from(JSON.stringify({aud:origin,exp:Date.now()+8*60*60*1000})).toString('base64url');return body+'.'+signature(body)}
 export function validStaffSession(req:Request){
- const path=new URL(req.url).pathname,base=liveWorkspaceEnabled()?'/inbox':'/inbox/workspace'
+ const path=new URL(req.url).pathname,base='/inbox'
  if(!staffWorkspaceAvailable()||!(path===base||path.startsWith(base+'/')))return false
  const raw=req.headers.get('cookie')?.split(';').map(c=>c.trim()).find(c=>c.startsWith(staffCookie+'='))?.slice(staffCookie.length+1)
  if(!raw||raw.length>1000)return false

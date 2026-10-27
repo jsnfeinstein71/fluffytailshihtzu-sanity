@@ -6,6 +6,7 @@ export type SavedFamily = {
   familyKey:string; textVersion?:number; profile:Omit<Family,'records'|'messages'|'checks'|'unread'> & Partial<Pick<Family,'records'|'messages'|'unread'>>; drafts:Record<Channel,string>; notes:SavedNote[]; checks:string[]
 }
 export type WorkspaceMutation =
+  | {type:'test-sms-consent';familyId:string;acknowledged:true}
   | {type:'initialize'}
   | {type:'sync-inquiries'}
   | {type:'associate';familyId:string;puppyId:string}

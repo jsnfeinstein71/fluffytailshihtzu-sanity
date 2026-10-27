@@ -16,9 +16,24 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
     async getDocument(id){return structuredClone(documents.get(id))},
     async createIfNotExists(doc){if(!documents.has(doc._id)){documents.set(doc._id,{...structuredClone(doc),_rev:`fixture-${randomUUID()}`});await save()}return structuredClone(documents.get(doc._id))},
     transaction(){
-      const pending=[]
-      const tx={createIfNotExists(doc){pending.push(doc);return tx},async commit(){
-        for(const d of pending)if(!documents.has(d._id))documents.set(d._id,{...structuredClone(d),_rev:`fixture-${randomUUID()}`})
+      const pending=[],patches=[]
+      const tx={createIfNotExists(doc){pending.push(doc);return tx},patch(id,input){
+        let expected;const sets={}
+        const builder={ifRevisionId(value){expected=value;return builder},set(values){Object.assign(sets,structuredClone(values));return builder}}
+        if(typeof input==='function')input(builder);else builder.set(input.set||{})
+        patches.push({id,expected,sets});return tx
+      },async commit(){
+        if(beforePatch&&patches.length){const fn=beforePatch;beforePatch=null;await fn(documents,patches[0].id)}
+        if(nextFailure){const error=nextFailure;nextFailure=null;throw error}
+        const next=new Map([...documents].map(([key,value])=>[key,structuredClone(value)]))
+        for(const d of pending)if(!next.has(d._id))next.set(d._id,{...structuredClone(d),_rev:`fixture-${randomUUID()}`})
+        for(const {id,expected,sets} of patches){
+          const record=next.get(id);if(!record||expected!==undefined&&record._rev!==expected)throw conflict()
+          for(const [key,value]of Object.entries(sets)){const segments=key.split('.');let cursor=record;for(const segment of segments.slice(0,-1))cursor=cursor[segment];cursor[segments.at(-1)]=structuredClone(value)}
+          record._rev=`fixture-${randomUUID()}`
+        }
+        for(const doc of pending)if(!documents.has(doc._id))documents.set(doc._id,next.get(doc._id))
+        for(const {id}of patches)documents.set(id,next.get(id))
         await save()
       }}
       return tx

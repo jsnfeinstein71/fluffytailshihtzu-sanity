@@ -52,12 +52,12 @@ test('test checkout rejects live credentials, mismatched provider associations, 
  store.documents.get('preview-litter').deposit=500;assert.equal((await send(action)).status,409)
  assert.equal((await send({type:'payment',familyId,puppyId:'preview-puppy',kind:'balance',requestId:'00000000-0000-4000-8000-000000000404'})).status,409)
 })
-test('one-time owner access grants are revision claimed, host scoped and cannot access existing Inbox or Production',async()=>{
+test('one-time owner access grants are revision claimed, host scoped cover the existing staff Inbox without granting Production access',async()=>{
  const link=await json(await mint.POST(req('/inbox/workspace/api/access',{}))),token=new URL(link.url).hash.slice(1)
  const request=()=>req('/inbox/access/api',{token},{authorization:''})
  const results=await Promise.all([redeem.POST(request()),redeem.POST(request())]);assert.deepEqual(results.map(r=>r.status).sort(),[200,401]);const cookie=results.find(r=>r.status===200).headers.get('set-cookie').split(';')[0];assert.match(results.find(r=>r.status===200).headers.get('set-cookie'),/HttpOnly/)
  assert.equal(requireOperator(new Request(origin+'/inbox/workspace/api/state',{headers:{cookie}})),null)
- assert.equal(requireOperator(new Request(origin+'/inbox',{headers:{cookie}})).status,401)
+ assert.equal(requireOperator(new Request(origin+'/inbox',{headers:{cookie}})),null)
  assert.equal(requireOperator(new Request('https://other.example.test/inbox/workspace',{headers:{cookie}})).status,401)
  assert.equal((await redeem.POST(req('/inbox/access/api',{token},{origin:'https://evil.test'}))).status,403)
  process.env.VERCEL_ENV='production';assert.equal(requireOperator(new Request(origin+'/inbox/workspace',{headers:{cookie}})).status,401);assert.equal((await redeem.POST(request())).status,404)
@@ -65,6 +65,6 @@ test('one-time owner access grants are revision claimed, host scoped and cannot 
 test('Preview workspace navigation and expired API sessions never trigger browser-wide Basic Auth prompts',()=>{
  const api=requireOperator(new Request(origin+'/inbox/workspace/api/state'));assert.equal(api.status,401);assert.equal(api.headers.has('www-authenticate'),false)
  const page=proxy(new NextRequest(origin+'/inbox/workspace',{headers:{accept:'text/html'}}));assert.equal(page.status,307);assert.equal(page.headers.get('location'),origin+'/inbox/access');assert.equal(page.headers.has('www-authenticate'),false)
- assert.equal(requireOperator(new Request(origin+'/inbox')).headers.has('www-authenticate'),true)
+ assert.equal(requireOperator(new Request(origin+'/inbox')).headers.has('www-authenticate'),false)
  process.env.VERCEL_ENV='production';assert.equal(requireOperator(new Request(origin+'/inbox/workspace')).headers.has('www-authenticate'),true)
 })

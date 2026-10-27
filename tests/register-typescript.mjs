@@ -14,6 +14,8 @@ const nextModules = new Map(['next/link', 'next/navigation', 'next/server', 'nex
 // Test-only loader: execute actual TSX pages with a read-only in-memory Sanity client.
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if(specifier==='next/image')return {url:'fixture:next-image-interop',shortCircuit:true}
+    if(specifier==='@/lib/test-customer')return {url:'fixture:test-customer',shortCircuit:true}
     if (specifier === 'server-only') return {url: 'fixture:empty', shortCircuit: true}
     if (specifier === '@sanity/client') return {url: 'fixture:sanity-sdk', shortCircuit: true}
     if (specifier === '@/sanity/lib/operator-client' || specifier === './operator-client') return {url: 'fixture:operator-client', shortCircuit: true}
@@ -34,11 +36,13 @@ registerHooks({
     return nextResolve(specifier, context)
   },
   load(url, context, nextLoad) {
+    if(url==='fixture:next-image-interop')return {format:'module',source:`import value from ${JSON.stringify(nextModules.get('next/image'))};export default value.default||value;`,shortCircuit:true}
+    if(url==='fixture:test-customer')return {format:'module',source:`export * from ${JSON.stringify(pathToFileURL(path.join(root,'lib/test-customer.ts')).href)};import {testCustomerContacts as realContacts,approvedTestCustomer as realApproved} from ${JSON.stringify(pathToFileURL(path.join(root,'lib/test-customer.ts')).href)};export const testCustomerContacts=()=>globalThis.fixtureTestContacts||realContacts();export const approvedTestCustomer=p=>globalThis.fixtureTestContacts?!!p&&p.paymentTestScenario==='customer-20261027'&&p.email===globalThis.fixtureTestContacts.email&&p.phone===globalThis.fixtureTestContacts.phone:realApproved(p);`,shortCircuit:true}
     if (url === 'fixture:empty') return {format: 'module', source: '', shortCircuit: true}
     if (url === 'fixture:sanity-sdk') return {format: 'module', source: 'export const createClient = config => {globalThis.fixtureWriterConfigs?.push(config); return globalThis.fixtureOperatorClient}', shortCircuit: true}
     if (url === 'fixture:operator-client') return {format: 'module', source: 'export const getOperatorClient = () => globalThis.fixtureOperatorClient', shortCircuit: true}
     if (url === 'fixture:stripe') return {format: 'module', source: 'export const getStripe = () => globalThis.fixtureStripe', shortCircuit: true}
-    if (url === 'fixture:twilio') return {format: 'module', source: 'export const getTwilio = () => globalThis.fixtureTwilio', shortCircuit: true}
+    if (url === 'fixture:twilio') return {format: 'module', source: 'export const getTwilio = () => globalThis.fixtureTwilio; export const getTestCustomerTwilio = () => globalThis.fixtureTwilio', shortCircuit: true}
     if (url === 'fixture:sanity-client') return {format: 'module', source: 'export const client = {fetch: (...args) => globalThis.fixtureSanityFetch(...args)}', shortCircuit: true}
     if (url === 'fixture:mail-provider') return {format:'module',source:`export * from ${JSON.stringify(pathToFileURL(path.join(root,'sanity/lib/mail-provider.ts')).href)}; import {getMailProvider as realProvider,getMailCapabilities as realCapabilities} from ${JSON.stringify(pathToFileURL(path.join(root,'sanity/lib/mail-provider.ts')).href)}; export const getMailProvider=()=>globalThis.fixtureMailProvider||realProvider(); export const getMailCapabilities=()=>globalThis.fixtureMailProvider?.capabilities||realCapabilities();`,shortCircuit:true}
     if (url.endsWith('.css')) return {format: 'module', source: '', shortCircuit: true}

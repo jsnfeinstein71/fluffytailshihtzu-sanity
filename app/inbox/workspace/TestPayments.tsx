@@ -1,0 +1,7 @@
+'use client'
+import {money,type Family} from './model'
+import type {EmailWorkspace} from './useEmailWorkspace'
+export default function TestPayments({family,email}:{family:Family;email:EmailWorkspace}){
+ const requests=(email.data?.paymentRequests||[]).filter(r=>r.familyId===family.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))
+ return <section className="ops-email-options ops-payment-history" aria-label="Payment history"><h3>Payment history</h3>{family.records.length?<ul>{family.records.map((record,index)=><li key={index}><strong>{record.paymentType==='deposit'?'Deposit':'Final payment'} · {money(Math.round(record.amountPaid*100))}</strong><span>Payment confirmed{record.createdAt?` · ${new Date(record.createdAt).toLocaleDateString()}`:''}</span></li>)}</ul>:<p>No confirmed payments yet.</p>}{requests.length?<details><summary>Payment requests</summary>{requests.map(request=><article key={request._id}><strong>{request.kind==='deposit'?'Deposit':'Final payment'} · {money(request.amountCents)}</strong><p>{request.webhookVerifiedAt?'Payment confirmed':request.paymentVerification==='test-paid'?'Payment processing; confirmation pending':request.checkoutOutcome==='expired'?'Link expired':request.checkoutOutcome==='failed'?'Payment not completed':'Awaiting payment'}</p>{request.checkoutUrl?<a href={request.checkoutUrl} target="_blank" rel="noopener noreferrer">View {request.webhookVerifiedAt?'confirmation':'request'} ↗</a>:null}</article>)}</details>:null}</section>
+}

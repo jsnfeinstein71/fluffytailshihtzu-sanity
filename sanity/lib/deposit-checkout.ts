@@ -1,5 +1,6 @@
 import {createHash,randomBytes} from 'node:crypto'
 import {privateRecordId} from './private-records'
+import {paymentTestWorkspaceEnabled,requirePaymentTestConfiguration} from '@/lib/payment-test-mode'
 import {getStripe} from './stripe'
 import {getPaymentContext,paymentMetadata,PaymentError} from './payment-context'
 type DepositLink = {
@@ -9,6 +10,7 @@ type DepositLink = {
 }
 
 export async function createDepositCheckout(context:Awaited<ReturnType<typeof getPaymentContext>>,body:{customerName?:string;customerEmail?:string;customerPhone?:string},base:string,scope:Record<string,string>={}){
+ if(paymentTestWorkspaceEnabled()&&scope.staffTestOnly!=='1')throw new PaymentError('Use the isolated family workspace to request this test payment.',403)
     const stripe = getStripe()
     const {sanity, puppy, pricing, balance} = context
     if (!['available', 'hold'].includes(puppy.status) || !['current', 'active'].includes(puppy.litterStatus) || puppy.isVisible === false || puppy.litterVisible === false || balance.paidCents > 0) {
@@ -52,14 +54,14 @@ export async function createDepositCheckout(context:Awaited<ReturnType<typeof ge
     if (!link.stripeCheckoutUrl) {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment', currency: 'usd', client_reference_id: puppy._id,
-        success_url: `${base}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${base}/puppies/${encodeURIComponent(puppy.slug)}`,
+        success_url: paymentTestWorkspaceEnabled()&&scope.customerPaymentToken?`${requirePaymentTestConfiguration()}/pay/${scope.customerPaymentToken}?result=returned`:paymentTestWorkspaceEnabled()?`${requirePaymentTestConfiguration()}/inbox/workspace/payment-return?session_id={CHECKOUT_SESSION_ID}`:`${base}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: paymentTestWorkspaceEnabled()&&scope.customerPaymentToken?`${requirePaymentTestConfiguration()}/pay/${scope.customerPaymentToken}?result=canceled`:paymentTestWorkspaceEnabled()?`${requirePaymentTestConfiguration()}/inbox/workspace?family=${scope.staffFamilyId}`:`${base}/puppies/${encodeURIComponent(puppy.slug)}`,
         customer_email: link.customerEmail || undefined,
         expires_at: Math.floor(Date.parse(link.expiresAt) / 1000),
         metadata: link.checkoutMetadata,
         line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: pricing.depositCents, product_data: {
-          name: link.checkoutMetadata.puppyName + ' deposit',
-          description: 'Deposit toward ' + link.checkoutMetadata.puppyName + ' from ' + link.checkoutMetadata.litterTitle + '; applied to the total puppy price.',
+          name: (scope.customerPaymentToken?'FluffyTail — ':'')+link.checkoutMetadata.puppyName + ' deposit',
+          description: scope.customerPaymentToken?`Jeanne at FluffyTail requests this non-refundable $${pricing.depositCents/100} deposit toward the $${pricing.totalCents/100} total puppy price. It is applied to the total; $${pricing.remainingCents/100} remains after payment.`:'Deposit toward ' + link.checkoutMetadata.puppyName + ' from ' + link.checkoutMetadata.litterTitle + '; applied to the total puppy price.',
         }}}],
       }, {idempotencyKey: link.token})
       if (!session.url) throw new Error('Checkout URL unavailable.')

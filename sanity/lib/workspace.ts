@@ -1,3 +1,5 @@
+import {loadTestSmsProfile,saveTestSmsConsent} from './workspace-sms'
+import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {normalizePhone} from '@/lib/inquiry'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
@@ -33,6 +35,10 @@ export async function listWorkspaceFamilies():Promise<SavedFamily[]> {
   const records=await getOperatorClient().fetch<SavedFamily[]>(query,{workspace:workspaceNamespace()},{cache:'no-store'})
   if(records.length>500)throw new WorkspaceError('More than 500 families need paginated review. No records were discarded.',409)
   const checked=records.map(checkedRecord)
+  if(paymentTestWorkspaceEnabled())return await Promise.all(checked.filter(record=>record.profile.paymentTestScenario).map(async record=>{
+    const payments=await getOperatorClient().fetch<{paymentStatus:string;amountPaid:number;paymentType:string;createdAt:string;webhookVerifiedAt:string;quotedTotalCents:number}[]>('*[_type == "paymentRecord" && workspace == "review-v1" && testOnly == true && staffFamilyId == $familyId && puppyId == $puppyId && paymentStatus == "paid"] | order(createdAt asc){paymentStatus,amountPaid,paymentType,createdAt,webhookVerifiedAt,quotedTotalCents}',{familyId:record.familyKey,puppyId:record.profile.puppyId||null},{cache:'no-store'})
+    return {...record,profile:{...await loadTestSmsProfile(record),records:payments,agreedTotalCents:payments[0]?.quotedTotalCents}}
+  }))
   if(!liveWorkspaceEnabled())return checked
   return await Promise.all(checked.map(async record=>{
     const profile={...record.profile}
@@ -54,10 +60,11 @@ function text(value:unknown, limit:number, empty=false) {
 export function validateWorkspaceMutation(input:unknown):WorkspaceMutation {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new WorkspaceError('Invalid workspace action.')
   const data = input as Record<string,unknown>
-  const allowed:Record<string,string[]> = {initialize:['type'],'sync-inquiries':['type'],draft:['type','familyId','channel','body','base'],note:['type','familyId','body','requestId'],check:['type','familyId','item','checked'],associate:['type','familyId','puppyId']}
+  const allowed:Record<string,string[]> = {'test-sms-consent':['type','familyId','acknowledged'],initialize:['type'],'sync-inquiries':['type'],draft:['type','familyId','channel','body','base'],note:['type','familyId','body','requestId'],check:['type','familyId','item','checked'],associate:['type','familyId','puppyId']}
   if (typeof data.type !== 'string' || !allowed[data.type] || Object.keys(data).some(key => !allowed[data.type as string].includes(key))) throw new WorkspaceError('Invalid workspace action.')
   if (data.type === 'initialize' || data.type === 'sync-inquiries') return {type:data.type}
   if (!validFamilyKey(data.familyId)) throw new WorkspaceError('Family was not found.',404)
+  if(data.type==='test-sms-consent'){if(data.acknowledged!==true)throw new WorkspaceError('Confirm that you are the test recipient and agree to test texts.');return {type:'test-sms-consent',familyId:data.familyId,acknowledged:true}}
   if(data.type==='associate'){if(typeof data.puppyId!=='string'||!/^[-a-zA-Z0-9_]{1,128}$/.test(data.puppyId))throw new WorkspaceError('Choose a published puppy.');return {type:'associate',familyId:data.familyId,puppyId:data.puppyId}}
   if (data.type === 'draft') {
     if (data.channel !== 'Email' && data.channel !== 'Text') throw new WorkspaceError('Choose email or text.')
@@ -81,6 +88,7 @@ export async function mutateWorkspace(input:unknown) {
   requireWorkspace()
   const action = validateWorkspaceMutation(input)
   const client = getOperatorClient()
+  if(action.type==='test-sms-consent'){await saveTestSmsConsent(action.familyId);return}
   if(action.type==='sync-inquiries'){await syncInquiryFamilies();return}
   if (action.type === 'initialize') {
     if(liveWorkspaceEnabled()){await syncInquiryFamilies();return}

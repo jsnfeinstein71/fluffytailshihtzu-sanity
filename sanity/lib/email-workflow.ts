@@ -1,3 +1,8 @@
+import {attachmentParts} from './workspace-attachments'
+import {sameAttachments} from '@/lib/mail/attachment-model'
+import {samePaymentEmail} from '@/lib/mail/payment-email'
+import {approvedTestCustomer,testCustomerContacts} from '@/lib/test-customer'
+import {testConfirmationSnapshot} from './test-payment-confirmation'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
 import {randomUUID} from 'node:crypto'
@@ -5,7 +10,7 @@ import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {privateRecordId} from './private-records'
 import {getMailCapabilities,getMailProvider,ownerTestConfigured,ownerTestBody,ownerTestSubject,type Cursor,type ReplyEnvelope} from './mail-provider'
 import {EmailWorkflowError,loadMailbox,validateSavedEmailReview} from './workspace-email'
-import {requireWorkspace,validFamilyKey} from './workspace'
+import {requireWorkspace,validFamilyKey,workspaceId} from './workspace'
 import {refreshWorkspaceSms} from './workspace-sms'
 import {jeanneEmail,type EmailReview,type IncomingEmail,type MailData,type OutgoingEmail,type OutgoingState,type TransportAction} from '@/app/inbox/workspace/email-model'
 
@@ -36,14 +41,14 @@ export async function ensureOutgoing(reviewId:string,origin:string){
   const id=outgoingId(snapshot)
   const existing=await client.getDocument<OutgoingEmail>(id)
   if(existing){
-    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body)throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
+    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body||!sameAttachments(existing.attachments,snapshot.attachments)||existing.html!==snapshot.html||!samePaymentEmail(existing.paymentEmail,snapshot.paymentEmail))throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
     return existing
   }
   const review=await validateSavedEmailReview(reviewId,origin)
-  const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
+  const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,...(review.attachments?.length?{attachments:review.attachments}:{}),...(review.paymentEmail?{paymentEmail:review.paymentEmail,html:review.html}:{}),messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
   const stored=await client.getDocument<OutgoingEmail>(id)
-  if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
+  if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
   return stored
 }
 
@@ -84,10 +89,12 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
   const provider=getMailProvider()
   if(!provider.capabilities.canDispatch)throw new EmailWorkflowError('Real sending is disabled. Saved outgoing records and drafts are kept. Use the fictional provider for operational tests.',403)
   if(scenario!==undefined&&(provider.capabilities.provider!=='fictional'||!['accepted','rejected','uncertain'].includes(scenario)))throw new EmailWorkflowError('Choose a supported fictional provider result.')
+  const confirmations=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == \"staffOutgoingEmail\" && workspace == $workspace && reviewId == $reviewId && defined(paymentConfirmationSessionId)][0...2]',{workspace:workspaceNamespace(),reviewId},{cache:'no-store'});if(confirmations.length){if(confirmations.length!==1)throw new EmailWorkflowError('Confirmation identity needs review.',409);await dispatchTestConfirmation(confirmations[0]);return}
   let record=await ensureOutgoing(reviewId,origin)
   if(stale(record)){await finishAttempt(record,'uncertain','INTERRUPTED_ATTEMPT');return}
   if(['accepted','sending','uncertain'].includes(record.state))return
   await validateSavedEmailReview(reviewId,origin)
+  const parts=await attachmentParts(record.attachments,record.familyId)
   if(provider.capabilities.provider==='pair'&&ownerTestConfigured()){
     if(record.to!==jeanneEmail||record.subject!==ownerTestSubject||record.body!==ownerTestBody||record.inReplyTo||record.paymentRequestId||record.attempts.length)throw new EmailWorkflowError('The owner-only trial permits one initial message with the exact approved recipient/text and no payment link. No real submission was made.',403)
     const prior=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == $workspace && source == "pair" && count(attempts) > 0][0...1]',{workspace:workspaceNamespace()},{cache:'no-store'})
@@ -95,7 +102,8 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
     const baseline=await getOperatorClient().getDocument<SavedCursor>(privateRecordId('staffMailCursor','review-v1:owner-only-trial:INBOX'))
     if(!baseline?.validity)throw new EmailWorkflowError('Initialize the approved future-only reply watermark before the single owner-only send. No existing message will be imported.',409)
   }
-  if(liveWorkspaceEnabled())await initializeFamilyMailbox(record.familyId)
+  if(testCustomerContacts()){const family=await getOperatorClient().getDocument<import('@/app/inbox/workspace/persistence').SavedFamily>(workspaceId(record.familyId));if(!family||!approvedTestCustomer(family.profile)||record.to!==testCustomerContacts()!.email)throw new EmailWorkflowError('Only the approved test family can receive messages.',403)}
+  if(liveWorkspaceEnabled()||testCustomerContacts())await initializeFamilyMailbox(record.familyId)
   await acquireGuard(record,provider.capabilities.provider==='pair'&&ownerTestConfigured())
   record=(await getOperatorClient().getDocument<OutgoingEmail>(record._id))!
   if(!['prepared','failed'].includes(record.state))return
@@ -107,7 +115,7 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
   try{await getOperatorClient().patch(record._id).ifRevisionId(record._rev).set({state:'sending',attempts,source:provider.capabilities.provider}).commit({visibility:'sync'})}catch(error){if(conflict(error))return;throw error}
   const claimed={...record,state:'sending' as const,attempts,source:provider.capabilities.provider}
   let result
-  try{result=await provider.send(claimed,scenario)}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
+  try{result=await provider.send({...claimed,...(parts.length?{attachmentParts:parts}:{})},scenario)}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
   const state:OutgoingState=result.outcome==='accepted'?'accepted':result.outcome==='rejected'?'failed':'uncertain'
   await finishAttempt(claimed,state,result.code)
   // Draft and payment/reservation records are deliberately not changed.
@@ -121,8 +129,9 @@ async function syncReplies(familyId?:string,initializeOnly=false,background=fals
   const provider=getMailProvider()
   if(!provider.capabilities.canSync)throw new EmailWorkflowError('Real mailbox reads are disabled. No existing message list, body or header was read.',403)
   const client=getOperatorClient()
-  if(liveWorkspaceEnabled()&&(!familyId||!/^inquiry-[a-f0-9]{64}$/.test(familyId)))throw new EmailWorkflowError('Choose a saved family conversation before synchronizing replies.')
-  const cursorId=liveWorkspaceEnabled()?familyMailCursorId(familyId!):provider.capabilities.provider==='pair'?privateRecordId('staffMailCursor','review-v1:owner-only-trial:INBOX'):mailCursorId
+  if((liveWorkspaceEnabled()||testCustomerContacts())&&(!familyId||!/^inquiry-[a-f0-9]{64}$/.test(familyId)))throw new EmailWorkflowError('Choose a saved family conversation before synchronizing replies.')
+  if(testCustomerContacts()){const family=await client.getDocument<import('@/app/inbox/workspace/persistence').SavedFamily>(workspaceId(familyId!));if(!family||!approvedTestCustomer(family.profile))throw new EmailWorkflowError('Only the approved test conversation can read matching replies.',403)}
+  const cursorId=liveWorkspaceEnabled()||testCustomerContacts()?familyMailCursorId(familyId!):provider.capabilities.provider==='pair'?privateRecordId('staffMailCursor','review-v1:owner-only-trial:INBOX'):mailCursorId
   await client.transaction().createIfNotExists({_id:cursorId,_type:'staffMailCursor',workspace:workspaceNamespace(),validity:'',lastUid:0,source:provider.capabilities.provider,syncToken:null,leaseUntil:0}).commit({visibility:'sync'})
   const cursor=await client.getDocument<SavedCursor>(cursorId)
   if(background&&cursor&&(cursor.leaseUntil>Date.now()||Date.now()-(cursor.lastCheckedAt||0)<15000))return 'Automatic updates are active.'
@@ -133,16 +142,16 @@ async function syncReplies(familyId?:string,initializeOnly=false,background=fals
   try{await client.patch(cursorId).ifRevisionId(cursor._rev).set({syncToken:token,leaseUntil:Date.now()+90000,lastCheckedAt:Date.now()}).commit({visibility:'sync'})}catch(error){if(conflict(error))throw new EmailWorkflowError('Another synchronization has claimed this mailbox. Refresh before continuing.',409);throw error}
   let imported=0,skipped=0
   try{
-    const outgoing=await client.fetch<OutgoingEmail[]>(liveWorkspaceEnabled()?'*[_type == "staffOutgoingEmail" && workspace == $workspace && familyId == $familyId] | order(createdAt desc)[0...101]':outgoingQuery,{workspace:workspaceNamespace(),familyId:familyId||null},{cache:'no-store'})
-    if(liveWorkspaceEnabled()&&outgoing.length>100)throw new EmailWorkflowError('This conversation has more than 100 outgoing versions. Review its reply scope before synchronizing.',409)
-    const threads=outgoing.filter(o=>o.source===provider.capabilities.provider&&o.attempts.length>0&&(!liveWorkspaceEnabled()||o.familyId===familyId))
+    const outgoing=await client.fetch<OutgoingEmail[]>((liveWorkspaceEnabled()||testCustomerContacts())?'*[_type == "staffOutgoingEmail" && workspace == $workspace && familyId == $familyId] | order(createdAt desc)[0...101]':outgoingQuery,{workspace:workspaceNamespace(),familyId:familyId||null},{cache:'no-store'})
+    if((liveWorkspaceEnabled()||testCustomerContacts())&&outgoing.length>100)throw new EmailWorkflowError('This conversation has more than 100 outgoing versions. Review its reply scope before synchronizing.',409)
+    const threads=outgoing.filter(o=>o.source===provider.capabilities.provider&&o.attempts.length>0&&(!(liveWorkspaceEnabled()||testCustomerContacts())||o.familyId===familyId))
     const batch=await provider.sync({cursor:{validity:cursor.validity,lastUid:cursor.lastUid},threads})
     if(typeof batch.validity!=='string'||!batch.validity||!Number.isSafeInteger(batch.lastUid)||batch.lastUid<cursor.lastUid||!Array.isArray(batch.messages)||batch.messages.length>100||(cursor.validity&&batch.validity!==cursor.validity))throw new EmailWorkflowError('The mailbox identity or cursor changed. No automatic reset or history import was performed.',409)
     for(const message of batch.messages){
       checkedReply(message)
       if(message.validity!==batch.validity||message.uid>batch.lastUid)throw new EmailWorkflowError('Reply cursor and message identity do not match.',409)
       const refs=[message.inReplyTo,...message.references].filter(Boolean)
-      const candidates=liveWorkspaceEnabled()?await client.fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == $workspace && messageId in $refs]',{workspace:workspaceNamespace(),refs},{cache:'no-store'}):threads
+      const candidates=liveWorkspaceEnabled()||testCustomerContacts()?await client.fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == $workspace && messageId in $refs]',{workspace:workspaceNamespace(),refs},{cache:'no-store'}):threads
       const matches=candidates.filter(o=>refs.includes(o.messageId))
       if(!matches.length||new Set(matches.map(o=>o.familyId)).size!==1||matches.some(o=>o.to.toLowerCase()!==message.from.toLowerCase())){skipped++;continue}
       const parent=matches.find(o=>o.messageId===message.inReplyTo)||matches[0]
@@ -175,7 +184,7 @@ export async function performTransportAction(input:unknown,origin:string){
   if(!['dispatch','sync','refresh','reconcile','resolve'].includes(action.type)||Object.keys(action).some(key=>!fields.includes(key)))throw new EmailWorkflowError('Choose a valid email action.')
   if(action.type==='dispatch'){
     if(typeof action.reviewId!=='string'||!/^private\.staffEmailReview\.[a-f0-9]{64}$/.test(action.reviewId))throw new EmailWorkflowError('Choose a saved review.')
-    if(liveWorkspaceEnabled()&&action.confirmed!==true)throw new EmailWorkflowError('Confirm this saved email before sending it.',400)
+    if((liveWorkspaceEnabled()||testCustomerContacts())&&action.confirmed!==true)throw new EmailWorkflowError('Confirm this saved email before sending it.',400)
     await dispatch(action.reviewId,action.scenario,origin)
   }else if(action.type==='resolve'){
     if(typeof action.outgoingId!=='string'||!/^private\.staffOutgoingEmail\.[a-f0-9]{64}$/.test(action.outgoingId)||typeof action.attemptKey!=='string'||action.acknowledged!==true||!['accepted','not-accepted'].includes(action.decision)||typeof action.evidence!=='string'||action.evidence.trim().length<20||action.evidence.length>2000)throw new EmailWorkflowError('Record the checked provider evidence and explicitly confirm the SMTP outcome before resolving this attempt.')
@@ -188,9 +197,10 @@ export async function performTransportAction(input:unknown,origin:string){
   }else if(action.type==='refresh'){
     if(!validFamilyKey(action.familyId))throw new EmailWorkflowError('Choose a saved family conversation.')
     await reconcileInterruptedAttempts()
+    if(testCustomerContacts())await sendPreparedTestConfirmations(action.familyId)
     let syncNotice=''
     if(getMailCapabilities().canSync){
-      const cursor=await getOperatorClient().getDocument<SavedCursor>(liveWorkspaceEnabled()?familyMailCursorId(action.familyId):mailCursorId)
+      const cursor=await getOperatorClient().getDocument<SavedCursor>(liveWorkspaceEnabled()||testCustomerContacts()?familyMailCursorId(action.familyId):mailCursorId)
       // Opening a conversation never starts a historical mailbox import. Only
       // threads with an existing future-only watermark are eligible.
       if(cursor?.validity)try{await syncReplies(action.familyId,false,true)}catch(error){syncNotice=error instanceof Error?error.message:'Automatic email updates are unavailable. Use Refresh to retry.'}
@@ -204,3 +214,33 @@ export async function performTransportAction(input:unknown,origin:string){
 
 export function familyMailCursorId(familyId:string){return privateRecordId('staffMailCursor',`${workspaceNamespace()}:${familyId}:INBOX`)}
 async function initializeFamilyMailbox(familyId:string){const cursor=await getOperatorClient().getDocument<SavedCursor>(familyMailCursorId(familyId));if(!cursor?.validity)await syncReplies(familyId,true)}
+
+// Payment confirmations share the existing durable outbox and attempt controls.
+// Only a verified test ledger creates this immutable message; no browser draft
+// or unsigned checkout return can create, retarget or settle it.
+export async function ensureTestPaymentConfirmation(sessionId:string){
+ const snapshot=await testConfirmationSnapshot(sessionId);if(!snapshot)return
+ const client=getOperatorClient()
+ await client.transaction().createIfNotExists({...snapshot,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'pair',delivery:'unconfirmed'}).commit({visibility:'sync'})
+ const record=await client.getDocument<OutgoingEmail>(snapshot._id)
+ if(record?.state==='prepared')try{await dispatchTestConfirmation(record)}catch{/* Durable preparation remains visible; staff refresh can retry an unclaimed preparation. */}
+}
+async function sendPreparedTestConfirmations(familyId:string){
+ const records=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == "review-v1" && familyId == $familyId && defined(paymentConfirmationSessionId) && state == "prepared"][0...5]',{familyId},{cache:'no-store'})
+ for(const record of records)try{await dispatchTestConfirmation(record)}catch{/* No automatic retry of a failed, sending or uncertain attempt. */}
+}
+async function dispatchTestConfirmation(record:OutgoingEmail){
+ const snapshot=await testConfirmationSnapshot(record.paymentConfirmationSessionId||'')
+ if(!snapshot||Object.entries(snapshot).some(([key,value])=>key==='paymentEmail'&&'paymentEmail' in snapshot?!samePaymentEmail(record.paymentEmail,snapshot.paymentEmail):JSON.stringify(record[key as keyof OutgoingEmail])!==JSON.stringify(value)))throw new EmailWorkflowError('This payment confirmation needs review. No email was sent.',409)
+ const provider=getMailProvider();if(provider.capabilities.provider!=='pair'||!provider.capabilities.canDispatch)throw new EmailWorkflowError('Pair test confirmations are unavailable.',503)
+ if(!['prepared','failed'].includes(record.state))return
+ await initializeFamilyMailbox(record.familyId)
+ await acquireGuard(record)
+ const client=getOperatorClient(),latest=await client.getDocument<OutgoingEmail>(record._id)
+ if(!latest||!['prepared','failed'].includes(latest.state))return
+ if(latest.attempts.length>=10)throw new EmailWorkflowError('Review the confirmation attempt limit.',409)
+ const attempts=[...latest.attempts,{_key:randomUUID(),number:latest.attempts.length+1,startedAt:new Date().toISOString(),state:'sending' as const}]
+ try{await client.patch(latest._id).ifRevisionId(latest._rev).set({state:'sending',attempts,source:'pair'}).commit({visibility:'sync'})}catch(error){if(conflict(error))return;throw error}
+ let result;try{result=await provider.send({...latest,state:'sending',attempts,source:'pair'})}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
+ await finishAttempt({...latest,attempts},result.outcome==='accepted'?'accepted':result.outcome==='rejected'?'failed':'uncertain',result.code)
+}
