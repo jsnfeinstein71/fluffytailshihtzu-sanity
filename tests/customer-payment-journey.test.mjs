@@ -151,3 +151,13 @@ test('HTML review and confirmation validation survives Sanity reordering snapsho
  assert.equal(sent.state,'accepted');assert.equal(mailSent.length,1);assert.match(mailSent[0].html,/View deposit request/)
  await ok(await settle(deposit));await ok(await settle(deposit));assert.equal(mailSent.length,2);assert.match(mailSent[1].html,/Your deposit is confirmed/)
 })
+
+
+test('a payment request and private file travel together in the existing handler flow without replacing Jeanne’s note or settling a payment',async()=>{
+ const payment=await create('deposit'),files=await import('../app/inbox/workspace/api/files/route.ts'),bytes=Buffer.from('FICTIONAL pickup notes only')
+ const upload=await ok(await files.POST(request('/inbox/workspace/api/files',{familyId,uploadId:'00000000-0000-4000-8000-000000000071',filename:'pickup-test.txt',contentType:'text/plain',contentBase64:bytes.toString('base64')})))
+ const value={subject:'My custom subject',body:'Jeanne’s exact personal note. Please reply with any questions.',replyToId:null,paymentRequestId:payment._id,attachmentIds:[upload.attachment.id]}
+ const result=await sendEmailDraft(familyId,{familyId,revision:null,value},'00000000-0000-4000-8000-000000000072',async body=>ok(await action(body)))
+ assert.equal(result.state,'accepted');assert.equal(mailSent.length,1);assert.equal(mailSent[0].subject,value.subject);assert.ok(mailSent[0].body.includes(value.body));assert.match(mailSent[0].html,/View deposit request/);assert.match(mailSent[0].html,/fluffytail-email-logo-transparent/);assert.equal(mailSent[0].html.split('Please reply with any questions.').length,2);assert.equal(mailSent[0].attachmentParts.length,1);assert.deepEqual(Buffer.from(mailSent[0].attachmentParts[0].contentBase64,'base64'),bytes)
+ assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,0);assert.equal(store.documents.get('test-puppy').status,'available')
+})
