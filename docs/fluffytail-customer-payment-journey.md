@@ -47,3 +47,8 @@ A real Stripe test checkout was explicitly expired after the declined/canceled c
 Final authenticated readback: DjinX Daisy is Available, with zero requests, zero paid and zero outgoing messages; Poppy is Reserved with its original $400 and $1,200 paid entries. Pair sending/reply settings and the approved SMS gate are available. Production is still deployment `dpl_DxUWjg3yWGgkTYgzNuWVr1nLyZfe`, main `4a203e8`. No setup email/SMS was sent and no existing message content was imported. The only remaining real-delivery proof is the owner's explicit sends, device receipt and replies. The accepted live-route exception applies only when the owner later replies by SMS.
 
 A replacement request also checks earlier unsettled Stripe sessions. An expired saved link cannot bypass a provider-paid or processing payment that is still awaiting its callback; another charge is blocked until reconciliation. This is separately covered by an application-handler regression test.
+
+
+## Branded payment-email follow-up
+
+The owner subsequently confirmed receipt of the request email and successful DjinX deposit Checkout, and approved the payment pages. The next phase preserves that $400 deposit/Reserved status and adds four branded HTML/plain-text emails, optional draft preview and a saved future-confirmation note. Runtime `432d1a9` is published only to the existing test alias. The next $1,200 request is prepared and its email saved, with zero send attempts. See `docs/fluffytail-payment-emails.md` for the current 230-test and hosted persistence/visual checkpoint; earlier zero-request readiness statements above are historical.
