@@ -21,7 +21,7 @@ export async function testConfirmationSnapshot(sessionId:string){
  const existing=await getOperatorClient().getDocument<OutgoingEmail>(confirmationId(sessionId))
  // Already-prepared/sent plaintext snapshots are historical records, not a migration.
  if(existing&&!existing.paymentEmail)return legacy
- const paymentEmail:PaymentEmail={version:1,kind:complete?'paid-confirmation':'deposit-confirmation',name:existing?.paymentEmail?.name??family.profile.name,message:existing?.paymentEmail?.message??(family.profile.paymentConfirmationMessage||confirmationMessage),puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:ledger.totalPaidCents,depositCents:request.depositCents,url:`${requirePaymentTestConfiguration()}/pay/${request.publicToken}`,testOnly:true}
+ const paymentEmail:PaymentEmail={version:existing?.paymentEmail?.version||2,kind:complete?'paid-confirmation':'deposit-confirmation',name:existing?.paymentEmail?.name??family.profile.name,message:existing?.paymentEmail?.message??(family.profile.paymentConfirmationMessage||confirmationMessage),puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:ledger.totalPaidCents,depositCents:request.depositCents,url:`${requirePaymentTestConfiguration()}/pay/${request.publicToken}`,testOnly:true}
  const formatted=renderPaymentEmail(paymentEmail)
  return {...legacy,paymentEmail,html:formatted.html,body:formatted.text}
 

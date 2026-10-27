@@ -1,3 +1,5 @@
+import {checkedAttachments,listAttachments} from './workspace-attachments'
+import {sameAttachments} from '@/lib/mail/attachment-model'
 import {paymentRequestEmail,renderPaymentEmail,samePaymentEmail} from '@/lib/mail/payment-email'
 import {randomBytes} from 'node:crypto'
 import {approvedTestCustomer} from '@/lib/test-customer'
@@ -33,8 +35,9 @@ function asDraft(record:DraftDocument):EmailDraft{return {familyId:record.family
 function validValue(input:unknown):EmailValue{
   if(!input||typeof input!=='object'||Array.isArray(input))throw new EmailWorkflowError('Enter a valid email draft.')
   const value=input as Record<string,unknown>
-  if(Object.keys(value).some(key=>!['subject','body','replyToId','paymentRequestId'].includes(key))||typeof value.subject!=='string'||value.subject.length>160||Array.from(value.subject).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127)||typeof value.body!=='string'||value.body.length>10000||!(value.replyToId===null||typeof value.replyToId==='string'&&value.replyToId.length<=100)||!(value.paymentRequestId===null||typeof value.paymentRequestId==='string'&&/^private\.staffPaymentRequest\.[a-f0-9]{64}$/.test(value.paymentRequestId)))throw new EmailWorkflowError('Use a subject up to 160 characters, plain message text up to 10,000 characters, and an existing payment request.')
-  return {subject:value.subject,body:value.body,replyToId:value.replyToId,paymentRequestId:value.paymentRequestId}
+  if(Object.keys(value).some(key=>!['subject','body','replyToId','paymentRequestId','attachmentIds'].includes(key))||typeof value.subject!=='string'||value.subject.length>160||Array.from(value.subject).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127)||typeof value.body!=='string'||value.body.length>10000||!(value.replyToId===null||typeof value.replyToId==='string'&&value.replyToId.length<=100)||!(value.paymentRequestId===null||typeof value.paymentRequestId==='string'&&/^private\.staffPaymentRequest\.[a-f0-9]{64}$/.test(value.paymentRequestId)))throw new EmailWorkflowError('Use a subject up to 160 characters, plain message text up to 10,000 characters, and an existing payment request.')
+  if(value.attachmentIds!==undefined&&(!Array.isArray(value.attachmentIds)||value.attachmentIds.length>5||new Set(value.attachmentIds).size!==value.attachmentIds.length||value.attachmentIds.some(id=>typeof id!=='string'||!/^private\.staffAttachment\.[a-f0-9]{64}$/.test(id))))throw new EmailWorkflowError('Choose up to five saved family files.')
+  return {...(value.attachmentIds?{attachmentIds:value.attachmentIds as string[]}:{}),subject:value.subject,body:value.body,replyToId:value.replyToId,paymentRequestId:value.paymentRequestId}
 }
 function validate(input:unknown):MailAction{
   if(!input||typeof input!=='object'||Array.isArray(input))throw new EmailWorkflowError('Invalid email action.')
@@ -137,7 +140,7 @@ export async function loadMailbox():Promise<MailData>{
     return {familyId:f.familyKey,revision:null,value:emptyEmail(f.drafts.Email||'')}
   })
   const inventory=await client.fetch<{id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug:string;paymentTestScenario?:string}[]>('*[_type == "puppy" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,sex,color,paymentTestScenario,"litter":litter->title,status,"price":coalesce(overridePrice,litter->price),"deposit":litter->deposit,"slug":slug.current}',{},{cache:'no-store'})
-  return {paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
+  return {attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
 }
 export async function prepareEmailAction(input:unknown,origin:string){
   requireWorkspace()
@@ -181,6 +184,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const id=emailDraftId(action.familyId)
   const current=await client.getDocument<DraftDocument>(id)
   if(action.type==='save'){
+    await checkedAttachments(action.value.attachmentIds,family.familyKey)
     await checkReply(family,action.value)
     if(action.value.paymentRequestId)await checkedPayment(action.value.paymentRequestId,family,false)
     if(current&&sameEmail(current.value,action.value))return {}
@@ -198,18 +202,19 @@ export async function prepareEmailAction(input:unknown,origin:string){
   }
   if(!current||current._rev!==action.revision)throw new EmailWorkflowError('Save and refresh this email before preparing a review.',409)
   const value=validValue(current.value)
-  if(!value.subject.trim()||!value.body.trim())throw new EmailWorkflowError('Enter a subject and message before preparing the review.')
+  if(!value.subject.trim()||!value.body.trim()&&!value.attachmentIds?.length)throw new EmailWorkflowError('Enter a subject and a message or attachment before sending.')
   const parent=await checkReply(family,value)
   const payment=value.paymentRequestId?await checkedPayment(value.paymentRequestId,family):null
   if(liveWorkspaceEnabled()&&payment&&!payment.checkoutUrl)throw new EmailWorkflowError('Create and verify the payment checkout link before reviewing this email.',409)
   const testUrl=payment?(payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${testUrl}`:value.body
+  const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)
   const paymentEmail=paymentTestWorkspaceEnabled()&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
-  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
+  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(attachments.length?{attachments}:{}),...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
   const stored=await client.getDocument<EmailReview>(record._id)
-  if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject||stored.html!==record.html||!samePaymentEmail(stored.paymentEmail,record.paymentEmail))throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
+  if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html||!samePaymentEmail(stored.paymentEmail,record.paymentEmail))throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
   return {reviewId:record._id}
 }
 export async function getPaymentPreview(requestId:string){
@@ -234,7 +239,10 @@ export async function validateSavedEmailReview(id:string,origin:string){
   const parent=await checkReply(family,value)
   const payment=value.paymentRequestId?await checkedPayment(value.paymentRequestId,family):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href}`:value.body
-  const paymentEmail=review.paymentEmail&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
+  const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)
+  if(!sameAttachments(review.attachments,attachments))throw new EmailWorkflowError('The attachment snapshot changed. Prepare the current message again.',409)
+  const currentTemplate=review.paymentEmail&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
+  const paymentEmail=currentTemplate?{...currentTemplate,version:review.paymentEmail!.version}:null
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
   if(review.html!==formatted?.html||!samePaymentEmail(review.paymentEmail,paymentEmail||undefined))throw new EmailWorkflowError('The formatted payment email changed. Prepare a fresh review.',409)
   if(review.from!==jeanneEmail||review.replyTo!==jeanneEmail||review.to!==emailRecipient(family.profile.email)||review.subject!==value.subject||review.body!==(formatted?.text||body)||review.inReplyTo!==(parent?.messageId||null)||JSON.stringify(review.references)!==JSON.stringify(parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[])||review.paymentRequestId!==(payment?._id||null))throw new EmailWorkflowError('The saved review no longer matches this family, draft or payment context. Prepare a fresh review.',409)

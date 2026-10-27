@@ -1,5 +1,23 @@
 # Branded payment emails — October 27, 2026
 
+## Current composer/sidebar iteration
+
+The owner has since completed DjinX/Daisy's $1,600 test payments. Preserve both paid entries, their original signed confirmation timestamps, all conversations, Poppy and Reserved status. No further request is appropriate for a paid-in-full family.
+
+The Conversations navigation now expands the searchable family list inside the left sidebar. There is no separate family column in the message area. Desktop retains its fixed viewport, independently scrolling family list/history/details, stationary thread header and bottom composer, bounded growing draft and existing reading-position/New messages behavior. Mobile retains family/back and details panels. Other navigation and the original Inbox remain available.
+
+**Add to message** beside Email/Text prepares the eligible deposit or current balance through the existing request/Checkout handlers, then attaches the branded customer-page link directly to the draft. It preserves the current personal text and custom subject; selection never sends. Fully paid families have no payment option. The right panel has one reservation/price/verified-paid/remaining summary and concise payment history; request actions and zero-balance buttons have been removed from it.
+
+Email supports actual photo/document attachments via Pair's existing Nodemailer adapter, not links to public customer files. Uploads use authenticated-only `private.staffAttachment.*` Sanity documents; no public Sanity asset/CDN URL or new service is used. Supported formats: JPEG, PNG, WebP, PDF and UTF-8 TXT; **2.5 MB per file, five files and 7.5 MB combined per email**. The per-file serialized storage write remains below Sanity's [4 MB mutation-body limit](https://www.sanity.io/docs/content-lake/technical-limits). File extension/type/signature, size, ownership, namespace and content hash are checked. Private downloads require staff authentication and are no-store/nosniff. Library queries expose metadata only, never bytes. Staff can select saved family files again; removing a draft attachment keeps the private file and historical send copies.
+
+The selected payment and files appear above the message input with remove controls. Upload and selection save the draft; further email edits also save after a short idle interval. Save remains optional. Draft conflicts/errors retain local edits. If upload acknowledgment or draft saving fails, a completed private upload remains recoverable from Saved family files. No send happens until the operator chooses Send. Outgoing snapshots contain immutable file metadata; checksummed bytes are loaded before claiming SMTP submission. Pair receives real MIME attachment parts with stable message/thread headers. Acceptance remains delivery-unconfirmed. Rejected/uncertain sends retain the saved draft/files; uncertain attempts cannot be automatically retried. The confirmed-payment and reservation flow is unchanged.
+
+Text stays plain text. No photo/document/MMS action is exposed for Text and no channel is changed silently. Incoming attachments remain available in Pair webmail; this iteration implements outgoing attachment delivery and history, not historical/incoming file import.
+
+New version-two payment emails use the existing approved transparent white logo variant on the brown header, exported to a PNG with alpha. The original logo artwork and version-one asset/rendering are retained. The signature avoids repeating an invitation already written in Jeanne's message. Earlier immutable request/confirmation snapshots remain reproducible; payment pages and Stripe Checkout are untouched.
+
+Verification and the final Preview/owner handoff are recorded at the end of this document after deployment. All application-provider sends in regression tests use fictional SMTP/IMAP; development makes no real email/SMS sends or new payments. Production and the paused migration stay unchanged.
+
 Preview only, extending `5ce3556` on PR #8. The owner confirmed real receipt of the earlier deposit email and successful Stripe test deposit Checkout. Existing customer payment pages and Checkout are approved and unchanged. Production remains separate; do not merge or publish this phase to Production. Stage 2 remains paused.
 
 ## Presentation and everyday use

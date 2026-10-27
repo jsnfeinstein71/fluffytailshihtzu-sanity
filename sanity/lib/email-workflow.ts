@@ -1,3 +1,5 @@
+import {attachmentParts} from './workspace-attachments'
+import {sameAttachments} from '@/lib/mail/attachment-model'
 import {samePaymentEmail} from '@/lib/mail/payment-email'
 import {approvedTestCustomer,testCustomerContacts} from '@/lib/test-customer'
 import {testConfirmationSnapshot} from './test-payment-confirmation'
@@ -39,14 +41,14 @@ export async function ensureOutgoing(reviewId:string,origin:string){
   const id=outgoingId(snapshot)
   const existing=await client.getDocument<OutgoingEmail>(id)
   if(existing){
-    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body||existing.html!==snapshot.html||!samePaymentEmail(existing.paymentEmail,snapshot.paymentEmail))throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
+    if(existing.familyId!==snapshot.familyId||existing.draftRevision!==snapshot.draftRevision||existing.to!==snapshot.to||existing.subject!==snapshot.subject||existing.body!==snapshot.body||!sameAttachments(existing.attachments,snapshot.attachments)||existing.html!==snapshot.html||!samePaymentEmail(existing.paymentEmail,snapshot.paymentEmail))throw new EmailWorkflowError('This email version conflicts with its saved outgoing record. Nothing was submitted.',409)
     return existing
   }
   const review=await validateSavedEmailReview(reviewId,origin)
-  const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,...(review.paymentEmail?{paymentEmail:review.paymentEmail,html:review.html}:{}),messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
+  const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,...(review.attachments?.length?{attachments:review.attachments}:{}),...(review.paymentEmail?{paymentEmail:review.paymentEmail,html:review.html}:{}),messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
   const stored=await client.getDocument<OutgoingEmail>(id)
-  if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.html!==record.html)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
+  if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
   return stored
 }
 
@@ -92,6 +94,7 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
   if(stale(record)){await finishAttempt(record,'uncertain','INTERRUPTED_ATTEMPT');return}
   if(['accepted','sending','uncertain'].includes(record.state))return
   await validateSavedEmailReview(reviewId,origin)
+  const parts=await attachmentParts(record.attachments,record.familyId)
   if(provider.capabilities.provider==='pair'&&ownerTestConfigured()){
     if(record.to!==jeanneEmail||record.subject!==ownerTestSubject||record.body!==ownerTestBody||record.inReplyTo||record.paymentRequestId||record.attempts.length)throw new EmailWorkflowError('The owner-only trial permits one initial message with the exact approved recipient/text and no payment link. No real submission was made.',403)
     const prior=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == $workspace && source == "pair" && count(attempts) > 0][0...1]',{workspace:workspaceNamespace()},{cache:'no-store'})
@@ -112,7 +115,7 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
   try{await getOperatorClient().patch(record._id).ifRevisionId(record._rev).set({state:'sending',attempts,source:provider.capabilities.provider}).commit({visibility:'sync'})}catch(error){if(conflict(error))return;throw error}
   const claimed={...record,state:'sending' as const,attempts,source:provider.capabilities.provider}
   let result
-  try{result=await provider.send(claimed,scenario)}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
+  try{result=await provider.send({...claimed,...(parts.length?{attachmentParts:parts}:{})},scenario)}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
   const state:OutgoingState=result.outcome==='accepted'?'accepted':result.outcome==='rejected'?'failed':'uncertain'
   await finishAttempt(claimed,state,result.code)
   // Draft and payment/reservation records are deliberately not changed.

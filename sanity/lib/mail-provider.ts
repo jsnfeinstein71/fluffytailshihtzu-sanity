@@ -1,3 +1,4 @@
+import type {EmailAttachmentPart} from '@/lib/mail/attachment-model'
 import {testCustomerContacts} from '@/lib/test-customer'
 import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
@@ -13,7 +14,7 @@ export type ReplyEnvelope={uid:number;validity:string;messageId:string|null;from
 export type Cursor={validity:string;lastUid:number}
 export type SyncBatch={validity:string;lastUid:number;messages:ReplyEnvelope[];initialized?:boolean}
 export type SendResult={outcome:'accepted'|'rejected'|'uncertain';code:string}
-export type MailProvider={capabilities:MailCapabilities;send:(message:OutgoingEmail,scenario?:string)=>Promise<SendResult>;sync:(input:{cursor:Cursor;threads:OutgoingEmail[]})=>Promise<SyncBatch>}
+export type MailProvider={capabilities:MailCapabilities;send:(message:OutgoingEmail&{attachmentParts?:EmailAttachmentPart[]},scenario?:string)=>Promise<SendResult>;sync:(input:{cursor:Cursor;threads:OutgoingEmail[]})=>Promise<SyncBatch>}
 export const ownerTestSubject='FluffyTail owner-only email test [FT-OWNER-EMAIL-001]'
 export const ownerTestBody='Jeanne, this is the owner-only FluffyTail Inbox email test. Please reply with: Owner reply received. No puppy is being reserved and no payment is requested.'
 export function ownerTestConfigured(){return process.env.FLUFFYTAIL_MAIL_MODE==='pair-owner-test'&&process.env.FLUFFYTAIL_MAIL_OWNER_TEST_APPROVAL==='FT-OWNER-EMAIL-001'}

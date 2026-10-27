@@ -5,6 +5,12 @@ import nodemailer from 'nodemailer'
 import {createPairAdapter} from '../lib/mail/pair-adapter.mjs'
 const {renderPaymentEmail}=await import('../lib/mail/payment-email.ts')
 const base={version:1,kind:'deposit-request',name:'Alex & Sam',message:'I’m happy to help.\nYour note stays here.',puppyName:'Daisy',amountCents:40000,totalCents:160000,paidCents:0,depositCents:40000,url:'https://payments.example.test/pay/'+'a'.repeat(48),testOnly:true}
+test('new templates avoid duplicate invitations and use the existing transparent logo; historical rendering stays available',()=>{
+ const message='Thank you. Please reply with any questions.',current=renderPaymentEmail({...base,version:2,message}),old=renderPaymentEmail({...base,version:1,message})
+ assert.equal(current.text.split('Please reply with any questions.').length,2);assert.equal(current.html.split('Please reply with any questions.').length,2);assert.match(current.html,/fluffytail-email-logo-transparent.png/);assert.match(current.html,/bgcolor="#58493D"/);assert.doesNotMatch(current.html,/fluffytail-email-logo\.png/)
+ assert.equal(old.text.split('Please reply with any questions.').length,3);assert.match(old.html,/fluffytail-email-logo\.png/)
+ const noInvitation=renderPaymentEmail({...base,version:2,message:'Your puppy’s details are below.'});assert.match(noInvitation.text,/You can reply to this email\./)
+})
 test('all four templates have truthful summaries, readable CTA, test disclosure and usable text',()=>{
  for(const [kind,paid,amount,button] of [['deposit-request',0,40000,'View deposit request'],['balance-request',40000,120000,'View final payment request'],['deposit-confirmation',40000,40000,'View payment confirmation'],['paid-confirmation',160000,120000,'View payment confirmation']]){
   const result=renderPaymentEmail({...base,kind,paidCents:paid,amountCents:amount})
