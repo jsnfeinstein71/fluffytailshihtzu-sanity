@@ -95,3 +95,10 @@ test('a signed delayed-payment failure releases only its unpaid test request, ne
  const receipt=await ok(await publicReceipt(payment.publicToken));assert.equal(receipt.state,'failed');assert.equal(receipt.paidCents,0);assert.equal(receipt.checkoutUrl,null);assert.equal(mailSent.length,0);assert.equal(store.documents.get('test-puppy').status,'available')
  const next=await create('deposit',2);assert.notEqual(next.checkoutSessionId,payment.checkoutSessionId);assert.equal(next.amountCents,40000)
 })
+
+
+test('an earlier Stripe-paid payment awaiting its callback blocks replacement requests even after the saved link expires',async()=>{
+ const payment=await create('deposit');sessions.get(payment.checkoutSessionId).payment_status='paid';sessions.get(payment.checkoutSessionId).status='complete'
+ store.documents.get(payment._id).expiresAt=new Date(0).toISOString();for(const link of store.documents.values())if(link._type==='depositLink')link.expiresAt=new Date(0).toISOString()
+ const response=await action({type:'payment',familyId,puppyId:'test-puppy',kind:'deposit',requestId:'00000000-0000-4000-8000-000000000099'});assert.equal(response.status,409);assert.match((await response.json()).error,/awaiting confirmation/);assert.equal(sessions.size,1);assert.equal(mailSent.length,0);assert.equal(store.documents.get('test-puppy').status,'available')
+})

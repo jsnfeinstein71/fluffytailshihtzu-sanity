@@ -141,7 +141,14 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const client=getOperatorClient()
   if(action.type==='checkout'||action.type==='verify')return await paymentTransport(action,family,origin)
   if(action.type==='payment'){
-    if(paymentTestWorkspaceEnabled())requirePaymentTestConfiguration()
+    if(paymentTestWorkspaceEnabled()){
+      requirePaymentTestConfiguration()
+      // An expired app link does not prove an earlier provider attempt failed.
+      // Do not issue a second charge while the first is paid or processing.
+      const unsettled=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == "review-v1" && testOnly == true && familyId == $familyId && puppyId == $puppyId && defined(checkoutSessionId) && !defined(webhookVerifiedAt)][0...21]',{familyId:family.familyKey,puppyId:action.puppyId},{cache:'no-store'})
+      if(unsettled.length>20)throw new EmailWorkflowError('Earlier test checkouts need review before requesting another payment.',409)
+      for(const prior of unsettled){const session=await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId!);if(session.livemode!==false||session.payment_status==='paid'||session.status==='complete'&&prior.checkoutOutcome!=='failed')throw new EmailWorkflowError('An earlier Stripe payment is awaiting confirmation. Do not request or pay again; review that payment first.',409)}
+    }
     const details=await quote(family,action.puppyId,action.kind)
     if(paymentTestWorkspaceEnabled()){
       const pending=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == "review-v1" && testOnly == true && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'})
