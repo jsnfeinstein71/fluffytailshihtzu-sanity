@@ -10,6 +10,8 @@ export function useEmailWorkspace(ready:boolean){
   const [busy,setBusy]=useState(false)
   const flight=useRef<Promise<unknown>|null>(null)
   const sending=useRef(false)
+  const paymentFlow=useRef(false)
+  const [paymentBusy,setPaymentBusy]=useState(false)
   const [sendingFamily,setSendingFamily]=useState('')
   const [sendNotice,setSendNotice]=useState('')
   const [noticeFamily,setNoticeFamily]=useState('')
@@ -32,7 +34,7 @@ export function useEmailWorkspace(ready:boolean){
     })
   },[])
   const request=useCallback(async(action?:MailAction|TransportAction,clearFrom?:EmailValue,background=false):Promise<MailResult|null>=>{
-    if(background&&(flight.current||sending.current))return null
+    if(background&&(flight.current||sending.current||paymentFlow.current))return null
     while(flight.current)await flight.current
     let release!:()=>void
     flight.current=new Promise<void>(resolve=>{release=resolve})
@@ -93,12 +95,18 @@ export function useEmailWorkspace(ready:boolean){
     requestIds.current[key]||=crypto.randomUUID()
     await request({type:'review',familyId,revision:entry.revision,requestId:requestIds.current[key]})
   }
+  async function createPaymentLink(familyId:string,puppyId:string,kind:'deposit'|'balance'){
+    if(paymentFlow.current)return
+    paymentFlow.current=true;setPaymentBusy(true)
+    const key=`link:${familyId}:${puppyId}:${kind}`;requestIds.current[key]||=crypto.randomUUID()
+    try{const prepared=await request({type:'payment',familyId,puppyId,kind,requestId:requestIds.current[key]});if(prepared?.preparedPaymentId){const created=await request({type:'checkout',familyId,paymentRequestId:prepared.preparedPaymentId});if(created)delete requestIds.current[key]}}finally{paymentFlow.current=false;setPaymentBusy(false)}
+  }
   async function payment(familyId:string,puppyId:string,kind:'deposit'|'balance'){
     const key=`payment:${familyId}:${puppyId}:${kind}`
     requestIds.current[key]||=crypto.randomUUID()
     const result=await request({type:'payment',familyId,puppyId,kind,requestId:requestIds.current[key]})
     if(result?.preparedPaymentId){edit(familyId,{paymentRequestId:result.preparedPaymentId});delete requestIds.current[key]}
   }
-  return {checkout:(familyId:string,paymentRequestId:string)=>request({type:'checkout',familyId,paymentRequestId}),verifyPayment:(familyId:string,paymentRequestId:string)=>request({type:'verify',familyId,paymentRequestId}),data,entries,error,busy:busy||!!sendingFamily,sendingFamily,sendNotice,noticeFamily,send,refresh:useCallback((familyId:string)=>request({type:'refresh',familyId},undefined,true),[request]),load:()=>request(),edit,save,resolve,startReply,review,payment,dispatch:(reviewId:string,scenario?:'accepted'|'rejected'|'uncertain')=>{return request({type:'dispatch',reviewId,...(scenario?{scenario}:{}),...(data?.live?{confirmed:true}:{})})},sync:(familyId?:string)=>request({type:'sync',...(familyId?{familyId}:{})}),reconcile:()=>request({type:'reconcile'}),resolveAttempt:(outgoingId:string,attemptKey:string,decision:'accepted'|'not-accepted',evidence:string)=>request({type:'resolve',outgoingId,attemptKey,decision,evidence,acknowledged:true}),dirty:Object.values(entries).some(e=>!sameEmail(e.value,e.base)),empty:emptyEmail()}
+  return {checkout:(familyId:string,paymentRequestId:string)=>request({type:'checkout',familyId,paymentRequestId}),verifyPayment:(familyId:string,paymentRequestId:string)=>request({type:'verify',familyId,paymentRequestId}),data,entries,error,paymentBusy,createPaymentLink,busy:busy||!!sendingFamily||paymentBusy,sendingFamily,sendNotice,noticeFamily,send,refresh:useCallback((familyId:string)=>request({type:'refresh',familyId},undefined,true),[request]),load:()=>request(),edit,save,resolve,startReply,review,payment,dispatch:(reviewId:string,scenario?:'accepted'|'rejected'|'uncertain')=>{return request({type:'dispatch',reviewId,...(scenario?{scenario}:{}),...(data?.live?{confirmed:true}:{})})},sync:(familyId?:string)=>request({type:'sync',...(familyId?{familyId}:{})}),reconcile:()=>request({type:'reconcile'}),resolveAttempt:(outgoingId:string,attemptKey:string,decision:'accepted'|'not-accepted',evidence:string)=>request({type:'resolve',outgoingId,attemptKey,decision,evidence,acknowledged:true}),dirty:Object.values(entries).some(e=>!sameEmail(e.value,e.base)),empty:emptyEmail()}
 }
 export type EmailWorkspace=ReturnType<typeof useEmailWorkspace>

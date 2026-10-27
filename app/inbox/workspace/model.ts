@@ -3,11 +3,11 @@ import type {SavedFamily} from './persistence'
 
 export type Channel = 'Email' | 'Text'
 export type Family = {
-  smsBlockedReason?:string; historicalBalanceNeedsReview?:boolean; agreedTotalCents?:number; inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
+  paymentTestScenario?:string; smsBlockedReason?:string; historicalBalanceNeedsReview?:boolean; agreedTotalCents?:number; inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
   id: string; name: string; initials: string; location: string; email: string; phone: string
   preference: Channel | 'Either'; smsConsent: boolean; stage: string; puppyId?: string
   next: string; unread: boolean; pickup?: string; checks: string[]
-  records: {paymentStatus: string; amountPaid: number}[]
+  records: {paymentStatus: string; amountPaid: number;paymentType?:string;createdAt?:string;webhookVerifiedAt?:string}[]
   messages: {id: string; direction: 'in' | 'out'; channel: Channel; body: string; time: string;kind?:'inquiry'|'sms';status?:string;delivery?:string}[]
 }
 export const puppies = [

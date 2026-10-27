@@ -1,3 +1,4 @@
+import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {normalizePhone} from '@/lib/inquiry'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
@@ -33,6 +34,10 @@ export async function listWorkspaceFamilies():Promise<SavedFamily[]> {
   const records=await getOperatorClient().fetch<SavedFamily[]>(query,{workspace:workspaceNamespace()},{cache:'no-store'})
   if(records.length>500)throw new WorkspaceError('More than 500 families need paginated review. No records were discarded.',409)
   const checked=records.map(checkedRecord)
+  if(paymentTestWorkspaceEnabled())return await Promise.all(checked.filter(record=>record.profile.paymentTestScenario).map(async record=>{
+    const payments=await getOperatorClient().fetch<{paymentStatus:string;amountPaid:number;paymentType:string;createdAt:string;webhookVerifiedAt:string;quotedTotalCents:number}[]>('*[_type == "paymentRecord" && workspace == "review-v1" && testOnly == true && staffFamilyId == $familyId && puppyId == $puppyId && paymentStatus == "paid"] | order(createdAt asc){paymentStatus,amountPaid,paymentType,createdAt,webhookVerifiedAt,quotedTotalCents}',{familyId:record.familyKey,puppyId:record.profile.puppyId||null},{cache:'no-store'})
+    return {...record,profile:{...record.profile,records:payments,agreedTotalCents:payments[0]?.quotedTotalCents}}
+  }))
   if(!liveWorkspaceEnabled())return checked
   return await Promise.all(checked.map(async record=>{
     const profile={...record.profile}

@@ -1,4 +1,4 @@
-import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
+import {workspaceNamespace} from '@/lib/workspace-mode'
 import {requireOperator} from '@/lib/operator-auth'
 import {NextResponse} from 'next/server'
 import {createHash} from 'node:crypto'
@@ -21,6 +21,6 @@ export async function POST(req:Request){
   if(!record||record._type!=='staffAccess'||record.workspace!==workspaceNamespace()||record.used||!Number.isFinite(record.expiresAt)||record.expiresAt<Date.now())throw new Error()
   await client.patch(id).ifRevisionId(record._rev).set({used:true,usedAt:new Date().toISOString()}).commit({visibility:'sync'})
   }
-  const response=NextResponse.json({ok:true},{headers});response.cookies.set(staffCookie,makeStaffSession(new URL(req.url).origin),{httpOnly:true,secure:new URL(req.url).protocol==='https:',sameSite:'lax',path:liveWorkspaceEnabled()?'/inbox':'/inbox/workspace',maxAge:8*60*60});return response
+  const response=NextResponse.json({ok:true},{headers});response.cookies.set(staffCookie,makeStaffSession(new URL(req.url).origin),{httpOnly:true,secure:new URL(req.url).protocol==='https:',sameSite:'lax',path:'/inbox',maxAge:8*60*60});return response
  }catch{return NextResponse.json({error:'Sign-in could not be verified. Check your staff username and password, or use a fresh owner link.'},{status:401,headers})}
 }

@@ -82,3 +82,5 @@
 @media(max-width:999px){.is-conversations .ops-sidebar nav{scrollbar-width:none}.is-conversations .ops-sidebar nav::-webkit-scrollbar{display:none}.is-conversations .ops-sidebar nav button{gap:5px;padding:7px 9px;font-size:11px}}
 
 .ops-compact-viewport .ops-messages{padding:6px 10px 24px}.ops-compact-viewport .ops-new-messages{bottom:3px;padding:4px 8px;font-size:10px!important}
+
+.ops-payment-testing .ops-review-banner{display:flex!important}.ops-payment-testing .ops-review-banner strong{display:block;font-size:12px;margin-right:12px}.ops-test-payments{margin-top:18px}.ops-test-payments>p,.ops-test-payment-request p{font-size:11px;margin:8px 0}.ops-test-payment-request{border-top:1px solid var(--ops-line);margin-top:18px;padding-top:12px}.ops-test-payment-request h4,.ops-test-payments>h4{font-size:13px;margin:14px 0 7px}.ops-test-payment-request input{font-size:10px!important}.ops-test-payments .ops-button{margin-top:8px}.ops-payment-testing .ops-email-options>h3{font-size:21px}

@@ -1,3 +1,4 @@
+import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import 'server-only'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
@@ -18,6 +19,7 @@ export function ownerTestConfigured(){return process.env.FLUFFYTAIL_MAIL_MODE===
 export function emailRecipient(profileEmail:string){return ownerTestConfigured()?jeanneEmail:profileEmail}
 
 export function getMailCapabilities():MailCapabilities{
+  if(paymentTestWorkspaceEnabled())return {provider:'disabled',canDispatch:false,canSync:false}
   if(liveWorkspaceEnabled()&&process.env.FLUFFYTAIL_MAIL_MODE==='pair'){const credentials=!!process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD;return {provider:'pair',canDispatch:credentials&&process.env.FLUFFYTAIL_PAIR_SEND_ENABLED==='1',canSync:credentials&&process.env.FLUFFYTAIL_PAIR_READ_ENABLED==='1'}}
   if(process.env.FLUFFYTAIL_MAIL_MODE==='fictional'){
     requireSyntheticWorkspace()

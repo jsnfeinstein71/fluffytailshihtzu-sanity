@@ -1,4 +1,5 @@
 import {createBalanceCheckout} from './balance-checkout'
+import {paymentTestWorkspaceEnabled,requirePaymentTestConfiguration} from '@/lib/payment-test-mode'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
@@ -61,6 +62,7 @@ async function familyRecord(id:string){
   if(!record||record._type!=='staffFamily'||record.workspace!==workspaceNamespace()||record.familyKey!==id)throw new EmailWorkflowError('Start the saved family workspace before composing email.',409)
   if(typeof record.profile.email!=='string'||!/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(record.profile.email))throw new EmailWorkflowError('This family needs a valid email address before an email can be prepared.',409)
   if(!liveWorkspaceEnabled()&&!record.profile.email.toLowerCase().endsWith('@example.test'))throw new EmailWorkflowError('This review accepts fictional family addresses only. Live correspondence must stay outside the synthetic Preview.',409)
+  if(paymentTestWorkspaceEnabled()&&!record.profile.paymentTestScenario)throw new EmailWorkflowError('Choose a prepared fictional payment-test family.',409)
   return record
 }
 async function checkReply(family:SavedFamily,value:EmailValue){
@@ -87,6 +89,7 @@ async function quote(family:SavedFamily,puppyId:string,kind:'deposit'|'balance')
       if(!paid.length||paid.some(r=>r.customerEmail?.toLowerCase()!==family.profile.email.toLowerCase()&&(!family.profile.phone||r.customerPhone!==family.profile.phone)))throw new EmailWorkflowError('The paid records do not establish this family’s balance. Review the existing Inbox before creating a request.',409)
       const totals=[...new Set(paid.map(p=>p.quotedTotalCents))];if(liveWorkspaceEnabled()&&(totals.length!==1||!Number.isSafeInteger(totals[0])))throw new EmailWorkflowError('This historical payment has no verified agreed-price snapshot. Review it in the existing Inbox before requesting a balance.',409)
       const total=liveWorkspaceEnabled()?totals[0]!:context.pricing.totalCents,balance=getBalance(total,context.records)
+      if(balance.remainingCents<=0)throw new EmailWorkflowError('This puppy is paid in full. No further balance can be requested.',409)
       return {puppyName:context.puppy.name,amountCents:balance.remainingCents,totalCents:total,depositCents:paid[0].quotedDepositCents||context.pricing.depositCents,paidCents:balance.paidCents}
     }
     if(!['available','hold'].includes(context.puppy.status)||!['current','active'].includes(context.puppy.litterStatus)||context.puppy.isVisible===false||context.puppy.litterVisible===false||context.balance.paidCents!==0)throw new EmailWorkflowError('This puppy is not eligible for a new deposit.',409)
@@ -126,8 +129,8 @@ export async function loadMailbox():Promise<MailData>{
     if(record){validValue(record.value);return asDraft(record)}
     return {familyId:f.familyKey,revision:null,value:emptyEmail(f.drafts.Email||'')}
   })
-  const inventory=await client.fetch<{id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug:string}[]>('*[_type == "puppy" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,sex,color,"litter":litter->title,status,"price":coalesce(overridePrice,litter->price),"deposit":litter->deposit,"slug":slug.current}',{},{cache:'no-store'})
-  return {families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
+  const inventory=await client.fetch<{id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug:string;paymentTestScenario?:string}[]>('*[_type == "puppy" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,sex,color,paymentTestScenario,"litter":litter->title,status,"price":coalesce(overridePrice,litter->price),"deposit":litter->deposit,"slug":slug.current}',{},{cache:'no-store'})
+  return {paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
 }
 export async function prepareEmailAction(input:unknown,origin:string){
   requireWorkspace()
@@ -136,7 +139,12 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const client=getOperatorClient()
   if(action.type==='checkout'||action.type==='verify')return await paymentTransport(action,family,origin)
   if(action.type==='payment'){
+    if(paymentTestWorkspaceEnabled())requirePaymentTestConfiguration()
     const details=await quote(family,action.puppyId,action.kind)
+    if(paymentTestWorkspaceEnabled()){
+      const pending=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == "review-v1" && testOnly == true && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'})
+      if(pending[0]&&Object.entries(details).every(([key,value])=>pending[0][key as keyof PaymentRequest]===value))return {preparedPaymentId:pending[0]._id}
+    }
     if(liveWorkspaceEnabled()){const active=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{workspace:workspaceNamespace(),familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'});if(active.length){await checkedPayment(active[0]._id,family);return {preparedPaymentId:active[0]._id}}}
     const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
     await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
@@ -204,7 +212,8 @@ export async function validateSavedEmailReview(id:string,origin:string){
 
 async function paymentTransport(action:{type:'checkout'|'verify';familyId:string;paymentRequestId:string},family:SavedFamily,origin:string){
   requireWorkspace()
-  if(liveWorkspaceEnabled()?!/^(?:sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY||''):(process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED!=='1'||! /^(?:sk|rk|rkcs)_test_/.test(process.env.STRIPE_SECRET_KEY||'')))throw new EmailWorkflowError('Stripe test checkout is not configured. No live payment can be created.',503)
+  if(paymentTestWorkspaceEnabled()){const canonical=requirePaymentTestConfiguration();if(origin!==canonical)throw new EmailWorkflowError('Open payment testing from its stable entry address.',409)}
+  if(!paymentTestWorkspaceEnabled()&&(liveWorkspaceEnabled()?!/^(?:sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY||''):(process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED!=='1'||! /^(?:sk|rk|rkcs)_test_/.test(process.env.STRIPE_SECRET_KEY||''))))throw new EmailWorkflowError('Stripe test checkout is not configured. No live payment can be created.',503)
   if(family.profile.source!=='inquiry')throw new EmailWorkflowError('Connect a saved inquiry family before using Stripe test checkout.',409)
   const request=await checkedPayment(action.paymentRequestId,family,action.type==='checkout')
   const client=getOperatorClient()
