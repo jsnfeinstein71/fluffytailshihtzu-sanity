@@ -6,6 +6,7 @@ import InquiryForm from '../components/InquiryForm'
 import {legacyPuppySlug} from '@/lib/inquiry'
 import {getPuppy} from '@/sanity/lib/inventory'
 import {canInquireAboutPuppy, formatPuppyStatus} from '@/lib/inventory'
+import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
 
 export const metadata = {
   alternates: {canonical: '/puppy-inquiry'},
@@ -21,6 +22,7 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
   const puppy = slug ? await getPuppy(slug) : null
   if (slug && !puppy) notFound()
   const unavailable = puppy && !canInquireAboutPuppy(puppy)
+  const puppyPhotoUrl = puppy ? getPuppyProfilePortrait(puppy) || puppy.photoUrl || '' : ''
   const interest = slug ? 'puppy' : params.interest === 'waitlist' ? 'waitlist' : 'general'
 
   return (
@@ -34,7 +36,7 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
       {unavailable ? <div className="inquiry-confirmation">
         <p>Browse current puppies or ask Jeanne about other availability.</p>
         <div className="ctaRow"><Link className="brand-button" href="/available-puppies">Meet our puppies</Link><Link className="text-link" href="/contact">Contact Jeanne</Link></div>
-      </div> : <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppy?.photoUrl || ''} litterTitle={puppy?.litterTitle || ''} interest={interest} />}
+      </div> : <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppyPhotoUrl} litterTitle={puppy?.litterTitle || ''} interest={interest} />}
       </div>
     </main>
   )
