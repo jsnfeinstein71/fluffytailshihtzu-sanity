@@ -43,3 +43,9 @@ Read-only CMS rechecks confirmed that all three published documents were byte-fo
 Screenshots and structured hosted/browser proof are saved outside the repository at `C:/Users/jlcfe/AppData/Local/FluffyTail/CopyReview/`, including `jeanne-desktop.jpg`, `jeanne-mobile.jpg`, page screenshots and `hosted-proof.json` / `browser-proof.json`. The manuscript and optimized portrait are committed; the original source portrait is unmodified at the owner's supplied path.
 
 After owner review, publish only the three listed CMS drafts alongside the approved code release. Production then continues reading the actual published CMS fields without a text override. Refresh the bounded mirror only if review drafts change before approval; do not publish or reset unrelated content.
+
+## Production release authorization
+
+The owner approved publication of the reviewed code/portrait and the three prepared CMS changes. Release uses current main, preserves the payment work, and leaves the review-only submission block confined to its existing branch-specific Preview environment. Production has its existing inquiry secret and no `FLUFFYTAIL_WRITE_FREEZE` or `FLUFFYTAIL_COPY_REVIEW_CONTENT` setting. Publication applies only the named text fields with revision checks; no full-document replacement, price/status/relationship changes, financial writes or unrelated draft publication. A prepared draft is consumed only if its complete non-system content matches the resulting published document; any unrelated draft edits are retained.
+
+Live verification will read the homepage, Meet Jeanne, pricing, contact and the three published CMS records; check the Production form token/cookie and enabled composer; and exercise a deliberately invalid request that stops at input protection before any inquiry persistence or provider delivery. No customer inquiry, message, payment or reservation will be created. Final deployed commit and results follow below.
