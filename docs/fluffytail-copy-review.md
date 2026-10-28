@@ -29,3 +29,17 @@ Branch-only configuration selects the existing public Production dataset, freeze
 ## Validation
 
 The existing regression suite was updated for the supplied wording while retaining status, quote, relationship, duplicate-send and consent assertions. Added checks cover the exact personal introduction/portrait, constrained draft mirror, future CMS editing, ambiguous price ranges, payment/reservation conditions and earlier email-version rendering. Local build, hosted verification, desktop/mobile review and the final Preview URL are recorded below once complete.
+
+## Finished review — October 28
+
+Working entry: **https://fluffytail-copy-review.vercel.app/**. Meet Jeanne: **https://fluffytail-copy-review.vercel.app/about**. These public review pages open in a fresh browser without Vercel or staff sign-in. Only this review alias has the public-page access exception; project-wide protection, Production access, the private staff API and the existing payment-test alias are unchanged. The app's staff authentication remains enforced, and this copy Preview has all operational writes frozen.
+
+Runtime `60e19f0`, deployment `dpl_Fs2UYdvR1wN5osnYyaKXvuoENAru`, passed **257 tests**, TypeScript, lint (zero errors; eighteen existing image warnings), local optimized build, GitHub verification and Vercel's Preview build. PR #14 remains a draft for owner review; it has not been merged.
+
+Hosted checks returned 200 for all eight public editorial routes, future-interest inquiry, available Girl 2 inquiry and reserved Girl 1 inquiry. They verified the real CMS-derived $1,600/$400/$1,200 current pricing and the archived $1,500/$300 figures, the exact new CMS introduction, corrected Girl 1 spelling, archived summary, preserved homepage/puppy images, helpful unavailable state, loaded form token and private staff API (401). Browser review at desktop 1365×900 and mobile 390×844 found no horizontal overflow on the checked pages. Jeanne's portrait retained its full face/glasses and 4:5 proportions; mobile navigation closed after selection. Girl 2's form had the supplied prefill, and Text displayed the unchanged consent/STOP/HELP/policy wording. Reserved Girl 1's direct inquiry link showed the accurate notice and no form. No inquiry was submitted.
+
+Read-only CMS rechecks confirmed that all three published documents were byte-for-byte unchanged and all three draft revisions still matched the reviewed snapshot. The real Production homepage retained its prior published text. No real email/SMS, payment, Checkout, reservation or production deployment occurred. Payment behavior was exercised only with the existing isolated provider fixtures; no live payment trial or deferred Stripe setting was resumed.
+
+Screenshots and structured hosted/browser proof are saved outside the repository at `C:/Users/jlcfe/AppData/Local/FluffyTail/CopyReview/`, including `jeanne-desktop.jpg`, `jeanne-mobile.jpg`, page screenshots and `hosted-proof.json` / `browser-proof.json`. The manuscript and optimized portrait are committed; the original source portrait is unmodified at the owner's supplied path.
+
+After owner review, publish only the three listed CMS drafts alongside the approved code release. Production then continues reading the actual published CMS fields without a text override. Refresh the bounded mirror only if review drafts change before approval; do not publish or reset unrelated content.
