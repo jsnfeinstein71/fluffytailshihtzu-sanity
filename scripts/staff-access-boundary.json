@@ -1,0 +1,13 @@
+{
+  "name": "Staff access only through current application hosts",
+  "description": "Publish only during verified passkey cutover. Covers old immutable staff routes regardless of application credentials or deployment sharing bypasses.",
+  "active": true,
+  "conditionGroup": [
+    {"conditions": [
+      {"type": "path", "op": "pre", "value": "/inbox"},
+      {"type": "host", "op": "neq", "value": "admin.fluffytailshihtzu.com"},
+      {"type": "host", "op": "neq", "value": "www.fluffytailshihtzu.com"}
+    ]}
+  ],
+  "action": {"mitigate": {"action": "deny", "rateLimit": null, "redirect": null, "actionDuration": null}}
+}

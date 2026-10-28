@@ -14,10 +14,11 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
     beforeNextPatch(fn){beforePatch=fn},
     async fetch(query,params){return (await evaluate(parse(query),{dataset:[...documents.values()],params})).get()},
     async getDocument(id){return structuredClone(documents.get(id))},
+    async create(doc){if(documents.has(doc._id))throw conflict();documents.set(doc._id,{...structuredClone(doc),_rev:`fixture-${randomUUID()}`});await save();return structuredClone(documents.get(doc._id))},
     async createIfNotExists(doc){if(!documents.has(doc._id)){documents.set(doc._id,{...structuredClone(doc),_rev:`fixture-${randomUUID()}`});await save()}return structuredClone(documents.get(doc._id))},
     transaction(){
-      const pending=[],patches=[]
-      const tx={createIfNotExists(doc){pending.push(doc);return tx},patch(id,input){
+      const pending=[],patches=[],creates=[]
+      const tx={create(doc){creates.push(doc);return tx},createIfNotExists(doc){pending.push(doc);return tx},patch(id,input){
         let expected;const sets={}
         const builder={ifRevisionId(value){expected=value;return builder},set(values){Object.assign(sets,structuredClone(values));return builder}}
         if(typeof input==='function')input(builder);else builder.set(input.set||{})
@@ -26,6 +27,7 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
         if(beforePatch&&patches.length){const fn=beforePatch;beforePatch=null;await fn(documents,patches[0].id)}
         if(nextFailure){const error=nextFailure;nextFailure=null;throw error}
         const next=new Map([...documents].map(([key,value])=>[key,structuredClone(value)]))
+        for(const d of creates){if(next.has(d._id))throw conflict();next.set(d._id,{...structuredClone(d),_rev:`fixture-${randomUUID()}`})}
         for(const d of pending)if(!next.has(d._id))next.set(d._id,{...structuredClone(d),_rev:`fixture-${randomUUID()}`})
         for(const {id,expected,sets} of patches){
           const record=next.get(id);if(!record||expected!==undefined&&record._rev!==expected)throw conflict()
@@ -33,6 +35,7 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
           record._rev=`fixture-${randomUUID()}`
         }
         for(const doc of pending)if(!documents.has(doc._id))documents.set(doc._id,next.get(doc._id))
+        for(const doc of creates)documents.set(doc._id,next.get(doc._id))
         for(const {id}of patches)documents.set(id,next.get(id))
         await save()
       }}
