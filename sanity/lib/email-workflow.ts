@@ -2,6 +2,7 @@ import {attachmentParts} from './workspace-attachments'
 import {sameAttachments} from '@/lib/mail/attachment-model'
 import {samePaymentEmail} from '@/lib/mail/payment-email'
 import {approvedTestCustomer,testCustomerContacts} from '@/lib/test-customer'
+import {liveConfirmationSnapshot} from './live-payment-confirmation'
 import {testConfirmationSnapshot} from './test-payment-confirmation'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
@@ -89,7 +90,7 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
   const provider=getMailProvider()
   if(!provider.capabilities.canDispatch)throw new EmailWorkflowError('Real sending is disabled. Saved outgoing records and drafts are kept. Use the fictional provider for operational tests.',403)
   if(scenario!==undefined&&(provider.capabilities.provider!=='fictional'||!['accepted','rejected','uncertain'].includes(scenario)))throw new EmailWorkflowError('Choose a supported fictional provider result.')
-  const confirmations=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == \"staffOutgoingEmail\" && workspace == $workspace && reviewId == $reviewId && defined(paymentConfirmationSessionId)][0...2]',{workspace:workspaceNamespace(),reviewId},{cache:'no-store'});if(confirmations.length){if(confirmations.length!==1)throw new EmailWorkflowError('Confirmation identity needs review.',409);await dispatchTestConfirmation(confirmations[0]);return}
+  const confirmations=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == \"staffOutgoingEmail\" && workspace == $workspace && reviewId == $reviewId && defined(paymentConfirmationSessionId)][0...2]',{workspace:workspaceNamespace(),reviewId},{cache:'no-store'});if(confirmations.length){if(confirmations.length!==1)throw new EmailWorkflowError('Confirmation identity needs review.',409);await dispatchPaymentConfirmation(confirmations[0]);return}
   let record=await ensureOutgoing(reviewId,origin)
   if(stale(record)){await finishAttempt(record,'uncertain','INTERRUPTED_ATTEMPT');return}
   if(['accepted','sending','uncertain'].includes(record.state))return
@@ -197,7 +198,7 @@ export async function performTransportAction(input:unknown,origin:string){
   }else if(action.type==='refresh'){
     if(!validFamilyKey(action.familyId))throw new EmailWorkflowError('Choose a saved family conversation.')
     await reconcileInterruptedAttempts()
-    if(testCustomerContacts())await sendPreparedTestConfirmations(action.familyId)
+    if(testCustomerContacts()||liveWorkspaceEnabled())await sendPreparedPaymentConfirmations(action.familyId)
     let syncNotice=''
     if(getMailCapabilities().canSync){
       const cursor=await getOperatorClient().getDocument<SavedCursor>(liveWorkspaceEnabled()||testCustomerContacts()?familyMailCursorId(action.familyId):mailCursorId)
@@ -223,16 +224,16 @@ export async function ensureTestPaymentConfirmation(sessionId:string){
  const client=getOperatorClient()
  await client.transaction().createIfNotExists({...snapshot,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'pair',delivery:'unconfirmed'}).commit({visibility:'sync'})
  const record=await client.getDocument<OutgoingEmail>(snapshot._id)
- if(record?.state==='prepared')try{await dispatchTestConfirmation(record)}catch{/* Durable preparation remains visible; staff refresh can retry an unclaimed preparation. */}
+ if(record?.state==='prepared')try{await dispatchPaymentConfirmation(record)}catch{/* Durable preparation remains visible; staff refresh can retry an unclaimed preparation. */}
 }
-async function sendPreparedTestConfirmations(familyId:string){
- const records=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == "review-v1" && familyId == $familyId && defined(paymentConfirmationSessionId) && state == "prepared"][0...5]',{familyId},{cache:'no-store'})
- for(const record of records)try{await dispatchTestConfirmation(record)}catch{/* No automatic retry of a failed, sending or uncertain attempt. */}
+async function sendPreparedPaymentConfirmations(familyId:string){
+ const records=await getOperatorClient().fetch<OutgoingEmail[]>('*[_type == "staffOutgoingEmail" && workspace == $workspace && familyId == $familyId && defined(paymentConfirmationSessionId) && state == "prepared"][0...5]',{workspace:workspaceNamespace(),familyId},{cache:'no-store'})
+ for(const record of records)try{await dispatchPaymentConfirmation(record)}catch{/* No automatic retry of a failed, sending or uncertain attempt. */}
 }
-async function dispatchTestConfirmation(record:OutgoingEmail){
- const snapshot=await testConfirmationSnapshot(record.paymentConfirmationSessionId||'')
+async function dispatchPaymentConfirmation(record:OutgoingEmail){
+ const snapshot=await (liveWorkspaceEnabled()?liveConfirmationSnapshot:testConfirmationSnapshot)(record.paymentConfirmationSessionId||'')
  if(!snapshot||Object.entries(snapshot).some(([key,value])=>key==='paymentEmail'&&'paymentEmail' in snapshot?!samePaymentEmail(record.paymentEmail,snapshot.paymentEmail):JSON.stringify(record[key as keyof OutgoingEmail])!==JSON.stringify(value)))throw new EmailWorkflowError('This payment confirmation needs review. No email was sent.',409)
- const provider=getMailProvider();if(provider.capabilities.provider!=='pair'||!provider.capabilities.canDispatch)throw new EmailWorkflowError('Pair test confirmations are unavailable.',503)
+ const provider=getMailProvider();if(provider.capabilities.provider!=='pair'||!provider.capabilities.canDispatch)throw new EmailWorkflowError('Pair payment confirmations are unavailable.',503)
  if(!['prepared','failed'].includes(record.state))return
  await initializeFamilyMailbox(record.familyId)
  await acquireGuard(record)
@@ -243,4 +244,13 @@ async function dispatchTestConfirmation(record:OutgoingEmail){
  try{await client.patch(latest._id).ifRevisionId(latest._rev).set({state:'sending',attempts,source:'pair'}).commit({visibility:'sync'})}catch(error){if(conflict(error))return;throw error}
  let result;try{result=await provider.send({...latest,state:'sending',attempts,source:'pair'})}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
  await finishAttempt({...latest,attempts},result.outcome==='accepted'?'accepted':result.outcome==='rejected'?'failed':'uncertain',result.code)
+}
+
+// Live receipts are created only by newly verified, explicitly scoped live ledgers.
+export async function ensureLivePaymentConfirmation(sessionId:string){
+ const snapshot=await liveConfirmationSnapshot(sessionId);if(!snapshot)return
+ const client=getOperatorClient()
+ await client.transaction().createIfNotExists({...snapshot,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'pair',delivery:'unconfirmed'}).commit({visibility:'sync'})
+ const record=await client.getDocument<OutgoingEmail>(snapshot._id)
+ if(record?.state==='prepared')try{await dispatchPaymentConfirmation(record)}catch{/* Retain the durable preparation; never retry a claimed/uncertain attempt automatically. */}
 }

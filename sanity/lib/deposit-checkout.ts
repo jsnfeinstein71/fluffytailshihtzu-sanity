@@ -1,6 +1,8 @@
 import {createHash,randomBytes} from 'node:crypto'
 import {privateRecordId} from './private-records'
 import {paymentTestWorkspaceEnabled,requirePaymentTestConfiguration} from '@/lib/payment-test-mode'
+import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
+import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {getStripe} from './stripe'
 import {getPaymentContext,paymentMetadata,PaymentError} from './payment-context'
 type DepositLink = {
@@ -54,8 +56,8 @@ export async function createDepositCheckout(context:Awaited<ReturnType<typeof ge
     if (!link.stripeCheckoutUrl) {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment', currency: 'usd', client_reference_id: puppy._id,
-        success_url: paymentTestWorkspaceEnabled()&&scope.customerPaymentToken?`${requirePaymentTestConfiguration()}/pay/${scope.customerPaymentToken}?result=returned`:paymentTestWorkspaceEnabled()?`${requirePaymentTestConfiguration()}/inbox/workspace/payment-return?session_id={CHECKOUT_SESSION_ID}`:`${base}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: paymentTestWorkspaceEnabled()&&scope.customerPaymentToken?`${requirePaymentTestConfiguration()}/pay/${scope.customerPaymentToken}?result=canceled`:paymentTestWorkspaceEnabled()?`${requirePaymentTestConfiguration()}/inbox/workspace?family=${scope.staffFamilyId}`:`${base}/puppies/${encodeURIComponent(puppy.slug)}`,
+        success_url: liveWorkspaceEnabled()&&scope.staffTestOnly==='0'&&scope.customerPaymentToken?`${requireLivePaymentConfiguration()}/pay/${scope.customerPaymentToken}?result=returned`:paymentTestWorkspaceEnabled()&&scope.customerPaymentToken?`${requirePaymentTestConfiguration()}/pay/${scope.customerPaymentToken}?result=returned`:paymentTestWorkspaceEnabled()?`${requirePaymentTestConfiguration()}/inbox/workspace/payment-return?session_id={CHECKOUT_SESSION_ID}`:`${base}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: liveWorkspaceEnabled()&&scope.staffTestOnly==='0'&&scope.customerPaymentToken?`${requireLivePaymentConfiguration()}/pay/${scope.customerPaymentToken}?result=canceled`:paymentTestWorkspaceEnabled()&&scope.customerPaymentToken?`${requirePaymentTestConfiguration()}/pay/${scope.customerPaymentToken}?result=canceled`:paymentTestWorkspaceEnabled()?`${requirePaymentTestConfiguration()}/inbox/workspace?family=${scope.staffFamilyId}`:`${base}/puppies/${encodeURIComponent(puppy.slug)}`,
         customer_email: link.customerEmail || undefined,
         expires_at: Math.floor(Date.parse(link.expiresAt) / 1000),
         metadata: link.checkoutMetadata,

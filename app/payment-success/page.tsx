@@ -1,12 +1,30 @@
+import {redirect} from 'next/navigation'
+import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
+import {livePaymentContext,livePaymentUrl} from '@/sanity/lib/live-payment'
+import CustomerPayment from '@/app/pay/CustomerTestPayment'
+import '@/app/inbox/workspace/workspace.css'
 import Link from 'next/link'
 import {getStripe} from '@/sanity/lib/stripe'
 import {formatCurrency} from '@/lib/inventory'
 
 export const revalidate = 0
-export const metadata = {robots: {index: false, follow: false}}
+export const metadata = {robots: {index: false, follow: false},referrer:'no-referrer' as const}
 
 export default async function PaymentSuccessPage({searchParams}: {searchParams: Promise<{session_id?: string}>}) {
   const {session_id: sessionId} = await searchParams || {}
+  let destination:string|null=null
+  if(liveWorkspaceEnabled()&&typeof sessionId==='string'&&/^cs_live_[A-Za-z0-9]+$/.test(sessionId)){
+    let scoped=false
+    try{
+      const session=await getStripe().checkout.sessions.retrieve(sessionId)
+      scoped=!!session.metadata?.staffPaymentRequestId
+      if(scoped)destination=livePaymentUrl((await livePaymentContext(session)).request)
+    }catch{
+      if(scoped)return <CustomerPayment token={sessionId} initial={null} error="We could not confirm this payment. Please contact Jeanne before trying to pay again." canceled={false} testOnly={false}/>
+      // Unscoped legacy checkout keeps the existing read-only return.
+    }
+  }
+  if(destination)redirect(destination)
   let amount: number | undefined
   let remaining: number | undefined
   let deposit = false

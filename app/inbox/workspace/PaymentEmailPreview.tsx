@@ -34,7 +34,7 @@ export function PaymentEmailTools({family,email}:{family:Family;email:EmailWorks
   const [kind,setKind]=useState<PaymentEmailKind>('paid-confirmation')
   const [notice,setNotice]=useState('')
   const local=edits[family.id],message=local?.message??saved
-  const request=email.data?.paymentRequests.find(p=>p.familyId===family.id&&p.publicToken&&p.checkoutUrl)
+  const request=email.data?.paymentRequests.find(p=>p.familyId===family.id&&p.checkoutUrl&&(p.publicToken||!p.testOnly))
   const deposit=kind.startsWith('deposit'),confirmed=kind.endsWith('confirmation')
   const preview:PaymentEmail|null=request?{version:2,kind,name:family.name,message:confirmed?(message||confirmationMessage):'Here are the payment details for your puppy. Please reply if you have any questions.',puppyName:request.puppyName,amountCents:deposit?request.depositCents:request.totalCents-request.depositCents,totalCents:request.totalCents,paidCents:confirmed?(deposit?request.depositCents:request.totalCents):(deposit?0:request.depositCents),depositCents:request.depositCents,url:request.checkoutUrl!,testOnly:request.testOnly}:null
   return <details className="ops-payment-email-tools"><summary>Payment email templates</summary><p>Payment requests use your composer message. Confirmations are sent once after a verified payment, with the note saved below.</p>
