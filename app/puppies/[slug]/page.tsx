@@ -12,6 +12,7 @@ import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyS
 import {puppyBreadcrumbs, puppyMetadata} from '@/lib/seo'
 import StructuredData from '../../components/StructuredData'
 import PublicImage from '../../components/PublicImage'
+import {PublishedPuppyAnalytics} from '../../components/PublicAnalytics'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -37,6 +38,7 @@ export default async function PuppyDetailPage({params}: Props) {
   const profilePortrait = getPuppyProfilePortrait(puppy)
 
   return <main className="wrap puppy-detail-page">
+    <PublishedPuppyAnalytics slug={slug} />
     <StructuredData data={puppyBreadcrumbs(puppy, slug)} />
     <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
     <div className="puppy-detail-layout">

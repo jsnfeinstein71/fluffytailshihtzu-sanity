@@ -115,13 +115,18 @@ test('production publishes the approved hero and preserves future Sanity image s
   assert.match(page, /"heroImageUrl": heroImage.asset->url/)
 })
 
-test('legal page bodies and links remain unchanged during the presentation-only pass', () => {
+test('existing legal text stays unchanged around the separately authorized analytics disclosure', () => {
   const expected = {
     'privacy-policy': 'c67a8cf25855a7c902a4725a155f357b7cdbbc971d38fdf0dd120d7e09e7c557',
     'terms-and-conditions': '6190a3744da189ca6716fcc9374f1d0a42d30b8a9dfd04f567cba59772250473',
   }
   for (const [page, digest] of Object.entries(expected)) {
-    const source = readFileSync(new URL(`../app/${page}/page.tsx`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+    let source = readFileSync(new URL(`../app/${page}/page.tsx`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+    if (page === 'privacy-policy') {
+      assert.equal((source.match(/id="website-analytics"/g) || []).length, 1)
+      // Keep the original SMS/customer terms hash. The approved new section is additive.
+      source = source.replace(/          <section className="section" id="website-analytics">[\s\S]*?          <\/section>\n\n          <div className="divider"><\/div>\n\n/, '')
+    }
     const start = source.indexOf('<div className="card">')
     assert.ok(start > 0)
     assert.equal(createHash('sha256').update(source.slice(start)).digest('hex'), digest)

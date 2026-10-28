@@ -1,11 +1,12 @@
 import {pageDescriptions} from '@/lib/public-copy'
 import type { Metadata } from 'next'
-import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import './brand.css'
 import SiteChrome from './components/SiteChrome'
+import PublicAnalytics from './components/PublicAnalytics'
 
 export const metadata: Metadata = {
+  referrer: 'no-referrer',
   metadataBase: new URL('https://www.fluffytailshihtzu.com'),
   title: {
     default: 'FluffyTail Shih Tzu | Home-Raised Shih Tzu Puppies in Alabama',
@@ -43,8 +44,9 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://use.typekit.net/mun1gwi.css" />
       </head>
       <body className="min-h-full flex flex-col">
-        <SiteChrome>{children}</SiteChrome>
-        <Analytics />
+        <PublicAnalytics production={process.env.VERCEL_ENV === 'production'}>
+          <SiteChrome>{children}</SiteChrome>
+        </PublicAnalytics>
       </body>
     </html>
   )
