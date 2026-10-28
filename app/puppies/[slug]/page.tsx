@@ -41,8 +41,8 @@ export default async function PuppyDetailPage({params}: Props) {
       </header>
       <figure className={`puppy-detail-portrait${profilePortrait ? ' puppy-detail-portrait-cutout' : ''}`}>
         {profilePortrait ? <>
-          <span className="puppy-detail-ground-shadow" aria-hidden="true" />
-          <img className="puppy-detail-photo" src={profilePortrait} width={2048} height={2048} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="eager" fetchPriority="high" decoding="async" />
+          <span className="puppy-ground-shadow" aria-hidden="true" />
+          <img className="puppy-detail-photo" src={profilePortrait} width={1254} height={1254} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="eager" fetchPriority="high" decoding="async" />
         </> : puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" decoding="async" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Puppy photo to come">Photo to come</div>}
       </figure>
       <div className="puppy-detail-info">
