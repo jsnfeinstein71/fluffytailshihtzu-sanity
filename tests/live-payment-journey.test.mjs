@@ -104,3 +104,9 @@ test('saved confirmation snapshots freeze their note, greeting and thread throug
  const saved=structuredClone(store.documents.get(liveConfirmationId(p.checkoutSessionId))),family=store.documents.get(workspaceId(familyId));family.profile.name='Changed name';family.profile.paymentConfirmationMessage='New note for future payments'
  outcome='accepted';await ok(await action({type:'dispatch',reviewId:saved.reviewId,confirmed:true}));const retried=store.documents.get(saved._id);assert.equal(retried.html,saved.html);assert.equal(retried.body,saved.body);assert.equal(retried.inReplyTo,saved.inReplyTo);assert.equal(retried.state,'accepted')
 })
+
+test('a deposit verified by an earlier live release permits its true remaining balance without rewriting history or backfilling mail',async()=>{
+ const p=await create('deposit'),s=sessions.get(p.checkoutSessionId);s.payment_status='paid';s.status='complete';store.documents.get('puppy').status='reserved'
+ const ledger={_id:'earlier-live-ledger',_type:'paymentRecord',stripeCheckoutSessionId:s.id,paymentStatus:'paid',paymentType:'deposit',amountPaid:400,quotedTotalCents:160000,quotedDepositCents:40000,puppyId:'puppy',puppySlug:'fixture-puppy',staffFamilyId:familyId,customerEmail:'fixture@example.test'};store.documents.set(ledger._id,structuredClone(ledger))
+ const balance=await create('balance',2);assert.equal(balance.amountCents,120000);assert.equal(balance.paidCents,40000);assert.deepEqual(store.documents.get(ledger._id),ledger);assert.equal(store.documents.get(p._id).webhookVerifiedAt,undefined);assert.equal(sent.length,0)
+})

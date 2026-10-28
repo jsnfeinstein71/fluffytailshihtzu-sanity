@@ -1,5 +1,5 @@
 import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
-import {livePaymentContext,livePaymentUrl} from './live-payment'
+import {findLiveLedger,ledgerMatches,livePaymentContext,livePaymentUrl} from './live-payment'
 import {checkedAttachments,listAttachments} from './workspace-attachments'
 import {sameAttachments} from '@/lib/mail/attachment-model'
 import {paymentRequestEmail,renderPaymentEmail,samePaymentEmail} from '@/lib/mail/payment-email'
@@ -164,7 +164,16 @@ export async function prepareEmailAction(input:unknown,origin:string){
       // Do not issue a second charge while the first is paid or processing.
       const unsettled=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && testOnly == $testOnly && familyId == $familyId && puppyId == $puppyId && defined(checkoutSessionId) && !defined(webhookVerifiedAt)][0...21]',{workspace:workspaceNamespace(),testOnly:!liveWorkspaceEnabled(),familyId:family.familyKey,puppyId:action.puppyId},{cache:'no-store'})
       if(unsettled.length>20)throw new EmailWorkflowError('Earlier checkouts need review before requesting another payment.',409)
-      for(const prior of unsettled){const session=await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId!);if(session.livemode!==liveWorkspaceEnabled()||session.payment_status==='paid'||session.status==='complete'&&prior.checkoutOutcome!=='failed')throw new EmailWorkflowError('An earlier Stripe payment is awaiting confirmation. Do not request or pay again; review that payment first.',409)}
+      for(const prior of unsettled){
+        const session=await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId!)
+        // Earlier live releases recorded verified payments without stamping the
+        // request. Honor that ledger without rewriting it or backfilling mail.
+        if(liveWorkspaceEnabled()&&session.payment_status==='paid'){
+          const context=await livePaymentContext(session),ledger=await findLiveLedger(session.id)
+          if(ledger&&ledgerMatches(ledger,context))continue
+        }
+        if(session.livemode!==liveWorkspaceEnabled()||session.payment_status==='paid'||session.status==='complete'&&prior.checkoutOutcome!=='failed')throw new EmailWorkflowError('An earlier Stripe payment is awaiting confirmation. Do not request or pay again; review that payment first.',409)
+      }
     }
     const details=await quote(family,action.puppyId,action.kind)
     if(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled()){
