@@ -172,7 +172,7 @@ test('upcoming page features sorted expected litters before a separate active gr
   assert.match(html, /data-litter-id="born-legacy"/)
   assert.match(html, /src="\/original-announcement.png"/)
   assert.match(html, /<dt>Expected around<\/dt><dd>November 1, 2026<\/dd>/)
-  assert.match(html, /Active/)
+  assert.match(html, /Current/)
   assert.doesNotMatch(html, /data-litter-id="(?:past|hidden-expected|drafts.expected)"/)
 })
 

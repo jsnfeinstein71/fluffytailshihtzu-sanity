@@ -63,7 +63,7 @@ export function normalizeLitterStatus(status?: string | null) {
 
 export function formatLitterStatus(status?: string | null) {
   const normalized = normalizeLitterStatus(status)
-  if (normalized === 'current') return 'Active'
+  if (normalized === 'current') return 'Current'
   if (normalized === 'planned') return 'Upcoming'
   if (normalized === 'past') return 'Past'
   return 'Litter'
