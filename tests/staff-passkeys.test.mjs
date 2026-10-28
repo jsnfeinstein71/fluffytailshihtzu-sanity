@@ -53,3 +53,10 @@ test('embedded passkey ceremonies are rejected even with a valid exact origin an
 })
 test('public pages and public webhook paths are outside staff redirects',async()=>{for(const path of ['/','/api/stripe/webhook','/api/twilio/sms','/puppy-inquiry','/pay/example']){if(path==='/'){assert.equal((await proxy(new NextRequest('https://www.fluffytailshihtzu.com/'))).status,200)}else assert(!path.startsWith('/inbox'))}})
 test('transition enrollment uses branded legacy sign-in and a bounded local return, without a browser Basic popup',async()=>{const response=await proxy(new NextRequest('https://www.fluffytailshihtzu.com/inbox/security'));assert.equal(response.status,307);assert.equal(response.headers.get('location'),'https://www.fluffytailshihtzu.com/inbox/access?return=%2Finbox%2Fsecurity');assert.equal(response.headers.has('www-authenticate'),false);const {safeStaffReturn}=await import('../lib/staff-access-shared.ts');assert.equal(safeStaffReturn('https://evil.example'),'/inbox/workspace');assert.equal(safeStaffReturn('//evil.example'),'/inbox/workspace')})
+test('concurrent session activity refresh does not force another sign-in, while a concurrent revocation still denies access',async()=>{
+ const j=await enroll(),identity=await auth.getStaffIdentity(request('/inbox',undefined,j.jar));db.documents.get(identity.session._id).seenAt=Date.now()-2*3600000
+ db.beforeNextPatch((docs,id)=>{const session=docs.get(id);session.seenAt=Date.now();session._rev='concurrent-activity'})
+ assert(await auth.getStaffIdentity(request('/inbox',undefined,j.jar)))
+ db.documents.get(identity.session._id).seenAt=Date.now()-2*3600000;db.beforeNextPatch((docs,id)=>{const session=docs.get(id);session.revokedAt=Date.now();session._rev='concurrent-revocation'})
+ assert.equal(await auth.getStaffIdentity(request('/inbox',undefined,j.jar)),null)
+})

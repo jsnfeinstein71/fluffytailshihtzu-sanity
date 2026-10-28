@@ -35,7 +35,7 @@ function tokenBody(value:string){
   const a=Buffer.from(mac),b=Buffer.from(signature(body));if(a.length!==b.length||!timingSafeEqual(a,b))return
   return body
 }
-export async function getStaffIdentity(req:Request,{recovery=false,fresh=false}={}) : Promise<StaffIdentity|null> {
+export async function getStaffIdentity(req:Request,{recovery=false,fresh=false}={},retried=false) : Promise<StaffIdentity|null> {
   const cfg=passkeyConfig();if(new URL(req.url).origin!==cfg.origin)return null
   const body=tokenBody(readCookie(req,staffCookieName()));if(!body)return null
   const session=await get<Session>(authId('staffSession',hash(body)),'staffSession'),now=Date.now()
@@ -43,7 +43,12 @@ export async function getStaffIdentity(req:Request,{recovery=false,fresh=false}=
   const owner=await get<Owner>(authId('staffOwner',session.owner),'staffOwner')
   if(!owner||owner.disabled||owner.epoch!==session.epoch||!recovery&&session.assurance!=='passkey'||fresh&&session.verifiedAt+5*minute<=now)return null
   if(session.credentialId){const cred=await get<Credential>(authId('staffCredential',session.credentialId),'staffCredential');if(!cred||cred.revokedAt||cred.owner!==owner.key||cred.epoch!==owner.epoch)return null}
-  if(now-session.seenAt>60*minute){try{await client().patch(session._id).ifRevisionId(session._rev).set({seenAt:now}).commit({visibility:'sync'})}catch{return null}}
+  if(!retried&&now-session.seenAt>60*minute){try{await client().patch(session._id).ifRevisionId(session._rev).set({seenAt:now}).commit({visibility:'sync'})}catch(e){
+    // Concurrent workspace requests can refresh the same activity timestamp. A
+    // revision race rechecks all authorization once; provider failures fail closed.
+    if((e as {statusCode?:number}).statusCode===409)return getStaffIdentity(req,{recovery,fresh},true)
+    return null
+  }}
   return {session,owner}
 }
 export async function needIdentity(req:Request,opts={recovery:false,fresh:false}){
