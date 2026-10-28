@@ -6,6 +6,7 @@ import {renderToStaticMarkup} from 'react-dom/server'
 const {getPuppyProfilePortrait} = await import('../lib/puppy-portraits.ts')
 const {default: PuppyCard} = await import('../app/components/PuppyCard.tsx')
 const {default: PuppyDetailPage} = await import('../app/puppies/[slug]/page.tsx')
+const {default: PuppyInquiryPage} = await import('../app/puppy-inquiry/page.tsx')
 
 test('the first cutout only belongs to Elsie Girl 2 and yields to a newer CMS photo', () => {
   const puppy = {
@@ -75,4 +76,25 @@ test('Girl 1 and Girl 3 keep their own portraits and Reserved status across all 
       assert.doesNotMatch(html, /Request Info About This Puppy/)
     }
   }
+})
+
+test('the inquiry thumbnail matches the approved portrait and yields to a newer photo', async () => {
+  const puppy = {
+    _id: '136dcb97-3aaf-41dd-9a5d-b5fe194d629e',
+    photoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/3fa2bdd49dd9673a24c8a16ead795e9bb514b52b-2048x1984.jpg',
+    slug: 'girl-2-1', name: 'Girl 2', status: 'available', litterStatus: 'current',
+  }
+  const renderInquiry = () => PuppyInquiryPage({searchParams: Promise.resolve({puppySlug: puppy.slug})}).then(renderToStaticMarkup)
+  globalThis.fixtureSanityFetch = async () => puppy
+  const html = await renderInquiry()
+  assert.match(html, /src="\/puppies\/elsie-girl2-profile-v2.png"/)
+  assert.doesNotMatch(html, /src="https:\/\/cdn.sanity.io/)
+  assert.match(html, /aria-label="Puppy inquiry"/)
+
+  globalThis.fixtureSanityFetch = async () => ({...puppy, photoUrl: 'https://example.com/newer-photo.jpg'})
+  assert.match(await renderInquiry(), /src="https:\/\/example.com\/newer-photo.jpg"/)
+  globalThis.fixtureSanityFetch = async () => ({...puppy, status: 'reserved'})
+  const reserved = await renderInquiry()
+  assert.match(reserved, /Girl 2 is unavailable/)
+  assert.doesNotMatch(reserved, /aria-label="Puppy inquiry"/)
 })
