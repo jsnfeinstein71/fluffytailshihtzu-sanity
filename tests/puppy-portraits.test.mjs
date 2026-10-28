@@ -43,3 +43,36 @@ test('home cards, browsing cards and the detail page agree on the approved image
   assert.match(other, /src="https:\/\/cdn.sanity.io/)
   assert.doesNotMatch(other, /puppy-ground-shadow|puppyImageWrap-cutout/)
 })
+
+test('Girl 1 and Girl 3 keep their own portraits and Reserved status across all placements', async () => {
+  const puppies = [
+    {
+      _id: '54a22bbc-7966-437e-8c0e-0fff6c4d1e8e', name: 'Girl 3', slug: 'girl-3-1',
+      photoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/a8be0cbcda43f32ec769ad6682f067d7b8bb2c93-2048x1778.jpg',
+      expectedPortrait: '/puppies/elsie-girl3-profile.png',
+    },
+    {
+      _id: '6e181ad7-3340-4b2f-ba61-91fbd9155ca0', name: 'Girl.1', slug: 'girl-1-1',
+      photoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/3cf72827d25286b55a40fd5b570c07a9e4b7db72-2048x1955.jpg',
+      expectedPortrait: '/puppies/elsie-girl1-profile.png',
+    },
+  ]
+  for (const values of puppies) {
+    const puppy = {...values, status: 'reserved', litterStatus: 'current', litterPrice: 1600, litterDeposit: 400}
+    assert.equal(getPuppyProfilePortrait(puppy), puppy.expectedPortrait)
+    assert.equal(getPuppyProfilePortrait({...puppy, photoUrl: 'https://example.com/newer-photo.jpg'}), null)
+    assert.equal(getPuppyProfilePortrait({...puppy, _id: 'another-puppy'}), null)
+    globalThis.fixtureSanityFetch = async () => puppy
+    const outputs = [
+      ...[false, true].map(browsing => renderToStaticMarkup(createElement(PuppyCard, {puppy, browsing}))),
+      renderToStaticMarkup(await PuppyDetailPage({params: Promise.resolve({slug: puppy.slug})})),
+    ]
+    for (const html of outputs) {
+      assert.ok(html.includes(`src="${puppy.expectedPortrait}"`))
+      assert.match(html, /class="puppy-ground-shadow" aria-hidden="true"/)
+      assert.match(html, /Reserved/)
+      assert.match(html, /\$1,600/)
+      assert.doesNotMatch(html, /Request Info About This Puppy/)
+    }
+  }
+})
