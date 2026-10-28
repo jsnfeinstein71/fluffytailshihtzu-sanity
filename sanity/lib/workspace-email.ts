@@ -1,3 +1,5 @@
+import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
+import {livePaymentContext,livePaymentUrl} from './live-payment'
 import {checkedAttachments,listAttachments} from './workspace-attachments'
 import {sameAttachments} from '@/lib/mail/attachment-model'
 import {paymentRequestEmail,renderPaymentEmail,samePaymentEmail} from '@/lib/mail/payment-email'
@@ -121,7 +123,7 @@ async function checkedPayment(id:string,family:SavedFamily,requireCurrent=true){
   const request=await getOperatorClient().getDocument<PaymentRequest>(id)
   if(!request||request._type!=='staffPaymentRequest'||request.workspace!==workspaceNamespace()||request.familyId!==family.familyKey||request._id!==workspacePaymentId(request.requestId)||request.testOnly===liveWorkspaceEnabled())throw new EmailWorkflowError('That payment request does not belong to this family.',409)
   if(!requireCurrent)return request
-  if(!Number.isFinite(Date.parse(request.expiresAt))||Date.parse(request.expiresAt)<=Date.now())throw new EmailWorkflowError('This test payment request has expired. Prepare a fresh request before reviewing the email.',409)
+  if(!Number.isFinite(Date.parse(request.expiresAt))||Date.parse(request.expiresAt)<=Date.now())throw new EmailWorkflowError('This payment request has expired. Prepare a fresh request before reviewing the email.',409)
   const current=await quote(family,request.puppyId,request.kind)
   if(Object.entries(current).some(([key,value])=>request[key as keyof PaymentRequest]!==value))throw new EmailWorkflowError('The puppy’s price or confirmed balance has changed. Review the payment details and prepare a fresh request.',409)
   return request
@@ -140,7 +142,8 @@ export async function loadMailbox():Promise<MailData>{
     return {familyId:f.familyKey,revision:null,value:emptyEmail(f.drafts.Email||'')}
   })
   const inventory=await client.fetch<{id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug:string;paymentTestScenario?:string}[]>('*[_type == "puppy" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,sex,color,paymentTestScenario,"litter":litter->title,status,"price":coalesce(overridePrice,litter->price),"deposit":litter->deposit,"slug":slug.current}',{},{cache:'no-store'})
-  return {attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
+  const presentedPayments=liveWorkspaceEnabled()?paymentRequests.map(p=>{try{return {...p,checkoutUrl:livePaymentUrl(p)}}catch{return p}}):paymentRequests
+  return {attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests:presentedPayments,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
 }
 export async function prepareEmailAction(input:unknown,origin:string){
   requireWorkspace()
@@ -148,24 +151,24 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const family=await familyRecord(action.familyId)
   const client=getOperatorClient()
   if(action.type==='confirmation-message'){
-    if(!paymentTestWorkspaceEnabled())throw new EmailWorkflowError('Confirmation editing is available in payment testing only.',403)
+    if(!paymentTestWorkspaceEnabled()&&!liveWorkspaceEnabled())throw new EmailWorkflowError('Confirmation editing is unavailable.',403)
     if((family.profile.paymentConfirmationMessage||'')!==action.base)throw new EmailWorkflowError('This confirmation message changed in another tab. Reload the saved message before replacing it.',409)
     try{await client.patch(family._id).ifRevisionId(family._rev).set({'profile.paymentConfirmationMessage':action.message}).commit({visibility:'sync'})}catch(error){if((error as {statusCode?:number}).statusCode===409)throw new EmailWorkflowError('The family changed in another tab. Your message is kept; refresh and save again.',409);throw error}
     return {}
   }
   if(action.type==='checkout'||action.type==='verify')return await paymentTransport(action,family,origin)
   if(action.type==='payment'){
-    if(paymentTestWorkspaceEnabled()){
-      requirePaymentTestConfiguration()
+    if(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled()){
+      if(liveWorkspaceEnabled())requireLivePaymentConfiguration();else requirePaymentTestConfiguration()
       // An expired app link does not prove an earlier provider attempt failed.
       // Do not issue a second charge while the first is paid or processing.
-      const unsettled=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == "review-v1" && testOnly == true && familyId == $familyId && puppyId == $puppyId && defined(checkoutSessionId) && !defined(webhookVerifiedAt)][0...21]',{familyId:family.familyKey,puppyId:action.puppyId},{cache:'no-store'})
-      if(unsettled.length>20)throw new EmailWorkflowError('Earlier test checkouts need review before requesting another payment.',409)
-      for(const prior of unsettled){const session=await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId!);if(session.livemode!==false||session.payment_status==='paid'||session.status==='complete'&&prior.checkoutOutcome!=='failed')throw new EmailWorkflowError('An earlier Stripe payment is awaiting confirmation. Do not request or pay again; review that payment first.',409)}
+      const unsettled=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && testOnly == $testOnly && familyId == $familyId && puppyId == $puppyId && defined(checkoutSessionId) && !defined(webhookVerifiedAt)][0...21]',{workspace:workspaceNamespace(),testOnly:!liveWorkspaceEnabled(),familyId:family.familyKey,puppyId:action.puppyId},{cache:'no-store'})
+      if(unsettled.length>20)throw new EmailWorkflowError('Earlier checkouts need review before requesting another payment.',409)
+      for(const prior of unsettled){const session=await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId!);if(session.livemode!==liveWorkspaceEnabled()||session.payment_status==='paid'||session.status==='complete'&&prior.checkoutOutcome!=='failed')throw new EmailWorkflowError('An earlier Stripe payment is awaiting confirmation. Do not request or pay again; review that payment first.',409)}
     }
     const details=await quote(family,action.puppyId,action.kind)
-    if(paymentTestWorkspaceEnabled()){
-      const pending=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == "review-v1" && testOnly == true && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'})
+    if(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled()){
+      const pending=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && testOnly == $testOnly && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{workspace:workspaceNamespace(),testOnly:!liveWorkspaceEnabled(),familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'})
       if(pending[0]&&Object.entries(details).every(([key,value])=>pending[0][key as keyof PaymentRequest]===value)){
         const prior=pending[0],session=prior.checkoutSessionId?await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId):null
         if(session?.status!=='expired')return {preparedPaymentId:prior._id}
@@ -174,8 +177,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
         if(link)await client.patch(link._id).set({active:false,expiresAt:new Date().toISOString()}).commit({visibility:'sync'})
       }
     }
-    if(liveWorkspaceEnabled()){const active=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{workspace:workspaceNamespace(),familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'});if(active.length){await checkedPayment(active[0]._id,family);return {preparedPaymentId:active[0]._id}}}
-    const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...(approvedTestCustomer(family.profile)?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
+    const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...(liveWorkspaceEnabled()||approvedTestCustomer(family.profile)?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
     await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
     const stored=await checkedPayment(record._id,family)
     if(stored.puppyId!==record.puppyId||stored.kind!==record.kind)throw new EmailWorkflowError('That request ID already belongs to a different payment request.',409)
@@ -209,7 +211,9 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const testUrl=payment?(payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${testUrl}`:value.body
   const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)
-  const paymentEmail=paymentTestWorkspaceEnabled()&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
+  const presentation=payment&&liveWorkspaceEnabled()?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
+  const paymentEmail=(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled())&&presentation?paymentRequestEmail(presentation,family.profile.name,value.body):null
+  if(liveWorkspaceEnabled()&&payment&&!paymentEmail)throw new EmailWorkflowError('This payment link needs review before sending.',409)
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
   const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(attachments.length?{attachments}:{}),...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
   await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
@@ -241,7 +245,8 @@ export async function validateSavedEmailReview(id:string,origin:string){
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href}`:value.body
   const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)
   if(!sameAttachments(review.attachments,attachments))throw new EmailWorkflowError('The attachment snapshot changed. Prepare the current message again.',409)
-  const currentTemplate=review.paymentEmail&&payment?paymentRequestEmail(payment,family.profile.name,value.body):null
+  const presentation=review.paymentEmail&&payment&&liveWorkspaceEnabled()?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
+  const currentTemplate=review.paymentEmail&&presentation?paymentRequestEmail(presentation,family.profile.name,value.body):null
   const paymentEmail=currentTemplate?{...currentTemplate,version:review.paymentEmail!.version}:null
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
   if(review.html!==formatted?.html||!samePaymentEmail(review.paymentEmail,paymentEmail||undefined))throw new EmailWorkflowError('The formatted payment email changed. Prepare a fresh review.',409)
@@ -251,6 +256,7 @@ export async function validateSavedEmailReview(id:string,origin:string){
 
 async function paymentTransport(action:{type:'checkout'|'verify';familyId:string;paymentRequestId:string},family:SavedFamily,origin:string){
   requireWorkspace()
+  if(liveWorkspaceEnabled()&&origin!==requireLivePaymentConfiguration())throw new EmailWorkflowError('Open payments on the real FluffyTail website.',409)
   if(paymentTestWorkspaceEnabled()){const canonical=requirePaymentTestConfiguration();if(origin!==canonical)throw new EmailWorkflowError('Open payment testing from its stable entry address.',409)}
   if(!paymentTestWorkspaceEnabled()&&(liveWorkspaceEnabled()?!/^(?:sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY||''):(process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED!=='1'||! /^(?:sk|rk|rkcs)_test_/.test(process.env.STRIPE_SECRET_KEY||''))))throw new EmailWorkflowError('Stripe test checkout is not configured. No live payment can be created.',503)
   if(family.profile.source!=='inquiry')throw new EmailWorkflowError('Connect a saved inquiry family before using Stripe test checkout.',409)

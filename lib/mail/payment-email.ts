@@ -12,14 +12,16 @@ export const paymentEmailLabels:Record<PaymentEmailKind,{title:string;button:str
   'paid-confirmation':{title:'Paid in full',button:'View payment confirmation'},
 }
 export function paymentRequestEmail(request:{publicToken?:string;checkoutUrl?:string;kind:'deposit'|'balance';puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;testOnly:boolean},name:string,message:string):PaymentEmail|null{
-  if(!request.publicToken||!request.checkoutUrl)return null
+  if(!request.checkoutUrl||request.testOnly&&!request.publicToken)return null
+  const url=new URL(request.checkoutUrl)
+  if(!/^\/pay\/(?:[a-f0-9]{48}|cs_live_[A-Za-z0-9]+)$/.test(url.pathname))return null
   return {version:2,kind:request.kind==='deposit'?'deposit-request':'balance-request',name,message,puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:request.paidCents,depositCents:request.depositCents,url:request.checkoutUrl,testOnly:request.testOnly}
 }
 const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const money=(cents:number)=>'$'+(cents/100).toFixed(2)
 function renderPaymentEmailV1(email:PaymentEmail){
   const url=new URL(email.url)
-  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||!/^\/pay\/[a-f0-9]{48}$/.test(url.pathname))throw new Error('A customer-facing payment page is required for this email.')
+  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||!(email.testOnly?/^\/pay\/[a-f0-9]{48}$/:/^\/pay\/(?:[a-f0-9]{48}|cs_live_[A-Za-z0-9]+)$/).test(url.pathname))throw new Error('A customer-facing payment page is required for this email.')
   if(email.version!==1||!paymentEmailLabels[email.kind]||[email.amountCents,email.totalCents,email.paidCents,email.depositCents].some(n=>!Number.isSafeInteger(n)||n<0)||email.amountCents>email.totalCents||email.paidCents>email.totalCents)throw new Error('Invalid payment email summary.')
   const confirmation=email.kind.endsWith('confirmation'),deposit=email.kind.startsWith('deposit'),label=paymentEmailLabels[email.kind]
   const remaining=email.totalCents-email.paidCents

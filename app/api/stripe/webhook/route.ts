@@ -1,3 +1,6 @@
+import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
+import {applyLiveStaffPayment} from '@/sanity/lib/live-payment'
+import {ensureLivePaymentConfirmation} from '@/sanity/lib/email-workflow'
 import {NextRequest, NextResponse} from 'next/server'
 import type Stripe from 'stripe'
 import {privateRecordId} from '@/sanity/lib/private-records'
@@ -92,7 +95,14 @@ export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_WEBHOOK_SECRET) return new NextResponse('Webhook is not configured', {status: 503})
   let event: Stripe.Event
   try {event = getStripe().webhooks.constructEvent(await req.text(), signature, process.env.STRIPE_WEBHOOK_SECRET)} catch {return new NextResponse('Webhook Error', {status: 400})}
+  if(process.env.VERCEL_ENV==='production'&&event.livemode!==true)return new NextResponse('Live events are required', {status:400})
   try {
+    const session=event.data.object as Stripe.Checkout.Session
+    if(event.type.startsWith('checkout.session.')&&session.metadata?.staffPaymentRequestId&&liveWorkspaceEnabled()){
+      const result=await applyLiveStaffPayment(event)
+      if(result.confirmationEligible)await ensureLivePaymentConfirmation(session.id)
+      return NextResponse.json({received:true})
+    }
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') await recordCheckout(event.data.object as Stripe.Checkout.Session)
     if (event.type === 'invoice.paid') await recordInvoice(event.data.object as Stripe.Invoice)
     return NextResponse.json({received: true})

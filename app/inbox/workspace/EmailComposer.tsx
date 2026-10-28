@@ -51,7 +51,7 @@ export default function EmailComposer({family,email,detailsTarget}:{family:Famil
   const dirty=!sameEmail(value,entry.base)
   const requests=email.data?.paymentRequests.filter(p=>p.familyId===family.id)||[]
   const attached=requests.find(p=>p._id===value.paymentRequestId)
-  const formatted=email.data?.paymentTesting&&attached?paymentRequestEmail(attached,family.name,value.body):null
+  const formatted=(email.data?.paymentTesting||email.data?.live)&&attached?paymentRequestEmail(attached,family.name,value.body):null
   const pending=(email.data?.outgoing||[]).filter(o=>o.familyId===family.id)
   const blocked=entry.conflict?'Resolve the draft change below before sending.':!family.email?'This family has no email address.':email.data?.paymentTesting&&!family.testCommunicationsAllowed?'Email sending is limited to the approved test family.':!email.data?.capabilities?.canDispatch?'Email sending is unavailable. Your draft can still be saved.':pending.some(o=>['sending','uncertain'].includes(o.state))?'A previous send needs review before another email can be sent.':pending.some(o=>o.state==='accepted'&&o.draftRevision===entry.revision&&!dirty)?'This draft has already been sent. Clear or edit it to write another message.':!value.subject.trim()?'Enter an email subject.':!value.body.trim()&&!value.attachmentIds?.length?'Write a message to send.':''
   const replies=(email.data?.messages||[]).filter(m=>m.familyId===family.id&&m.direction==='in'&&m.messageId)
@@ -75,7 +75,7 @@ export default function EmailComposer({family,email,detailsTarget}:{family:Famil
     <p className="ops-draft-note">Drafts save automatically. Send submits this message. A failed or uncertain send keeps your draft. Acceptance does not confirm delivery, payment or a reservation.</p>
     {detailsTarget?createPortal(<section className="ops-email-options" aria-label="Email options"><h3>Email options</h3><p className="ops-draft-note">From / Reply-To: {jeanneEmail}</p>    <details><summary>Email thread</summary><label htmlFor="email-conversation">Conversation</label><select id="email-conversation" value={value.replyToId||''} disabled={email.busy} onChange={event=>event.target.value?email.startReply(family.id,event.target.value):email.edit(family.id,{replyToId:null})}><option value="">New email</option>{replies.map(m=><option value={m.id} key={m.id}>Reply: {m.subject}</option>)}</select></details>
 
-{email.data?.paymentTesting?<PaymentEmailTools family={family} email={email}/>:null}
+{email.data?.paymentTesting||email.data?.live?<PaymentEmailTools family={family} email={email}/>:null}
 <details><summary>Sending history and attempt review</summary><EmailDelivery familyId={family.id} email={email}/></details></section>,detailsTarget):null}
   </div>
 }
