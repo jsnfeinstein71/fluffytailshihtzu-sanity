@@ -36,6 +36,7 @@ export async function proxy(req: NextRequest) {
   const denied = await requireOperator(req)
   if (denied) {
     if(host&&req.method==='GET'&&!path.includes('/api')&&!path.includes('/auth/'))return NextResponse.redirect(new URL('/inbox/unlock?return='+encodeURIComponent(safeStaffReturn(path)),req.url))
+    if(mode==='transition'&&req.nextUrl.origin==='https://www.fluffytailshihtzu.com'&&req.method==='GET'&&!path.includes('/api')&&!path.includes('/auth/'))return NextResponse.redirect(new URL('/inbox/access?return='+encodeURIComponent(safeStaffReturn(path)),req.url))
     if(staffWorkspaceAvailable()&&req.method==='GET'&&(req.nextUrl.pathname==='/inbox/workspace'||isolatedStaffPreview()&&!req.nextUrl.pathname.includes('/api/'))&&req.headers.get('accept')?.includes('text/html'))return NextResponse.redirect(new URL('/inbox/access',req.url))
     return denied
   }
