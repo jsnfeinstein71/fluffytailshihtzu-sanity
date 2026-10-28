@@ -1,5 +1,7 @@
 # FluffyTail analytics readiness
 
+Update: the owner subsequently approved consented public analytics and restricting Vercel scope. The coordinating task configured the existing `.com` stream; implementation and release controls are documented in [fluffytail-analytics-implementation.md](./fluffytail-analytics-implementation.md). The historical plan below describes the earlier SEO-only baseline, not current approval status.
+
 2026-10-28. Documentation only; no tracking, account settings, legal copy, environment variables or deployment changed. Source baseline: `b9a6ade`.
 
 ## Verified baseline and limits
