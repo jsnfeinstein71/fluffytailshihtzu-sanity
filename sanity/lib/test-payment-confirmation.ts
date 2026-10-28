@@ -12,7 +12,7 @@ import {jeanneEmail} from '@/app/inbox/workspace/email-model'
 export const confirmationId=(sessionId:string)=>privateRecordId('staffOutgoingEmail','review-v1:payment-confirmation:'+sessionId)
 export async function testConfirmationSnapshot(sessionId:string){
  if(!testCustomerContacts())return null
- const session=await getStripe().checkout.sessions.retrieve(sessionId),{request,family}=await testPaymentContext(session)
+ const session=await getStripe().checkout.sessions.retrieve(sessionId),{request,family,puppy}=await testPaymentContext(session)
  if(!approvedTestCustomer(family.profile)||!request.publicToken||!request.webhookVerifiedAt)return null
  const ledger=await getOperatorClient().getDocument<{_id:string;totalPaidCents:number;amountPaid:number}>(privateRecordId('testPaymentCheckout','review-v1:'+sessionId))
  if(!ledger||!Number.isSafeInteger(ledger.totalPaidCents))throw new Error('A verified payment snapshot is required for confirmation.')
@@ -21,7 +21,8 @@ export async function testConfirmationSnapshot(sessionId:string){
  const existing=await getOperatorClient().getDocument<OutgoingEmail>(confirmationId(sessionId))
  // Already-prepared/sent plaintext snapshots are historical records, not a migration.
  if(existing&&!existing.paymentEmail)return legacy
- const paymentEmail:PaymentEmail={version:existing?.paymentEmail?.version||2,kind:complete?'paid-confirmation':'deposit-confirmation',name:existing?.paymentEmail?.name??family.profile.name,message:existing?.paymentEmail?.message??(family.profile.paymentConfirmationMessage||confirmationMessage),puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:ledger.totalPaidCents,depositCents:request.depositCents,url:`${requirePaymentTestConfiguration()}/pay/${request.publicToken}`,testOnly:true}
+ const version=existing?.paymentEmail?.version||3
+ const paymentEmail:PaymentEmail={version,...(version===3?{reserved:existing?.paymentEmail?.reserved??(puppy.status==='reserved')}:{}) ,kind:complete?'paid-confirmation':'deposit-confirmation',name:existing?.paymentEmail?.name??family.profile.name,message:existing?.paymentEmail?.message??(family.profile.paymentConfirmationMessage||confirmationMessage),puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:ledger.totalPaidCents,depositCents:request.depositCents,url:`${requirePaymentTestConfiguration()}/pay/${request.publicToken}`,testOnly:true}
  const formatted=renderPaymentEmail(paymentEmail)
  return {...legacy,paymentEmail,html:formatted.html,body:formatted.text}
 

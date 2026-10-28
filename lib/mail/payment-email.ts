@@ -1,7 +1,9 @@
+import {paymentCopy} from '@/lib/public-copy'
+
 // Shared, deterministic presentation only. Payment facts must be verified by the
 // application before creating a confirmation. Never accept HTML from a browser.
 export type PaymentEmailKind='deposit-request'|'balance-request'|'deposit-confirmation'|'paid-confirmation'
-export type PaymentEmail={version:1|2;kind:PaymentEmailKind;name:string;message:string;puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;url:string;testOnly:boolean}
+export type PaymentEmail={version:1|2|3;reserved?:boolean;kind:PaymentEmailKind;name:string;message:string;puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;url:string;testOnly:boolean}
 // Sanity may reorder object keys during storage; compare field values, not insertion order.
 export const samePaymentEmail=(a:PaymentEmail|undefined,b:PaymentEmail|undefined)=>JSON.stringify(a,Object.keys(a||{}).sort())===JSON.stringify(b,Object.keys(b||{}).sort())
 export const confirmationMessage='Thank you for your payment. Please reply if you have any questions about your puppy or pickup.'
@@ -15,7 +17,7 @@ export function paymentRequestEmail(request:{publicToken?:string;checkoutUrl?:st
   if(!request.checkoutUrl||request.testOnly&&!request.publicToken)return null
   const url=new URL(request.checkoutUrl)
   if(!/^\/pay\/(?:[a-f0-9]{48}|cs_live_[A-Za-z0-9]+)$/.test(url.pathname))return null
-  return {version:2,kind:request.kind==='deposit'?'deposit-request':'balance-request',name,message,puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:request.paidCents,depositCents:request.depositCents,url:request.checkoutUrl,testOnly:request.testOnly}
+  return {version:3,kind:request.kind==='deposit'?'deposit-request':'balance-request',name,message,puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:request.paidCents,depositCents:request.depositCents,url:request.checkoutUrl,testOnly:request.testOnly}
 }
 const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const money=(cents:number)=>'$'+(cents/100).toFixed(2)
@@ -42,7 +44,7 @@ function renderPaymentEmailV1(email:PaymentEmail){
 
 // Version one remains byte-for-byte available for immutable earlier attempts.
 // New emails use the already-approved transparent white logo on a brown header.
-export function renderPaymentEmail(email:PaymentEmail){
+function renderHistoricalPaymentEmail(email:PaymentEmail){
  if(email.version===1)return renderPaymentEmailV1(email)
  if(email.version!==2)throw new Error('Unsupported payment email version.')
  const rendered=renderPaymentEmailV1({...email,version:1})
@@ -53,4 +55,19 @@ export function renderPaymentEmail(email:PaymentEmail){
   .replace('Please reply with any questions.<br><strong>Jeanne</strong>',`${invitation?invitation+'<br>':''}<strong>Jeanne</strong>`)
  const text=rendered.text.replace(/\n\nPlease reply with any questions\.\nJeanne\nFluffyTail Shih Tzu$/,`\n\n${invitation?invitation+'\n':''}Jeanne\nFluffyTail Shih Tzu`)
  return {html,text}
+}
+
+// Earlier snapshots retain their exact rendering. New messages apply the owner’s
+// manuscript without changing quotes, ledger verification or send behavior.
+export function renderPaymentEmail(email:PaymentEmail){
+ if(email.version!==3)return renderHistoricalPaymentEmail(email)
+ const rendered=renderHistoricalPaymentEmail({...email,version:2})
+ const confirmed=email.kind.endsWith('confirmation'),deposit=email.kind.startsWith('deposit'),remaining=email.totalCents-email.paidCents
+ const intro=confirmed?(email.kind==='paid-confirmation'?paymentCopy.paidInFull(email.puppyName):paymentCopy.verifiedDeposit(money(email.amountCents),email.puppyName,money(remaining))):deposit?paymentCopy.deposit(email.puppyName,money(email.depositCents),money(email.totalCents)):paymentCopy.balance(email.puppyName,money(email.paidCents+email.amountCents),money(remaining-email.amountCents))
+ const previous=confirmed?(email.kind==='paid-confirmation'?'Paid in full. Pickup timing and location will be coordinated with Jeanne.':`${email.testOnly?'Your fictional puppy':'Your puppy'} is reserved. Jeanne will coordinate the remaining balance and pickup with you.`):'This request is not a payment confirmation. Payment and reservation status are verified separately.'
+ const status=confirmed?(email.reserved===true?'Your puppy is reserved.':''):paymentCopy.unpaid
+ const summary='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#FFF9F1" class="email-summary"'
+ let html=rendered.html.replace(escape(previous),escape(status)).replace(summary,`<p style="margin:0 0 24px;color:#58493D">${escape(intro)}</p>${summary}`)
+ if(!confirmed)html=html.replace(escape(paymentEmailLabels[email.kind].title),escape(paymentCopy.request))
+ return {html,text:rendered.text.replace(previous,status).replace('\nPuppy:',`\n${intro}\n\nPuppy:`)}
 }

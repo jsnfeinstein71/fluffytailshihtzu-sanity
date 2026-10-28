@@ -334,8 +334,8 @@ test('native form presents server-selected puppy/photo context and defaults to e
 
 test('general and future-interest form presentation remains native without an invented puppy selection', async () => {
   const future = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({interest: 'waitlist'})}))
-  assert.match(future, /Ask about future puppies\./)
-  assert.match(future, /I would like to hear about future puppies and upcoming litters\./)
+  assert.match(future, /Let’s talk about a future puppy\./)
+  assert.match(future, /Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:/)
   const general = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({})}))
   assert.match(general, /Say hello to Jeanne\./)
   for (const html of [future, general]) {
@@ -350,8 +350,8 @@ test('saved and legacy inquiry links show current unavailability before collecti
     puppy.status = status
     for (const params of [{puppySlug: 'puppy'}, {puppyPageUrl: 'https://www.fluffytailshihtzu.com/puppies/puppy'}]) {
       const html = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve(params)}))
-      assert.match(html, /not currently available for a new reservation/)
-      assert.match(html, /href="\/contact"/)
+      assert.match(html, /is reserved|isn’t available for a new reservation/)
+      assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
       assert.match(html, /href="\/available-puppies"/)
       assert.doesNotMatch(html, /<form|Send inquiry|name="email"/)
     }
@@ -380,15 +380,15 @@ test('Contact starts empty with a placeholder while future-litter links retain t
   const html = renderToStaticMarkup(await Contact())
   assert.match(html, /Contact Jeanne/)
   assert.equal((html.match(/<form\b/g) || []).length, 1)
-  assert.match(html, /placeholder="Tell Jeanne how she can help\."/)
+  assert.match(html, /placeholder="Tell Jeanne what you’d like to know\."/)
   assert.match(html, /<textarea[^>]*name="message"[^>]*required=""><\/textarea>/)
   assert.doesNotMatch(html, /I would like to hear about future puppies and upcoming litters/)
   assert.match(html, /href="https:\/\/www.gooddog.com\/breeders\/fixture"/)
   assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
   assert.doesNotMatch(html, /name="smsConsent"|<iframe|class="inquiry-context"/)
   const future = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({interest: 'waitlist'})}))
-  assert.match(future, /I would like to hear about future puppies and upcoming litters\.<\/textarea>/)
-  assert.doesNotMatch(future, /placeholder="Tell Jeanne how she can help/)
+  assert.match(future, /Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:<\/textarea>/)
+  assert.doesNotMatch(future, /placeholder="Tell Jeanne what you’d like to know/)
 })
 
 test('retired Tally callback returns 410 and performs no record or notification work', async () => {

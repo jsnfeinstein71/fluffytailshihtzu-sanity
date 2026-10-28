@@ -147,13 +147,12 @@ export function puppyPath(slug: string) {
 
 export function buildPuppyInquiryUrl(puppy: Puppy) {
   const puppyText = puppy.name || 'this puppy'
-  const litterText = puppy.litterTitle ? ` from the ${puppy.litterTitle} litter` : ''
   const params = new URLSearchParams({
     puppySlug: puppy.slug || '',
     puppy: puppy.name || '',
     litter: puppy.litterTitle || '',
     puppyPageUrl: `https://www.fluffytailshihtzu.com${puppy.slug ? puppyPath(puppy.slug) : '/available-puppies'}`,
-    message: `Hi, I'm interested in ${puppyText}${litterText}. Please send me more information.`,
+    message: `Hi Jeanne, I’d like to know more about ${puppyText}.`,
   })
   return `/puppy-inquiry?${params}`
 }

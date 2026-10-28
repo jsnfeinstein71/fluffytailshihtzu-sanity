@@ -2,13 +2,14 @@ export const revalidate = 60
 
 import '../home.css'
 import './upcoming.css'
+import {pageDescriptions} from '@/lib/public-copy'
 import Link from 'next/link'
 import {getInventory} from '@/sanity/lib/inventory'
 import {formatCurrency, formatDate, getLitterDate, getLittersByStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
 import LitterTile from '../components/LitterTile'
 
-export const metadata = {title: 'Upcoming Litters', alternates: {canonical: '/upcoming-litters'}}
+export const metadata = {title: 'Upcoming Litters', description:pageDescriptions.upcoming, alternates: {canonical: '/upcoming-litters'}}
 
 export default async function UpcomingLittersPage() {
   const inventory = await getInventory()
@@ -17,9 +18,9 @@ export default async function UpcomingLittersPage() {
 
   return <main className="wrap upcoming-page">
     <header className="upcoming-intro">
-      <p className="eyebrow">Looking ahead</p>
+      <p className="eyebrow">Planning ahead</p>
       <h1 className="h1">Upcoming Litters</h1>
-      <p className="lead">A little planning for a lot of love.</p>
+      <p className="lead">Not choosing a puppy today? Here’s what we’re looking forward to. Tell Jeanne when you hope to bring your little one home.</p>
     </header>
 
     {expectedLitters.map((litter, index) => {
@@ -30,8 +31,9 @@ export default async function UpcomingLittersPage() {
       return <section className="expected-litter" key={litter._id} data-litter-id={litter._id}>
         <header className="expected-litter-heading">
           <div><span className="expected-status">Upcoming</span><h2>{litter.title || 'Expected litter'}</h2></div>
-          <dl className="expected-litter-date"><div><dt>Expected birth</dt><dd>{date || 'Date to be confirmed'}</dd></div></dl>
+          <dl className="expected-litter-date"><div><dt>Expected around</dt><dd>{date || 'Date to be confirmed'}</dd></div></dl>
         </header>
+        <p>Expected dates are estimates. Jeanne will confirm timing as the litter develops.</p>
         <div className="expected-litter-layout">
           <figure className="expected-announcement">
             {litter.groupPhotoUrl ? <img
@@ -54,15 +56,15 @@ export default async function UpcomingLittersPage() {
             {litter.expectedAvailability ? <div className="expected-availability"><h3>Looking ahead</h3><p>{litter.expectedAvailability}</p></div> : null}
             {pricing ? <div className="expected-pricing">
               <dl>
-                <div><dt>Default puppy price</dt><dd>{formatCurrency(pricing.totalCents / 100, pricing.totalCents % 100 !== 0)}</dd></div>
-                <div><dt>Deposit</dt><dd>{formatCurrency(pricing.depositCents / 100, pricing.depositCents % 100 !== 0)}</dd></div>
+                <div><dt>Litter price</dt><dd>{formatCurrency(pricing.totalCents / 100, pricing.totalCents % 100 !== 0)}</dd></div>
+                <div><dt>Deposit toward the total</dt><dd>{formatCurrency(pricing.depositCents / 100, pricing.depositCents % 100 !== 0)}</dd></div>
               </dl>
-              <p>The deposit is included in the total.</p>
+              <p>See each puppy’s profile for the exact price. The deposit counts toward that total.</p>
             </div> : null}
             <div className="expected-inquiry">
-              <h3>Thinking about a future puppy?</h3>
-              <p>Talk with Jeanne about timing and what you are looking for.</p>
-              <Link className="brand-button" href="/puppy-inquiry?interest=waitlist">Ask about future puppies <span aria-hidden="true">&rarr;</span></Link>
+              <h3>Interested in this litter?</h3>
+              <p>Tell Jeanne which litter you’re following and a little about the home you have in mind. Asking now starts a conversation; it doesn’t reserve a puppy.</p>
+              <Link className="brand-button" href="/puppy-inquiry?interest=waitlist">Ask Jeanne about this litter <span aria-hidden="true">&rarr;</span></Link>
             </div>
           </div>
         </div>
@@ -70,13 +72,13 @@ export default async function UpcomingLittersPage() {
     })}
 
     {!expectedLitters.length ? <section className="upcoming-empty">
-      <h2>No upcoming litters listed yet.</h2>
-      <p>Talk with Jeanne about future puppies and timing.</p>
+      <h2>Nothing announced just yet.</h2>
+      <p>If you’re planning for a future puppy, you can still tell Jeanne what you’re looking for and ask about timing.</p>
       <Link className="brand-button" href="/puppy-inquiry?interest=waitlist">Ask about future puppies <span aria-hidden="true">&rarr;</span></Link>
     </section> : null}
 
     {activeLitters.length ? <section className="upcoming-current" aria-labelledby="current-litters-title">
-      <div className="upcoming-current-heading"><div><p className="eyebrow">Already here</p><h2 id="current-litters-title">Our current litters</h2></div><Link className="text-link" href="/available-puppies">Meet our puppies <span aria-hidden="true">&rarr;</span></Link></div>
+      <div className="upcoming-current-heading"><div><p className="eyebrow">Already here</p><h2 id="current-litters-title">Already here</h2></div><Link className="text-link" href="/available-puppies">Meet our puppies <span aria-hidden="true">&rarr;</span></Link></div>
       <div className="upcoming-current-grid">{activeLitters.map(litter => <LitterTile key={litter._id} litter={litter} />)}</div>
     </section> : null}
   </main>

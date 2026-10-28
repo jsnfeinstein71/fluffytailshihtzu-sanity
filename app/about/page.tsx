@@ -1,138 +1,112 @@
 import '../home.css'
 import '../content.css'
-import {getInventory} from '@/sanity/lib/inventory'
-import {getLittersByStatus} from '@/lib/inventory'
-
+import Link from 'next/link'
+import {pageDescriptions} from '@/lib/public-copy'
 export const revalidate = 60
-export const metadata = {title: 'About', alternates: {canonical: '/about'}}
-import {client} from '@/sanity/lib/client'
-
-type SiteSettings = {
-  serviceArea?: string
+export const metadata = {
+  title: 'Meet Jeanne',
+  description: pageDescriptions.about,
+  alternates: {canonical: '/about'},
 }
-
-const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  serviceArea
-}`
-
-export default async function AboutPage() {
-  const [siteSettings, {litters}] = await Promise.all([
-    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}),
-    getInventory(),
-  ])
-  const photo = getLittersByStatus(litters, 'current').find(litter => litter.groupPhotoUrl)?.groupPhotoUrl
-
+export default function AboutPage() {
   return (
     <main className="wrap content-page">
-
       <header className="content-intro">
-      <p className="eyebrow">Small home-based breeder</p>
-      <h1 className="h1">About FluffyTail Shih Tzu</h1>
-
-      <p className="lead">
-        FluffyTail Shih Tzu is a small, home-based breeder in Alabama. Our dogs live with us as
-        family pets, not in a kennel.
-      </p>
-
-      <p className="sublead">
-        {siteSettings?.serviceArea ||
-          'Primarily serving the Southeast, with approved homes beyond the region.'}
-      </p>
-
+        <p className="eyebrow">The person behind FluffyTail</p>
+        <h1 className="h1">Hi, I’m Jeanne.</h1>
+        <p className="lead">
+          Before one of our puppies becomes part of your family, I’d like you to
+          know a little about ours.
+        </p>
       </header>
-      <div className={`grid${photo ? ' content-has-photo' : ''}`}>
-        {photo ? <figure className="content-photo"><img src={photo} alt="A FluffyTail Shih Tzu" loading="eager" decoding="async" /><figcaption>From our FluffyTail family.</figcaption></figure> : null}
+      <div className="grid content-has-photo">
+        <figure className="content-photo jeanne-portrait">
+          <img
+            src="/brand/jeanne-portrait.webp"
+            width={960}
+            height={1200}
+            alt="Jeanne smiling, wearing pink glasses and a teal shirt."
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+          />
+          <figcaption>Jeanne · FluffyTail Shih Tzu</figcaption>
+        </figure>
         <div className="card content-copy">
           <div className="pad">
-            <div className="section" style={{marginTop: 0}}>
-              <h2>Our approach</h2>
+            <div className="section">
+              <h2>{'Our home, our dogs'}</h2>
               <p className="lead">
-                We work directly with families who are considering a puppy and welcome questions
-                about availability, timing, and next steps.
+                {
+                  'My husband, Jason, and I share our home in the Mobile, Alabama area with our Shih Tzus. They’re our family pets, and the puppies we raise start their lives as part of that household.'
+                }
               </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                Browse each puppy’s details, then contact Jeanne about the puppy or future litter
-                you are interested in.
+              <p className="lead">
+                {
+                  'If you’ve been looking through our litters, you may already have met names like Elsie and Penny. Behind those names are our own dogs, and behind every puppy listing is a conversation you can have directly with me.'
+                }
               </p>
             </div>
-
-            <div className="divider"></div>
-
+            <div className="divider" />
             <div className="section">
-              <h2>About Jeanne</h2>
+              <h2>{'You’ll be talking with me'}</h2>
               <p className="lead">
-                Jeanne is the breeder behind FluffyTail Shih Tzu in the Mobile, Alabama area.
-                Her breeding dogs live in her home.
+                {
+                  'Choosing a puppy is personal. I want you to feel comfortable asking about the little one you’re interested in, what to expect before pickup, and what you’ll need at home.'
+                }
               </p>
               <p className="lead">
-                She is your point of contact for questions about current puppies and upcoming litters.
+                {
+                  'You don’t need to have everything figured out before you get in touch. Tell me about your household, your timing, and the puppy who caught your eye. We can start there.'
+                }
               </p>
             </div>
-
-            <div className="divider"></div>
-
+            <div className="divider" />
             <div className="section">
-              <h2>What matters to us</h2>
-              <div className="qa">
-                <div>
-                  <div className="q">Daily life</div>
-                  <div className="a">
-                    Our dogs are part of the household.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">Questions welcome</div>
-                  <div className="a">
-                    Ask about a puppy’s availability and the next step before making a decision.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">Planning ahead</div>
-                  <div className="a">
-                    You can ask about future litters even if you are not choosing a puppy today.
-                  </div>
-                </div>
-              </div>
+              <h2>{'A little piece of home goes with them'}</h2>
+              <p className="lead">
+                {
+                  'We begin socialization and potty-training work while the puppies are with us. They’ll still need patience, practice, and a routine as they settle into your home.'
+                }
+              </p>
+              <p className="lead">
+                {
+                  'At pickup, your puppy comes with written vaccination and deworming records, CKC registration papers, and a starter kit with food, treats, toys, and a blanket carrying the scent of mom and littermates. A little piece of their first home goes with them.'
+                }
+              </p>
             </div>
           </div>
         </div>
-
-        <div className="card content-aside">
+        <aside className="card content-aside">
           <div className="pad">
             <h2 className="panelTitle">At a glance</h2>
             <ul className="content-facts">
               <li>Mobile, Alabama area</li>
-              <li>In-home raised</li>
-              <li>Small breeder, not a kennel</li>
-              <li>Southeast and beyond</li>
+              <li>Puppies raised in our home</li>
+              <li>Direct conversations with Jeanne</li>
+              <li>Pickup arranged together</li>
             </ul>
-
           </div>
-        </div>
+        </aside>
       </div>
-
-      <div className="card section" style={{marginTop: '18px'}}>
+      <section className="card section">
         <div className="pad">
-          <h2 style={{marginTop: 0}}>Next step</h2>
+          <h2>Let’s meet your next little companion</h2>
           <p className="lead">
-            Browse current puppies, learn more about the breed, or use the contact page if you have
-            questions.
+            {
+              'Have a look at our puppies, or send me a note if you’re planning ahead. I’d love to hear what you’re looking for.'
+            }
           </p>
           <div className="ctaRow">
-            <a className="brand-button" href="/available-puppies">
-              View Available Puppies
-            </a>
-            <a className="text-link" href="/the-breed">
-              About the Breed
-            </a>
-            <a className="text-link" href="/contact">
-              Contact FluffyTail
-            </a>
+            <Link className="brand-button" href="/available-puppies">
+              Meet our puppies
+            </Link>
+            <Link className="text-link" href="/contact">
+              Send Jeanne a message
+            </Link>
           </div>
         </div>
-      </div>
-
+      </section>
     </main>
   )
 }
-

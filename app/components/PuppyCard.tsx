@@ -13,11 +13,11 @@ export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; brow
       {profilePortrait ? <div className="puppy-cutout-stage">
         <span className="puppy-ground-shadow" aria-hidden="true" />
         <img className="puppyImage" src={profilePortrait} width={1254} height={1254} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="lazy" decoding="async" />
-      </div> : puppy.photoUrl ? <img className="puppyImage" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} /> : null}
+      </div> : puppy.photoUrl ? <img className="puppyImage" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} /> : <span className="puppyMetaLine">Photo coming soon</span>}
     </div>
     <div className="puppyCardBody">
       <div className="puppyCardTop">
-        <h3 className="puppyName">{puppy.name || 'Unnamed puppy'}</h3>
+        <h3 className="puppyName">{puppy.name || 'Puppy details'}</h3>
         <span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>{formatPuppyStatus(puppy.status)}</span>
       </div>
       <p className="puppyMetaLine">
@@ -25,7 +25,7 @@ export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; brow
         {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
       </p>
       {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
-      {ready && (browsing || puppy.status === 'available' || puppy.status === 'hold') ? <div style={{marginTop: '10px'}}><span className="badge">Ready {ready}</span></div> : null}
+      {ready && (browsing || puppy.status === 'available' || puppy.status === 'hold') ? <div style={{marginTop: '10px'}}><span className="badge">Estimated ready date: {ready}</span></div> : null}
       <div className="puppy-card-footer">
         <span>{browsing && pricing ? <span className="puppy-card-price-label">Total puppy price</span> : null}{pricing ? formatCurrency(pricing.totalCents / 100, browsing && pricing.totalCents % 100 !== 0) : 'Ask Jeanne about pricing'}</span>
         {puppy.slug ? <span>{browsing ? 'View puppy' : `Meet ${puppy.name || 'this puppy'}`} <span aria-hidden="true">&rarr;</span></span> : null}

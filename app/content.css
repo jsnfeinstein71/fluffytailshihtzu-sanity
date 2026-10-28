@@ -11,6 +11,7 @@
 .content-page .content-photo { grid-area: photo; margin: 0; min-width: 0; width: 100%; }
 .content-page .content-photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: #fbf8f3; border-radius: 6px; }
 .content-page .content-photo figcaption { font-size: 12px; color: var(--brand-muted); margin-top: 10px; }
+.content-page .content-photo.jeanne-portrait img { aspect-ratio: 4 / 5; height: auto; object-fit: contain; }
 .brand-site .content-page .section h2, .content-page .panelTitle { font-size: 32px; margin: 0 0 16px; }
 .content-page .q { font-family: 'cormorant-garamond', Georgia, serif; font-weight: 600; font-size: 23px; line-height: 1.25; color: var(--brand-brown); margin-bottom: 7px; }
 .content-page .a { font-size: 16px; line-height: 1.75; color: var(--brand-muted); }

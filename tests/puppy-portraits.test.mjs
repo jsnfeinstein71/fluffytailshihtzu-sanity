@@ -95,6 +95,6 @@ test('the inquiry thumbnail matches the approved portrait and yields to a newer 
   assert.match(await renderInquiry(), /src="https:\/\/example.com\/newer-photo.jpg"/)
   globalThis.fixtureSanityFetch = async () => ({...puppy, status: 'reserved'})
   const reserved = await renderInquiry()
-  assert.match(reserved, /Girl 2 is unavailable/)
+  assert.match(reserved, /Girl 2 is reserved/)
   assert.doesNotMatch(reserved, /aria-label="Puppy inquiry"/)
 })
