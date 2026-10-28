@@ -8,11 +8,12 @@ import {tryPricing} from '@/lib/pricing'
 
 export const revalidate = 60
 
-export const metadata = {
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
   title: 'Pricing & Process',
   description: pageDescriptions.pricing,
-  alternates: {canonical: '/pricing'},
-}
+  path: '/pricing',
+})
 
 export default async function PricingPage() {
   const {litters, puppies} = await getInventory()

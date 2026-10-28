@@ -3,6 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {createElement} from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
+import {imageSources} from './image-source-helpers.mjs'
 const {getPuppyProfilePortrait} = await import('../lib/puppy-portraits.ts')
 const {default: PuppyCard} = await import('../app/components/PuppyCard.tsx')
 const {default: PuppyDetailPage} = await import('../app/puppies/[slug]/page.tsx')
@@ -32,7 +33,7 @@ test('home cards, browsing cards and the detail page agree on the approved image
     renderToStaticMarkup(await PuppyDetailPage({params: Promise.resolve({slug: puppy.slug})})),
   ]
   for (const output of html) {
-    assert.match(output, /src="\/puppies\/elsie-girl2-profile-v2.png"/)
+    assert.deepEqual(imageSources(output), ['/puppies/elsie-girl2-profile-v2.png'])
     assert.match(output, /width="1254" height="1254"/)
     assert.match(output, /class="puppy-ground-shadow" aria-hidden="true"/)
     assert.match(output, /Girl 2/)
@@ -69,7 +70,7 @@ test('Girl 1 and Girl 3 keep their own portraits and Reserved status across all 
       renderToStaticMarkup(await PuppyDetailPage({params: Promise.resolve({slug: puppy.slug})})),
     ]
     for (const html of outputs) {
-      assert.ok(html.includes(`src="${puppy.expectedPortrait}"`))
+      assert.deepEqual(imageSources(html), [puppy.expectedPortrait])
       assert.match(html, /class="puppy-ground-shadow" aria-hidden="true"/)
       assert.match(html, /Reserved/)
       assert.match(html, /\$1,600/)

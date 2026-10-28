@@ -2,11 +2,12 @@ import '../home.css'
 import '../content.css'
 import Link from 'next/link'
 
-export const metadata = {
-  alternates: {canonical: '/terms-and-conditions'},
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
+  path: '/terms-and-conditions',
   title: 'Terms and Conditions',
   description: 'Terms and Conditions for FluffyTail Shih Tzu.',
-}
+})
 
 export default function TermsAndConditionsPage() {
   return (

@@ -2,6 +2,8 @@ import Link from 'next/link'
 import {formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
+import {puppyCardSizes, puppyCutoutSizes} from '@/lib/responsive-images'
+import PublicImage from './PublicImage'
 
 export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; browsing?: boolean}) {
   const age = getAgeInWeeks(puppy.birthDate)
@@ -12,8 +14,8 @@ export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; brow
     <div className={`puppyImageWrap${profilePortrait ? ' puppyImageWrap-cutout' : ''}`}>
       {profilePortrait ? <div className="puppy-cutout-stage">
         <span className="puppy-ground-shadow" aria-hidden="true" />
-        <img className="puppyImage" src={profilePortrait} width={1254} height={1254} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="lazy" decoding="async" />
-      </div> : puppy.photoUrl ? <img className="puppyImage" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} /> : <span className="puppyMetaLine">Photo coming soon</span>}
+        <PublicImage className="puppyImage" src={profilePortrait} width={1254} height={1254} sizes={puppyCutoutSizes} alt={`${puppy.name || 'Puppy'} held in caring hands`} />
+      </div> : puppy.photoUrl ? <PublicImage className="puppyImage" src={puppy.photoUrl} sizes={puppyCardSizes} alt={puppy.name || 'Puppy'} /> : <span className="puppyMetaLine">Photo coming soon</span>}
     </div>
     <div className="puppyCardBody">
       <div className="puppyCardTop">

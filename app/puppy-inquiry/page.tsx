@@ -9,11 +9,12 @@ import {unavailablePuppyNotice} from '@/lib/public-copy'
 import {canInquireAboutPuppy} from '@/lib/inventory'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
 
-export const metadata = {
-  alternates: {canonical: '/puppy-inquiry'},
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
+  path: '/puppy-inquiry',
   title: 'Puppy Inquiry',
   description: 'Submit a puppy inquiry to FluffyTail Shih Tzu.',
-}
+})
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
 

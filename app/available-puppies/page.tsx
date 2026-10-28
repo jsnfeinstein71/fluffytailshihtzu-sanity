@@ -10,7 +10,8 @@ import {tryPricing} from '@/lib/pricing'
 import LitterTile from '../components/LitterTile'
 import PuppyCard from '../components/PuppyCard'
 
-export const metadata = {title: 'Available Puppies', description:pageDescriptions.available, alternates: {canonical: '/available-puppies'}}
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({title: 'Available Puppies', description:pageDescriptions.available, path: '/available-puppies'})
 
 export default async function AvailablePuppiesPage() {
   const {litters, puppies} = await getInventory()

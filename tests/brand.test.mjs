@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {createElement} from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
+import {imageSources} from './image-source-helpers.mjs'
 import {PathnameContext} from 'next/dist/shared/lib/hooks-client-context.shared-runtime.js'
 const {default: SiteChrome} = await import('../app/components/SiteChrome.tsx')
 const {default: PuppyCard} = await import('../app/components/PuppyCard.tsx')
@@ -84,14 +85,14 @@ test('brand tokens and the development kit use only the approved colors and font
   assert.match(layout, /https:\/\/use\.typekit\.net\/mun1gwi\.css/)
 })
 
-test('the hero proposal preserves the original JPEG and requests it eagerly without recompression', () => {
+test('the hero preserves original JPEG bytes and requests responsive delivery eagerly', () => {
   const bytes = readFileSync(new URL('../public/design-preview/IMG_6731.JPEG', import.meta.url))
   assert.equal(createHash('sha256').update(bytes).digest('hex'), 'e0d9a68a5e4b67daf2e8f810b438a32b1f72f7e27ea2dc7cc9cd927c1e2ec62b')
   const html = renderToStaticMarkup(createElement(HomeHero, {imageUrl: 'https://example.com/cms.jpg', preview: true}))
   assert.match(html, /home-hero-proposal/)
-  assert.match(html, /src="\/design-preview\/IMG_6731.JPEG"/)
+  assert.deepEqual(imageSources(html), ['/design-preview/IMG_6731.JPEG'])
   assert.match(html, /width="2048" height="1536"/)
-  assert.match(html, /loading="eager" fetchPriority="high" decoding="async"/)
+  for (const attribute of ['loading="eager"', 'fetchPriority="high"', 'decoding="async"', 'sizes="100vw"', 'srcSet="']) assert.ok(html.includes(attribute), attribute)
   assert.match(html, /Two cream-colored FluffyTail Shih Tzu puppies/)
   assert.doesNotMatch(html, /https:\/\/example.com\/cms.jpg/)
 })
@@ -102,9 +103,9 @@ test('production publishes the approved hero and preserves future Sanity image s
   assert.match(html, /home-hero-proposal/)
   assert.doesNotMatch(html, /IMG_6731/)
   const empty = renderToStaticMarkup(createElement(HomeHero))
-  assert.match(empty, /src="\/design-preview\/IMG_6731.JPEG"/)
+  assert.deepEqual(imageSources(empty), ['/design-preview/IMG_6731.JPEG'])
   const legacy = renderToStaticMarkup(createElement(HomeHero, {imageUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/bd64e3600d604b26c9be93461487adc79922acb2-3787x2580.jpg'}))
-  assert.match(legacy, /src="\/design-preview\/IMG_6731.JPEG"/)
+  assert.deepEqual(imageSources(legacy), ['/design-preview/IMG_6731.JPEG'])
   assert.match(legacy, /home-hero-proposal/)
   assert.doesNotMatch(legacy, /brand-button-light/)
   assert.match(empty, /Meet our puppies/)

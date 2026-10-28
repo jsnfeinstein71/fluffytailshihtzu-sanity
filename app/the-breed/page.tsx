@@ -5,11 +5,12 @@ import {pageDescriptions} from '@/lib/public-copy'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus} from '@/lib/inventory'
 export const revalidate = 60
-export const metadata = {
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
   title: 'Life with a Shih Tzu',
   description: pageDescriptions.breed,
-  alternates: {canonical: '/the-breed'},
-}
+  path: '/the-breed',
+})
 export default async function TheBreedPage() {
   const {litters} = await getInventory()
   const photo = getLittersByStatus(litters, 'current').find(

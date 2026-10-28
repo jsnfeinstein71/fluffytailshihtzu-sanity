@@ -7,7 +7,8 @@ import InquiryForm from '../components/InquiryForm'
 import {client} from '@/sanity/lib/client'
 
 export const revalidate = 60
-export const metadata = {title: 'Contact Jeanne', description:pageDescriptions.contact, alternates: {canonical: '/contact'}}
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({title: 'Contact Jeanne', description:pageDescriptions.contact, path: '/contact'})
 
 type SiteSettings = {goodDogUrl?: string}
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{goodDogUrl}`

@@ -2,11 +2,12 @@ import '../home.css'
 import '../content.css'
 import Link from 'next/link'
 
-export const metadata = {
-  alternates: {canonical: '/privacy-policy'},
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
+  path: '/privacy-policy',
   title: 'Privacy Policy',
   description: 'Privacy Policy for FluffyTail Shih Tzu.',
-}
+})
 
 export default function PrivacyPolicyPage() {
   return (

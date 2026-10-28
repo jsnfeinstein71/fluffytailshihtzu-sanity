@@ -5,11 +5,12 @@ import {pageDescriptions} from '@/lib/public-copy'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus, getPuppiesForLitter} from '@/lib/inventory'
 export const revalidate = 60
-export const metadata = {
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
   title: 'Getting ready for home',
   description: pageDescriptions.resources,
-  alternates: {canonical: '/puppy-resources'},
-}
+  path: '/puppy-resources',
+})
 export default async function PuppyResourcesPage() {
   const {litters, puppies} = await getInventory()
   const current = getLittersByStatus(litters, 'current')[0]
