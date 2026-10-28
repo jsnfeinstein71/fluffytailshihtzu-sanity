@@ -1,5 +1,23 @@
 # Puppy profile photography pilot — October 27, 2026
 
+## Completed Elsie portraits: Girls 1, 2 and 3
+
+After approving Girl 2 on the live site, the owner completed and supplied the
+other two transparent Photoshop exports for the same treatment. Both are
+1254 × 1254 RGBA PNGs and are copied unchanged:
+
+- Girl 1: `public/puppies/elsie-girl1-profile.png`, document
+  `6e181ad7-3340-4b2f-ba61-91fbd9155ca0`, route `/puppies/girl-1-1`.
+- Girl 3: `public/puppies/elsie-girl3-profile.png`, document
+  `54a22bbc-7966-437e-8c0e-0fff6c4d1e8e`, route `/puppies/girl-3-1`.
+
+These use the approved generated concepts with natural-looking nail cleanup,
+followed by the owner's Photoshop masks and lowermost wrist/torso fade.
+Both retain their existing Reserved status and original Sanity records.
+The existing shared card/detail presentation and website shadow apply without
+layout changes. Girl 2's approved export and the homepage hero remain intact.
+All three exact puppy/source-image guards yield to newer CMS photographs.
+
 ## Current version: approved Photoshop export v2
 
 The owner approved `elsie-girl2-profile-v2.png` and requested proceeding with
