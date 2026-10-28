@@ -9,7 +9,8 @@ import {formatCurrency, formatDate, getLitterDate, getLittersByStatus} from '@/l
 import {tryPricing} from '@/lib/pricing'
 import LitterTile from '../components/LitterTile'
 
-export const metadata = {title: 'Upcoming Litters', description:pageDescriptions.upcoming, alternates: {canonical: '/upcoming-litters'}}
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({title: 'Upcoming Litters', description:pageDescriptions.upcoming, path: '/upcoming-litters'})
 
 export default async function UpcomingLittersPage() {
   const inventory = await getInventory()

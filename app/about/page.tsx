@@ -3,11 +3,12 @@ import '../content.css'
 import Link from 'next/link'
 import {pageDescriptions} from '@/lib/public-copy'
 export const revalidate = 60
-export const metadata = {
+import {publicPageMetadata} from '@/lib/seo'
+export const metadata = publicPageMetadata({
   title: 'Meet Jeanne',
   description: pageDescriptions.about,
-  alternates: {canonical: '/about'},
-}
+  path: '/about',
+})
 export default function AboutPage() {
   return (
     <main className="wrap content-page">

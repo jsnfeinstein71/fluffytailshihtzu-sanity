@@ -9,8 +9,10 @@ import {getInventory} from '@/sanity/lib/inventory'
 import {canInquireAboutPuppy, getLittersByStatus} from '@/lib/inventory'
 import LitterSection from './components/LitterSection'
 import HomeHero from './components/HomeHero'
+import StructuredData from './components/StructuredData'
+import {homeTitle, organizationJsonLd, publicPageMetadata} from '@/lib/seo'
 
-export const metadata = {description:pageDescriptions.home,alternates: {canonical: '/'}}
+export const metadata = publicPageMetadata({title: homeTitle, description: pageDescriptions.home, path: '/'})
 
 
 type SiteSettings = {
@@ -45,6 +47,7 @@ export default async function HomePage() {
   const introHeadline = siteSettings?.homepageHeadline || homepageHeadline
 
   return <main>
+    <StructuredData data={organizationJsonLd} />
     <HomeHero imageUrl={heroImageUrl} preview={designPreview} />
 
     <section className="brand-container home-intro">

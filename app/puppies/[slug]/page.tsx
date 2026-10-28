@@ -8,7 +8,10 @@ import {tryPricing} from '@/lib/pricing'
 import {notFound} from 'next/navigation'
 import {getPuppy} from '@/sanity/lib/inventory'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
-import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass} from '@/lib/inventory'
+import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyStatusClass} from '@/lib/inventory'
+import {puppyBreadcrumbs, puppyMetadata} from '@/lib/seo'
+import StructuredData from '../../components/StructuredData'
+import PublicImage from '../../components/PublicImage'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -16,7 +19,7 @@ export async function generateMetadata({params}: Props) {
   const {slug} = await params
   const puppy = await getPuppy(slug)
   if (!puppy) notFound()
-  return {title: puppy.name || 'Puppy', alternates: {canonical: puppyPath(slug)}}
+  return puppyMetadata(puppy, slug)
 }
 
 export default async function PuppyDetailPage({params}: Props) {
@@ -34,6 +37,7 @@ export default async function PuppyDetailPage({params}: Props) {
   const profilePortrait = getPuppyProfilePortrait(puppy)
 
   return <main className="wrap puppy-detail-page">
+    <StructuredData data={puppyBreadcrumbs(puppy, slug)} />
     <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
     <div className="puppy-detail-layout">
       <header className="puppy-detail-heading">
@@ -43,8 +47,8 @@ export default async function PuppyDetailPage({params}: Props) {
       <figure className={`puppy-detail-portrait${profilePortrait ? ' puppy-detail-portrait-cutout' : ''}`}>
         {profilePortrait ? <>
           <span className="puppy-ground-shadow" aria-hidden="true" />
-          <img className="puppy-detail-photo" src={profilePortrait} width={1254} height={1254} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="eager" fetchPriority="high" decoding="async" />
-        </> : puppy.photoUrl ? <img className="puppy-detail-photo" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" decoding="async" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Photo coming soon">Photo coming soon</div>}
+          <PublicImage className="puppy-detail-photo" src={profilePortrait} width={1254} height={1254} sizes="(max-width: 640px) calc(100vw - 40px), (max-width: 820px) 600px, (max-width: 1160px) 50vw, 530px" alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="eager" fetchPriority="high" />
+        </> : puppy.photoUrl ? <PublicImage className="puppy-detail-photo" src={puppy.photoUrl} sizes="(max-width: 640px) calc(100vw - 40px), (max-width: 820px) 600px, (max-width: 1160px) 50vw, 530px" alt={puppy.name || 'Puppy'} loading="eager" fetchPriority="high" /> : <div className="puppy-detail-photo puppy-photo-pending" role="img" aria-label="Photo coming soon">Photo coming soon</div>}
       </figure>
       <div className="puppy-detail-info">
         <dl className="puppy-detail-facts">
