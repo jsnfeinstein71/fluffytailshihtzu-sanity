@@ -1,0 +1,4 @@
+'use client'
+export default function RecoveryCodes({codes}:{codes:string[]}){
+ return <section className="staff-recovery" aria-label="Your private recovery codes"><h2>Save your recovery codes</h2><p>These are shown only here. Keep them in your password manager or print and store them somewhere safe, separate from your phone. Each code works once. Never share them in chat.</p><ol>{codes.map(code=><li key={code}><code>{code}</code></li>)}</ol><button type="button" onClick={()=>{const file=new Blob(['FluffyTail staff recovery codes\nKeep private. Each code works once.\n\n'+codes.join('\n')],{type:'text/plain'}),url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download='FluffyTail-private-recovery-codes.txt';a.click();URL.revokeObjectURL(url)}}>Download recovery codes</button><p>To confirm you saved them, enter one code below. That verification uses the code; the others remain available.</p></section>
+}

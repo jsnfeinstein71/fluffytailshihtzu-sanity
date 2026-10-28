@@ -16,13 +16,13 @@ function failure(error:unknown) {
   return NextResponse.json({error:'Saved workspace is unavailable. Your unsaved text has not been cleared. Retry the connection before continuing.'},{status:503,headers})
 }
 export async function GET(req:Request) {
-  const denied = requireOperator(req)
+  const denied = await requireOperator(req)
   if (denied) return denied
   try {if(liveWorkspaceEnabled()&&!operationalWriteFreeze())await syncInquiryFamilies();return NextResponse.json({families:await listWorkspaceFamilies()},{headers})}
   catch (error) {return failure(error)}
 }
 export async function POST(req:Request) {
-  const denied = requireOperator(req)
+  const denied = await requireOperator(req)
   if (denied) return denied
   const frozen = operationalWriteFreeze()
   if (frozen) return frozen

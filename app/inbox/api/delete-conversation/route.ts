@@ -20,7 +20,7 @@ type PuppyInquiryRecord = {
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireOperator(req)
+  const denied = await requireOperator(req)
   if (denied) return denied
   const frozen = operationalWriteFreeze()
   if (frozen) return frozen

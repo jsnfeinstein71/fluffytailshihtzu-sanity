@@ -108,12 +108,12 @@ test('verified quotes resolve identically across root/private IDs; unverifiable 
   assert.ok(reads.every(read => read.options.cache === 'no-store'))
 })
 
-test('Inbox proxy preserves private/no-store HTML and RSC plus fail-closed Basic Auth', () => {
-  assert.equal(proxy(new NextRequest('https://fixture.example/inbox')).status, 401)
-  const response = proxy(new NextRequest('https://fixture.example/inbox?_rsc=fixture', {headers: {authorization: auth}}))
+test('Inbox proxy preserves private/no-store HTML and RSC plus fail-closed Basic Auth', async () => {
+  assert.equal((await proxy(new NextRequest('https://fixture.example/inbox'))).status, 401)
+  const response = await proxy(new NextRequest('https://fixture.example/inbox?_rsc=fixture', {headers: {authorization: auth}}))
   assert.equal(response.headers.get('cache-control'), 'private, no-store')
   delete process.env.INBOX_BASIC_AUTH_PASS
-  assert.equal(proxy(new NextRequest('https://fixture.example/inbox')).status, 503)
+  assert.equal((await proxy(new NextRequest('https://fixture.example/inbox'))).status, 503)
 })
 
 test('Studio retains private-ID publishing and duplicate restrictions including native inquiry admission records', () => {

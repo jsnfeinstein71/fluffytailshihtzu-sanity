@@ -1,12 +1,30 @@
 import {createHash, timingSafeEqual} from 'node:crypto'
 import {NextResponse} from 'next/server'
 import {isolatedStaffPreview,staffWorkspaceAvailable,validStaffSession} from './staff-session'
+import {isPasskeyHost,passkeyMode} from './passkey-config'
+import {getStaffIdentity} from '@/sanity/lib/staff-auth'
 
 function equal(a: string, b: string) {
   return timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest())
 }
 
 export function requireOperator(req: Request) {
+  if(passkeyMode()!=='off')return requirePasskeyOrTransition(req)
+  return requireLegacyOperator(req)
+}
+async function requirePasskeyOrTransition(req:Request){
+  const headers={'Cache-Control':'private, no-store'}
+  try{
+    if(isPasskeyHost(req)){
+      if(!await getStaffIdentity(req))return NextResponse.json({error:'Unlock the staff workspace to continue.'},{status:401,headers})
+      if(!['GET','HEAD','OPTIONS'].includes(req.method)&&(req.headers.get('origin')!==new URL(req.url).origin||req.headers.get('sec-fetch-site')==='cross-site'))return NextResponse.json({error:'Cross-origin staff requests are not allowed.'},{status:403,headers})
+      return null
+    }
+    if(passkeyMode()==='transition'&&new URL(req.url).origin==='https://www.fluffytailshihtzu.com')return requireLegacyOperator(req)
+    return NextResponse.json({error:'Use the private staff address.'},{status:401,headers})
+  }catch{return NextResponse.json({error:'Staff access could not be verified. Try again shortly.'},{status:503,headers})}
+}
+function requireLegacyOperator(req: Request) {
   const user = process.env.INBOX_BASIC_AUTH_USER
   const pass = process.env.INBOX_BASIC_AUTH_PASS
   const headers = {'Cache-Control': 'no-store'}

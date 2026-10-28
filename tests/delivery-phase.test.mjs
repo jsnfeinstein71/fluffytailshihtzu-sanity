@@ -62,9 +62,9 @@ test('one-time owner access grants are revision claimed, host scoped cover the e
  assert.equal((await redeem.POST(req('/inbox/access/api',{token},{origin:'https://evil.test'}))).status,403)
  process.env.VERCEL_ENV='production';assert.equal(requireOperator(new Request(origin+'/inbox/workspace',{headers:{cookie}})).status,401);assert.equal((await redeem.POST(request())).status,404)
 })
-test('Preview workspace navigation and expired API sessions never trigger browser-wide Basic Auth prompts',()=>{
+test('Preview workspace navigation and expired API sessions never trigger browser-wide Basic Auth prompts',async()=>{
  const api=requireOperator(new Request(origin+'/inbox/workspace/api/state'));assert.equal(api.status,401);assert.equal(api.headers.has('www-authenticate'),false)
- const page=proxy(new NextRequest(origin+'/inbox/workspace',{headers:{accept:'text/html'}}));assert.equal(page.status,307);assert.equal(page.headers.get('location'),origin+'/inbox/access');assert.equal(page.headers.has('www-authenticate'),false)
+ const page=await proxy(new NextRequest(origin+'/inbox/workspace',{headers:{accept:'text/html'}}));assert.equal(page.status,307);assert.equal(page.headers.get('location'),origin+'/inbox/access');assert.equal(page.headers.has('www-authenticate'),false)
  assert.equal(requireOperator(new Request(origin+'/inbox')).headers.has('www-authenticate'),false)
  process.env.VERCEL_ENV='production';assert.equal(requireOperator(new Request(origin+'/inbox/workspace')).headers.has('www-authenticate'),true)
 })

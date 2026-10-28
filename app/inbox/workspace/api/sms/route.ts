@@ -7,7 +7,7 @@ import {WorkspaceError} from '@/sanity/lib/workspace'
 export const runtime='nodejs'
 export const maxDuration=30
 export async function POST(req:Request){
- const denied=requireOperator(req);if(denied)return denied
+ const denied = await requireOperator(req);if(denied)return denied
  const frozen=operationalWriteFreeze();if(frozen)return frozen
  const headers={'Cache-Control':'private, no-store'}
  if(!req.headers.get('content-type')?.startsWith('application/json'))return NextResponse.json({error:'Use a JSON request.'},{status:415,headers})

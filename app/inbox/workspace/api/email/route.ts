@@ -17,11 +17,11 @@ function failure(error:unknown){
   return NextResponse.json({error:'The email workspace could not confirm this action. Your draft is kept; review and retry after reconnecting.'},{status:503,headers})
 }
 export async function GET(req:Request){
-  const denied=requireOperator(req);if(denied)return denied
+  const denied = await requireOperator(req);if(denied)return denied
   try{return NextResponse.json(await loadEmailWorkflow(),{headers})}catch(error){return failure(error)}
 }
 export async function POST(req:Request){
-  const denied=requireOperator(req);if(denied)return denied
+  const denied = await requireOperator(req);if(denied)return denied
   const frozen=operationalWriteFreeze();if(frozen)return frozen
   if(req.headers.get('content-type')?.split(';')[0].trim()!=='application/json')return NextResponse.json({error:'Use a JSON email request.'},{status:415,headers})
   try{
