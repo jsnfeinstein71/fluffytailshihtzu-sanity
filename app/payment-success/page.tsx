@@ -1,3 +1,4 @@
+import {paymentCopy} from '@/lib/public-copy'
 import {redirect} from 'next/navigation'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {livePaymentContext,livePaymentUrl} from '@/sanity/lib/live-payment'
@@ -20,7 +21,7 @@ export default async function PaymentSuccessPage({searchParams}: {searchParams: 
       scoped=!!session.metadata?.staffPaymentRequestId
       if(scoped)destination=livePaymentUrl((await livePaymentContext(session)).request)
     }catch{
-      if(scoped)return <CustomerPayment token={sessionId} initial={null} error="We could not confirm this payment. Please contact Jeanne before trying to pay again." canceled={false} testOnly={false}/>
+      if(scoped)return <CustomerPayment token={sessionId} initial={null} error={paymentCopy.unconfirmed} canceled={false} testOnly={false}/>
       // Unscoped legacy checkout keeps the existing read-only return.
     }
   }
@@ -45,7 +46,7 @@ export default async function PaymentSuccessPage({searchParams}: {searchParams: 
     <main style={{maxWidth: '720px', margin: '0 auto', padding: '40px 16px'}}>
       <h1 style={{fontSize: '40px', marginBottom: '12px'}}>{amount !== undefined ? deposit ? 'Deposit received' : 'Payment received' : 'Payment confirmation'}</h1>
       <p style={{fontSize: '18px', color: '#5a6472', marginBottom: '20px'}}>
-        {amount !== undefined ? <>Thank you. Stripe has confirmed your {deposit ? 'deposit' : 'payment'} of {formatCurrency(amount, true)}.</> : 'We cannot confirm a completed payment from this page. If you just paid, please check your Stripe receipt or contact FluffyTail before trying again.'}
+        {amount !== undefined ? <>Thank you. Stripe has confirmed your {deposit ? 'deposit' : 'payment'} of {formatCurrency(amount, true)}.</> : paymentCopy.unconfirmed}
       </p>
       {deposit && amount !== undefined ? <p>Your deposit is applied toward the total puppy price, not added on top.</p> : null}
       {remaining !== undefined ? <p>Remaining balance at checkout: {formatCurrency(remaining, true)}.</p> : null}

@@ -27,7 +27,7 @@ export default function SiteChrome({children}: {children: ReactNode}) {
         </Link>
         <nav className="site-desktop-nav" aria-label="Main navigation">
           {navigation.map(link => <Link key={link.href} href={link.href} aria-current={activeHref === link.href ? 'page' : undefined}>{link.label}</Link>)}
-          <Link className="brand-button" href="/contact" aria-current={pathname === '/contact' ? 'page' : undefined}>Get in touch</Link>
+          <Link className="brand-button" href="/contact" aria-current={pathname === '/contact' ? 'page' : undefined}>Ask Jeanne</Link>
         </nav>
         <details className="site-mobile-menu" key={pathname} onKeyDown={event => {
           if (event.key === 'Escape') {
@@ -38,7 +38,7 @@ export default function SiteChrome({children}: {children: ReactNode}) {
           <summary title="Navigation menu">Menu</summary>
           <nav aria-label="Mobile navigation">
             {navigation.map(link => <Link key={link.href} href={link.href} aria-current={activeHref === link.href ? 'page' : undefined} onClick={event => event.currentTarget.closest('details')?.removeAttribute('open')}>{link.label}</Link>)}
-            <Link href="/contact" onClick={event => event.currentTarget.closest('details')?.removeAttribute('open')}>Get in touch</Link>
+            <Link href="/contact" onClick={event => event.currentTarget.closest('details')?.removeAttribute('open')}>Ask Jeanne</Link>
           </nav>
         </details>
       </div>
@@ -48,12 +48,12 @@ export default function SiteChrome({children}: {children: ReactNode}) {
       <div className="site-footer-inner">
         <div className="site-footer-brand">
           <img src="/brand/fluffytail-logo-white.svg" width={96} height={96} alt="FluffyTail Shih Tzu" />
-          <div><p className="footer-tagline">Tiny Paws, Big Love</p><p>Home-raised in the Mobile, Alabama area.</p></div>
+          <div><p className="footer-tagline">Tiny Paws, Big Love</p><p>Raised in our home in the Mobile, Alabama area.</p></div>
         </div>
         <nav aria-label="Explore FluffyTail">
           <Link href="/available-puppies">Our puppies</Link>
           <Link href="/the-breed">About the breed</Link>
-          <Link href="/puppy-resources">Puppy resources</Link>
+          <Link href="/puppy-resources">Getting ready for home</Link>
           <Link href="/contact">Contact Jeanne</Link>
         </nav>
         <div className="site-footer-bottom"><span>&copy; {new Date().getFullYear()} FluffyTail Shih Tzu</span><div><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms-and-conditions">Terms & Conditions</Link></div></div>

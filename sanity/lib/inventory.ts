@@ -1,3 +1,4 @@
+import {editorialPuppy,editorialLitter} from './editorial-review'
 import {cache} from 'react'
 import {client} from './client'
 import type {Litter, Puppy} from '@/lib/inventory'
@@ -10,9 +11,10 @@ export const getInventory = cache(async () => {
     client.fetch<Litter[]>(littersQuery, {}, publicOptions),
     client.fetch<Puppy[]>(puppiesQuery, {}, publicOptions),
   ])
-  return {litters, puppies}
+  return {litters:litters.map(editorialLitter), puppies:puppies.map(editorialPuppy)}
 })
 
-export const getPuppy = cache(async (slug: string) =>
-  client.fetch<Puppy | null>(puppyQuery, {slug}, publicOptions)
-)
+export const getPuppy = cache(async (slug: string) => {
+  const puppy=await client.fetch<Puppy | null>(puppyQuery, {slug}, publicOptions)
+  return puppy?editorialPuppy(puppy):null
+})

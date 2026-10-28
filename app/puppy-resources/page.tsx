@@ -1,145 +1,147 @@
 import '../home.css'
 import '../content.css'
+import Link from 'next/link'
+import {pageDescriptions} from '@/lib/public-copy'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus, getPuppiesForLitter} from '@/lib/inventory'
-
-export const metadata = {title: 'Puppy Resources', alternates: {canonical: '/puppy-resources'}}
-
+export const revalidate = 60
+export const metadata = {
+  title: 'Getting ready for home',
+  description: pageDescriptions.resources,
+  alternates: {canonical: '/puppy-resources'},
+}
 export default async function PuppyResourcesPage() {
   const {litters, puppies} = await getInventory()
   const current = getLittersByStatus(litters, 'current')[0]
   const members = current ? getPuppiesForLitter(puppies, current._id) : []
-  const featured = members.find(puppy => puppy.status === 'available' && puppy.photoUrl) || members.find(puppy => puppy.photoUrl)
+  const featured =
+    members.find((p) => p.status === 'available' && p.photoUrl) ||
+    members.find((p) => p.photoUrl)
   return (
     <main className="wrap content-page">
       <header className="content-intro">
-      <p className="eyebrow">A happy start at home</p>
-
-      <h1 className="h1">Puppy Resources</h1>
-
-      <p className="lead">
-        Bringing home a puppy is exciting, and a little preparation goes a long way.
-      </p>
+        <p className="eyebrow">Your puppy’s next chapter</p>
+        <h1 className="h1">Getting ready for home</h1>
+        <p className="lead">
+          {
+            'The bowls, the blanket, the first ride home — a little preparation lets you spend more time getting to know your puppy.'
+          }
+        </p>
       </header>
-
       <div className={`grid${featured?.photoUrl ? ' content-has-photo' : ''}`}>
-        {featured?.photoUrl ? <figure className="content-photo"><img src={featured.photoUrl} alt={featured.name || 'A FluffyTail puppy'} loading="eager" decoding="async" /></figure> : null}
+        {featured?.photoUrl ? (
+          <figure className="content-photo">
+            <img
+              src={featured.photoUrl}
+              alt={featured.name || 'A FluffyTail puppy'}
+              loading="eager"
+              decoding="async"
+            />
+          </figure>
+        ) : null}
         <div className="card content-copy">
           <div className="pad">
-            <div className="section" style={{marginTop: 0}}>
-              <h2>Before your puppy comes home</h2>
+            <div className="section">
+              <h2>{'Before pickup'}</h2>
               <div className="qa">
                 <div>
-                  <div className="q">Set up a safe space</div>
+                  <div className="q">{'Ask what your puppy is used to.'}</div>
                   <div className="a">
-                    Puppy-proof a small area, remove loose cords and unsafe objects, and provide
-                    water and a comfortable place to rest. Introduce a crate gently with positive experiences.
+                    {
+                      'Check with Jeanne about the food your puppy is eating and the routine to continue at home. Your starter kit includes food, so you’ll have some familiar things to begin with.'
+                    }
                   </div>
                 </div>
                 <div>
-                  <div className="q">Pick up basic supplies</div>
+                  <div className="q">{'Make a small, safe space.'}</div>
                   <div className="a">
-                    Have bowls, a suitable collar or harness, leash, puppy-safe toys, cleaning
-                    supplies, and grooming basics ready.
+                    {
+                      'Move cords and chewable hazards out of reach. Have water, bedding, and a quiet resting place ready. Choose bowls, a suitable harness or collar, a leash, puppy-safe toys, and cleaning supplies.'
+                    }
                   </div>
                 </div>
                 <div>
-                  <div className="q">Plan food and travel</div>
+                  <div className="q">{'Plan the ride home.'}</div>
                   <div className="a">
-                    Ask which food your puppy currently eats and discuss any changes with your
-                    veterinarian. Use a suitable carrier or restraint for the journey home.
+                    {
+                      'Confirm the meeting place and time with Jeanne. Bring a suitable carrier or restraint for the journey.'
+                    }
                   </div>
                 </div>
               </div>
             </div>
-
-            <div className="divider"></div>
-
+            <div className="divider" />
             <div className="section">
-              <h2>First week at home</h2>
-              <div className="qa">
-                <div>
-                  <div className="q">Arrange veterinary follow-up</div>
-                  <div className="a">
-                    Arrange a veterinary visit and bring any available vaccination and deworming
-                    records. Your veterinarian can advise on feeding, preventive care, and safe activities.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">Use a simple routine</div>
-                  <div className="a">
-                    Keep meals, potty breaks, rest, and gentle play predictable. Reward the behavior
-                    you want and expect accidents while your puppy learns.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">Go slow with introductions</div>
-                  <div className="a">
-                    Keep new experiences brief and positive. Ask your veterinarian how to balance
-                    early socialization with vaccination status and local infection risks.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="divider"></div>
-
-            <div className="section">
-              <h2>Grooming basics</h2>
+              <h2>{'In your puppy’s bag'}</h2>
               <p className="lead">
-                Shih Tzu puppies benefit from early handling around the face, feet, coat, and brushing routine.
+                {
+                  'Your FluffyTail starter kit includes food, treats, toys, and a blanket with mom and littermates’ scent. You’ll also receive CKC registration papers and written vaccination and deworming records. Keep the health records ready for your veterinarian.'
+                }
               </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                Gentle, regular grooming habits are usually easier than waiting until the puppy is older
-                and less used to it.
-              </p>
+            </div>
+            <div className="divider" />
+            <div className="section">
+              <h2>{'The first few days'}</h2>
+              <div className="qa">
+                <div>
+                  <div className="q">{'Give your puppy time.'}</div>
+                  <div className="a">
+                    {
+                      'A new home is a lot to take in. Keep introductions calm and brief, with time to rest. If you use a crate, introduce it gently with positive experiences.'
+                    }
+                  </div>
+                </div>
+                <div>
+                  <div className="q">
+                    {'Build on the beginning we’ve made.'}
+                  </div>
+                  <div className="a">
+                    {
+                      'We start socialization and potty-training work before pickup. Continue with a predictable routine, patient practice, and rewards. Accidents are part of learning.'
+                    }
+                  </div>
+                </div>
+                <div>
+                  <div className="q">{'Arrange veterinary follow-up.'}</div>
+                  <div className="a">
+                    {
+                      'Bring the vaccination and deworming records to your puppy’s visit. Your veterinarian can plan further care and help you choose safe activities and introductions.'
+                    }
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-
-        <div className="card content-aside">
+        <aside className="card content-aside">
           <div className="pad">
-            <h2 className="panelTitle">Quick checklist</h2>
-            <ul className="content-facts">
-              <li>Safe space and bedding</li>
-              <li>Current food and bowls</li>
-              <li>Safe travel carrier or restraint</li>
-              <li>Health records and veterinary visit</li>
-              <li>Grooming supplies and a calm routine</li>
-            </ul>
-
-            <div className="divider"></div>
-
-            <p className="lead" style={{margin: 0}}>
-              For more general guidance, see <a className="text-link" href="https://www.aaha.org/resources/what-to-do-when-you-first-bring-home-a-new-puppy/" target="_blank" rel="noopener noreferrer">AAHA’s advice for a new puppy’s first days</a>.
-            </p>
+            <h2 className="panelTitle">Further reading</h2>
+            <a
+              className="text-link"
+              href="https://www.aaha.org/resources/what-to-do-when-you-first-bring-home-a-new-puppy/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              AAHA’s guide to a puppy’s first days
+            </a>
           </div>
-        </div>
+        </aside>
       </div>
-
-      <div className="card section" style={{marginTop: '18px'}}>
+      <section className="card section">
         <div className="pad">
-          <h2 style={{marginTop: 0}}>Questions before bringing a puppy home?</h2>
+          <h2>Keep the practical details close</h2>
           <p className="lead">
-            If you’re still deciding or want to ask about availability, you can browse current puppies
-            or review upcoming litters.
+            {
+              'Before pickup, make sure you have the agreed meeting details, your puppy’s food information, and the care records. If a pickup detail is unclear, ask Jeanne before you travel.'
+            }
           </p>
-
           <div className="ctaRow">
-            <a className="brand-button" href="/available-puppies">
-              View Available Puppies
-            </a>
-            <a className="text-link" href="/upcoming-litters">
-              View Upcoming Litters
-            </a>
-            <a className="text-link" href="/contact">
-              Contact
-            </a>
+            <Link className="brand-button" href="/contact">
+              Ask Jeanne a question
+            </Link>
           </div>
         </div>
-      </div>
-
+      </section>
     </main>
   )
 }
-

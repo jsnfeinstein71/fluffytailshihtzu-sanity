@@ -1,3 +1,4 @@
+import {inquiryFailure,savedInquiryMessage} from '@/lib/public-copy'
 import {NextRequest, NextResponse} from 'next/server'
 import {InquiryError, validateInquiry} from '@/lib/inquiry'
 import {inquiryCookie, issueInquiryToken, requireInquiryOrigin, verifyInquiryToken} from '@/lib/inquiry-security'
@@ -9,7 +10,7 @@ export const runtime = 'nodejs'
 const headers = {'Cache-Control': 'no-store', Vary: 'Cookie'}
 
 function failure(error: unknown) {
-  return NextResponse.json({error: error instanceof InquiryError ? error.message : 'Unable to submit right now. Please try again later.'},
+  return NextResponse.json({error: error instanceof InquiryError ? error.message : inquiryFailure},
     {status: error instanceof InquiryError ? error.status : 503, headers})
 }
 
@@ -42,8 +43,6 @@ export async function POST(req: NextRequest) {
     const ip = process.env.VERCEL ? req.headers.get('x-vercel-forwarded-for')?.split(',')[0].trim() : 'local'
     if (!ip) throw new InquiryError('Unable to verify this request. Please try again later.', 503)
     const result = await acceptInquiry(input, ip)
-    return NextResponse.json({ok: true, duplicate: result.duplicate, message: process.env.VERCEL_ENV === 'preview'
-      ? 'Preview inquiry saved. No messages were sent.'
-      : 'Thank you. Your inquiry has been received. Jeanne will follow up with you.'}, {status: result.duplicate ? 200 : 201, headers})
+    return NextResponse.json({ok: true, duplicate: result.duplicate, message: savedInquiryMessage(input.preferredContactMethod)+(process.env.VERCEL_ENV === 'preview'?' Preview inquiry saved. No messages were sent.':'')}, {status: result.duplicate ? 200 : 201, headers})
   } catch (error) { return failure(error) }
 }

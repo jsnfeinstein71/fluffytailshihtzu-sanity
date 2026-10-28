@@ -1,3 +1,4 @@
+import {paymentCopy} from '@/lib/public-copy'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {customerLivePayment} from '@/sanity/lib/customer-live-payment'
 import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
@@ -18,7 +19,7 @@ type DepositLink = {
 
 export default async function DepositRedirectPage({params,searchParams}: {params: Promise<{token: string}>;searchParams?:Promise<{result?:string}>}) {
   const {token} = await params
-  if(paymentTestWorkspaceEnabled()){let initial=null,error='';try{initial=await customerTestPayment(token)}catch{error='This payment link is unavailable. Please contact Jeanne for a current link.'}return <CustomerTestPayment token={token} initial={initial} error={error} canceled={(await searchParams)?.result==='canceled'}/>}
+  if(paymentTestWorkspaceEnabled()){let initial=null,error='';try{initial=await customerTestPayment(token)}catch{error=paymentCopy.unavailable}return <CustomerTestPayment token={token} initial={initial} error={error} canceled={(await searchParams)?.result==='canceled'}/>}
 
   if(liveWorkspaceEnabled()){
     let initial=null,error=''
@@ -26,7 +27,7 @@ export default async function DepositRedirectPage({params,searchParams}: {params
       // Preserve old unscoped deposits without changing an already-issued link.
       const link=await getOperatorClient().fetch<DepositLink|null>('*[_type == \"depositLink\" && token == $paymentToken][0]{checkoutMetadata}',{paymentToken:token},{cache:'no-store'})
       if(link&&!link.checkoutMetadata?.staffPaymentRequestId){const destination=await legacyDepositDestination(token);if(destination)redirect(destination)}
-      error='This payment link is unavailable. Please contact Jeanne for a current link. If you already paid, please contact her before trying again.'
+      error=paymentCopy.unavailable
     }
     return <CustomerTestPayment token={token} initial={initial} error={error} canceled={(await searchParams)?.result==='canceled'} testOnly={false}/>
   }

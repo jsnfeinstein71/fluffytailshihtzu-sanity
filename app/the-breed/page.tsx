@@ -1,203 +1,116 @@
 import '../home.css'
 import '../content.css'
+import Link from 'next/link'
+import {pageDescriptions} from '@/lib/public-copy'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus} from '@/lib/inventory'
-
-export const metadata = {title: 'The Breed', alternates: {canonical: '/the-breed'}}
-
+export const revalidate = 60
+export const metadata = {
+  title: 'Life with a Shih Tzu',
+  description: pageDescriptions.breed,
+  alternates: {canonical: '/the-breed'},
+}
 export default async function TheBreedPage() {
   const {litters} = await getInventory()
-  const photo = getLittersByStatus(litters, 'current').find(litter => litter.groupPhotoUrl)?.groupPhotoUrl
+  const photo = getLittersByStatus(litters, 'current').find(
+    (l) => l.groupPhotoUrl,
+  )?.groupPhotoUrl
   return (
     <main className="wrap content-page">
       <header className="content-intro">
-      <p className="eyebrow">Life with a Shih Tzu</p>
-
-      <h1 className="h1">About the Shih Tzu Breed</h1>
-
-      <p className="lead">
-        Shih Tzus are known for their affectionate temperament, manageable size, and companion-first
-        personality. They were bred to live closely with people, and that shows in how connected
-        they tend to be with their families.
-      </p>
+        <p className="eyebrow">Getting to know the breed</p>
+        <h1 className="h1">Life with a Shih Tzu</h1>
+        <p className="lead">
+          {
+            'Small enough to fit beside you, with plenty of personality to fill the house. A Shih Tzu is a companion first — and bringing one home means making room in your daily life as well as on the sofa.'
+          }
+        </p>
       </header>
-
       <div className={`grid${photo ? ' content-has-photo' : ''}`}>
-        {photo ? <figure className="content-photo"><img src={photo} alt="A FluffyTail Shih Tzu" loading="eager" decoding="async" /></figure> : null}
+        {photo ? (
+          <figure className="content-photo">
+            <img
+              src={photo}
+              alt="A FluffyTail Shih Tzu"
+              loading="eager"
+              decoding="async"
+            />
+          </figure>
+        ) : null}
         <div className="card content-copy">
           <div className="pad">
-            <div className="section" style={{marginTop: 0}}>
-              <h2>Why families love Shih Tzus</h2>
+            <div className="section">
+              <h2>{'Company matters'}</h2>
               <p className="lead">
-                Shih Tzus are friendly little companion dogs that often do well in family homes,
-                apartments, and quieter households alike. Many people love them because they are
-                small enough to be easy to manage while still having a lot of personality.
-              </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                They are usually happiest when they are near their people. For many families, that
-                makes them a natural fit as an in-home companion rather than an outdoor or
-                high-energy working dog.
+                {
+                  'Many Shih Tzus enjoy being close to their people. Think about your everyday routine and how much companionship you can offer. Every puppy has a personality of its own; a breed description is a starting point, not a promise about an individual dog.'
+                }
               </p>
             </div>
-
-            <div className="divider"></div>
-
+            <div className="divider" />
             <div className="section">
-              <h2>Temperament</h2>
-              <div className="qa">
-                <div>
-                  <div className="q">Affectionate</div>
-                  <div className="a">
-                    Shih Tzus are generally known for being loving, people-oriented dogs that enjoy
-                    attention and closeness.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">Companion-minded</div>
-                  <div className="a">
-                    This breed was developed to be a companion, so many Shih Tzus naturally prefer
-                    being with their family over roaming or independent outdoor activity.
-                  </div>
-                </div>
-                <div>
-                  <div className="q">Adaptable</div>
-                  <div className="a">
-                    They often adapt well to different home sizes and routines, as long as they get
-                    attention, care, and regular structure.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="divider"></div>
-
-            <div className="section">
-              <h2>Size and daily life</h2>
+              <h2>{'A small dog still needs a routine'}</h2>
               <p className="lead">
-                Shih Tzus are a toy breed with a substantial grooming commitment. Their small size
-                does not make their coat low-maintenance.
+                {
+                  'Make time for gentle play, short walks, and patient training. Use praise and rewards, and keep learning sessions manageable.'
+                }
               </p>
-              <p className="lead" style={{marginBottom: 0}}>
-                Short walks and play are useful daily activities. Their short muzzles make heat
-                and humidity a concern: choose cooler times for walks, provide water and a cool
-                place to rest, and avoid strenuous activity in hot weather.
+            </div>
+            <div className="divider" />
+            <div className="section">
+              <h2>{'Make room for grooming'}</h2>
+              <p className="lead">
+                {
+                  'A long coat needs daily brushing. A shorter trim can make upkeep easier, but it still needs regular care. Talk with a groomer about a routine that suits your dog and your household.'
+                }
+              </p>
+            </div>
+            <div className="divider" />
+            <div className="section">
+              <h2>{'Take Alabama heat seriously'}</h2>
+              <p className="lead">
+                {
+                  'Shih Tzus can struggle in heat and humidity. Choose cooler times for outdoor activity and give them a cool place to rest. Ask your veterinarian about your dog’s needs.'
+                }
               </p>
             </div>
           </div>
         </div>
-
-        <div className="card content-aside">
+        <aside className="card content-aside">
           <div className="pad">
-            <h2 className="panelTitle">At a glance</h2>
-            <ul className="content-facts">
-              <li>Small companion breed</li>
-              <li>Often well-suited to indoor family life</li>
-              <li>Known for affectionate temperament</li>
-              <li>Regular grooming needed</li>
-              <li>Moderate daily activity</li>
-            </ul>
-
-            <div className="divider"></div>
-
-            <p className="lead" style={{margin: 0}}>
-              A Shih Tzu can be a wonderful fit for the right home, especially for families looking
-              for a close, people-oriented companion.
-            </p>
+            <h2 className="panelTitle">Further reading</h2>
+            <a
+              className="text-link"
+              href="https://www.akc.org/dog-breeds/shih-tzu/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              AKC’s Shih Tzu breed guide
+            </a>
           </div>
-        </div>
+        </aside>
       </div>
-
-      <div className="card section" style={{marginTop: '18px'}}>
+      <section className="card section">
         <div className="pad">
-          <h2 style={{marginTop: 0}}>Grooming and coat care</h2>
+          <h2>Thinking about your first Shih Tzu?</h2>
           <p className="lead">
-            One of the most important things to understand about Shih Tzus is grooming. Their coat
-            needs regular care to stay clean, comfortable, and manageable.
+            {
+              'Talk with Jeanne about the puppy you’re considering and read our guide to bringing one home.'
+            }
           </p>
-          <div className="qa">
-            <div>
-              <div className="q">Regular brushing</div>
-              <div className="a">
-                Long coats need daily brushing to prevent mats. A shorter trim still needs regular
-                brushing and grooming; ask your groomer about care for your dog’s coat.
-              </div>
-            </div>
-            <div>
-              <div className="q">Professional grooming</div>
-              <div className="a">
-                Many families choose a practical trim and keep a regular grooming schedule.
-              </div>
-            </div>
-            <div>
-              <div className="q">Face and eye area</div>
-              <div className="a">
-                Keep the face and eye area clean, and ask your veterinarian about eye irritation
-                or breathing concerns. Read more about <a className="text-link" href="https://vcacanada.com/know-your-pet/shih-tzu" target="_blank" rel="noopener noreferrer">Shih Tzu care and heat sensitivity</a>.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card section" style={{marginTop: '18px'}}>
-        <div className="pad">
-          <h2 style={{marginTop: 0}}>Is a Shih Tzu a good fit for your home?</h2>
-          <p className="lead">
-            A Shih Tzu may be a good fit if you want a dog that is:
-          </p>
-          <div className="qa">
-            <div>
-              <div className="q">People-centered</div>
-              <div className="a">
-                They generally do best when they are treated as a real part of the household.
-              </div>
-            </div>
-            <div>
-              <div className="q">Small but sturdy</div>
-              <div className="a">
-                Their size is convenient, but they still have a real personality and presence.
-              </div>
-            </div>
-            <div>
-              <div className="q">Worth the coat upkeep</div>
-              <div className="a">
-                Families who understand the grooming commitment tend to be happier with the breed.
-              </div>
-            </div>
-          </div>
-
-          <div className="divider"></div>
-
-          <p className="lead" style={{marginBottom: 0}}>
-            If you are looking for a little dog that wants to live closely with its people, the
-            Shih Tzu is easy to understand once you realize it is truly a companion breed first.
-          </p>
-        </div>
-      </div>
-
-      <div className="card section" style={{marginTop: '18px'}}>
-        <div className="pad">
-          <h2 style={{marginTop: 0}}>Interested in a FluffyTail puppy?</h2>
-          <p className="lead">
-            If you think a Shih Tzu may be the right fit for your home, browse our available
-            puppies or contact us with questions.
-          </p>
-
           <div className="ctaRow">
-            <a className="brand-button" href="/available-puppies">
-              View Available Puppies
-            </a>
-            <a className="text-link" href="/upcoming-litters">
-              View Upcoming Litters
-            </a>
-            <a className="text-link" href="/contact">
-              Contact
-            </a>
+            <Link className="brand-button" href="/available-puppies">
+              Meet our puppies
+            </Link>
+            <Link className="text-link" href="/puppy-resources">
+              Getting ready for home
+            </Link>
+            <Link className="text-link" href="/contact">
+              Ask Jeanne
+            </Link>
           </div>
         </div>
-      </div>
-
+      </section>
     </main>
   )
 }
-
