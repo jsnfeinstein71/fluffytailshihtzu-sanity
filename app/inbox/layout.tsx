@@ -10,7 +10,7 @@ export default async function StaffLayout({children}:{children:React.ReactNode})
   // verified again here and independently in each API, before loading private data.
   if(!path||!origin)redirect(adminOrigin+'/inbox/unlock')
   const req=new Request(origin+path,{headers:h}),host=isPasskeyHost(req)
-  if(path==='/inbox/unlock'&&host)return children
+  if((path==='/inbox/unlock'||path==='/inbox/enroll')&&host)return children
   if(path==='/inbox/access'&&passkeyMode()!=='cutover'&&!host)return children
   const allowed=host&&path==='/inbox/security'?!!await getStaffIdentity(req,{recovery:true}):!(await requireOperator(req))
   if(!allowed)redirect((host?origin:adminOrigin)+'/inbox/unlock?return='+encodeURIComponent(safeStaffReturn(path)))

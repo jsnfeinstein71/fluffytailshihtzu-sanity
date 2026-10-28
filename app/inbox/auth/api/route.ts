@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server'
 import {passkeyConfig} from '@/lib/passkey-config'
-import {StaffAuthError,limitAuth,registrationOptions,register,authenticationOptions,authenticate,recover,securityStatus,manageAccess,staffCookieName,ceremonyCookieName,invitationCookieName} from '@/sanity/lib/staff-auth'
+import {StaffAuthError,limitAuth,enrollmentContext,registrationOptions,register,authenticationOptions,authenticate,recover,securityStatus,manageAccess,staffCookieName,ceremonyCookieName,invitationCookieName} from '@/sanity/lib/staff-auth'
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
 const headers={'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff'}
@@ -16,16 +16,18 @@ export async function POST(req:Request){
     await limitAuth(req,input.action.startsWith('register')?'register':input.action.startsWith('authenticate')?'authenticate':input.action==='recover'?'recover':'manage')
     let result:Record<string,unknown>
     switch(input.action){
+      case 'enrollment-context':result=await enrollmentContext(req,input);break
       case 'register-options':result=await registrationOptions(req,input);break
       case 'register-verify':result=await register(req,input);break
-      case 'authenticate-options':result=await authenticationOptions();break
+      case 'authenticate-options':result=await authenticationOptions(input);break
       case 'authenticate-verify':result=await authenticate(req,input);break
       case 'recover':result=await recover(input);break
       default:result=await manageAccess(req,input)
     }
-    const {token,ceremony,...publicResult}=result,response=NextResponse.json(publicResult,{headers})
+    const {token,ceremony,enrollmentToken,...publicResult}=result,response=NextResponse.json(publicResult,{headers})
     const cookieOptions={httpOnly:true,secure:cfg.secure,sameSite:'strict' as const,path:'/'}
     if(typeof token==='string')response.cookies.set(staffCookieName(),token,{...cookieOptions,maxAge:30*86400})
+    if(typeof enrollmentToken==='string')response.cookies.set(invitationCookieName(),enrollmentToken,{...cookieOptions,maxAge:Math.max(1,Math.floor((Number(result.expiresAt)-Date.now())/1000))})
     if(input.action==='register-verify')response.cookies.set(invitationCookieName(),'',{...cookieOptions,maxAge:0})
     if(typeof ceremony==='string')response.cookies.set(ceremonyCookieName(),ceremony,{...cookieOptions,maxAge:300})
     else if(input.action.endsWith('-verify'))response.cookies.set(ceremonyCookieName(),'',{...cookieOptions,maxAge:0})

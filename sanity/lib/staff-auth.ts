@@ -14,7 +14,7 @@ type Owner=RecordBase&{key:OwnerKey;handle:string;epoch:number;recoveryHashes:st
 type Credential=RecordBase&{owner:OwnerKey;credentialId:string;publicKey:string;counter:number;transports?:AuthenticatorTransport[];epoch:number;label:string;revokedAt?:number;createdAt:number;lastUsedAt?:number;backedUp:boolean}
 type Session=RecordBase&{owner:OwnerKey;epoch:number;createdAt:number;expiresAt:number;seenAt:number;verifiedAt:number;assurance:'passkey'|'recovery';revokedAt?:number;credentialId?:string}
 type Invitation=RecordBase&{owner:OwnerKey;expiresAt:number;usedAt?:number;version:number;tokenHash:string}
-type Ceremony=RecordBase&{purpose:'register'|'authenticate';challenge:string;expiresAt:number;usedAt?:number;owner?:OwnerKey;sessionId?:string;invitationId?:string;invitationVersion?:number;origin:string}
+type Ceremony=RecordBase&{purpose:'register'|'authenticate';challenge:string;expiresAt:number;usedAt?:number;owner?:OwnerKey;sessionId?:string;invitationId?:string;invitationVersion?:number;localEnrollment?:boolean;origin:string}
 export type StaffIdentity={session:Session;owner:Owner}
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex')
 const random=()=>randomBytes(32).toString('base64url')
@@ -80,7 +80,31 @@ export async function inviteOwner(key:OwnerKey){
   await client().createIfNotExists({...base('staffInvitation',key),owner:key,version:0,expiresAt:0,tokenHash:''})
   const previous=await get<Invitation>(id,'staffInvitation');if(!previous)throw new StaffAuthError()
   await client().patch(id).ifRevisionId(previous._rev).set({tokenHash:hash(token),version:previous.version+1,expiresAt:Date.now()+30*minute,usedAt:0}).commit({visibility:'sync'})
-  return {invitation:token,owner:ownerNames[key],expiresInMinutes:30,entry:passkeyConfig().origin+'/inbox/unlock'}
+  return {invitation:token,owner:ownerNames[key],ownerKey:key,expiresInMinutes:30,entry:passkeyConfig().origin+'/inbox/enroll?owner='+key}
+}
+function enrollmentInput(req:Request,input:Record<string,unknown>){
+  const pending=readCookie(req,invitationCookieName()).split('.')
+  const key=input.owner||pending[0]
+  const token=input.invitation||(!input.owner||pending[0]===input.owner?pending[1]:'')
+  return {key,token}
+}
+async function checkedInvitation(key:unknown,token:unknown){
+  if(passkeyMode()!=='transition')throw new StaffAuthError('Initial owner enrollment is closed.',403)
+  if(!ownerKey(key)||typeof token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(token))throw new StaffAuthError('Enter your private owner invitation. Signing in does not create a passkey.')
+  const invitation=await get<Invitation>(authId('staffInvitation',key),'staffInvitation')
+  if(!invitation||invitation.owner!==key||invitation.tokenHash!==hash(token))throw new StaffAuthError('The invitation could not be verified for this owner. Check the code and name.')
+  if(invitation.usedAt)throw new StaffAuthError('This invitation was already used. Sign in only if you previously finished creating your own passkey.',409)
+  if(invitation.expiresAt<=Date.now())throw new StaffAuthError('This invitation expired. Ask Jason or Jeanne for a fresh private invitation.')
+  const owner=await get<Owner>(authId('staffOwner',key),'staffOwner')
+  if(owner?.enrolledAt)throw new StaffAuthError('A passkey is already registered for this owner. Check which device holds it before adding or removing anything.',409)
+  return invitation
+}
+export async function enrollmentContext(req:Request,input:Record<string,unknown>){
+  const {key,token}=enrollmentInput(req,input),identity=await getStaffIdentity(req,{recovery:true})
+  const signedInAs=identity?{key:identity.owner.key,name:ownerNames[identity.owner.key]}:null
+  if(!token)return {ready:false,ownerKey:ownerKey(key)?key:null,signedInAs}
+  const invitation=await checkedInvitation(key,token)
+  return {ready:true,owner:ownerNames[invitation.owner],ownerKey:invitation.owner,signedInAs,expiresAt:invitation.expiresAt,enrollmentToken:invitation.owner+'.'+token}
 }
 function freshCodes(){return Array.from({length:8},()=>randomBytes(16).toString('hex').match(/.{8}/g)!.join('-'))}
 const codeHash=(key:OwnerKey,value:string)=>hash(passkeyConfig().scope+':recovery:'+key+':'+value.trim().toLowerCase())
@@ -100,20 +124,20 @@ function sameTopLevel(response:{response?:{clientDataJSON?:string}}){
 }
 export async function registrationOptions(req:Request,input:Record<string,unknown>){
   const cfg=passkeyConfig();let owner:Owner|undefined,invitation:Invitation|undefined,identity:StaffIdentity|null=null
-  const pending=readCookie(req,invitationCookieName()).split('.')
-  if(!input.invitation&&pending.length===2&&pending[0]===input.owner)input={...input,invitation:pending[1]}
-  if(typeof input.invitation==='string'&&/^[A-Za-z0-9_-]{43}$/.test(input.invitation)&&ownerKey(input.owner)&&passkeyMode()==='transition'){
-    invitation=await get<Invitation>(authId('staffInvitation',input.owner),'staffInvitation')
-    if(!invitation||invitation.usedAt||invitation.expiresAt<=Date.now()||invitation.tokenHash!==hash(input.invitation))throw new StaffAuthError('The invitation is invalid or expired. Ask for a fresh invitation.')
-    owner=await get<Owner>(authId('staffOwner',input.owner),'staffOwner');if(owner?.enrolledAt)throw new StaffAuthError('This owner is already enrolled.',409)
-    if(!owner){await client().createIfNotExists({...base('staffOwner',input.owner),key:input.owner,handle:random(),epoch:1,recoveryHashes:[]});owner=await get<Owner>(authId('staffOwner',input.owner),'staffOwner')}
+  // An explicit enrollment intent must never fall back to whoever is already
+  // signed in on this browser when an invitation is absent or mismatched.
+  if(input.intent==='enroll'||input.owner!==undefined||input.invitation){
+    const {key,token}=enrollmentInput(req,input)
+    invitation=await checkedInvitation(key,token)
+    owner=await get<Owner>(authId('staffOwner',invitation.owner),'staffOwner')
+    if(!owner){await client().createIfNotExists({...base('staffOwner',invitation.owner),key:invitation.owner,handle:random(),epoch:1,recoveryHashes:[]});owner=await get<Owner>(authId('staffOwner',invitation.owner),'staffOwner')}
   }else{identity=await needIdentity(req,{recovery:true,fresh:true});owner=identity.owner}
   if(!owner||owner.disabled)throw new StaffAuthError()
   const credentials=(await ownerCredentials(owner.key)).filter(c=>!c.revokedAt&&c.epoch===owner.epoch)
   if(credentials.length>=10)throw new StaffAuthError('Remove an unused passkey before adding another.',409)
-  const options=await generateRegistrationOptions({rpName:'FluffyTail staff',rpID:cfg.rpID,userName:ownerNames[owner.key],userDisplayName:ownerNames[owner.key],userID:Buffer.from(owner.handle,'base64url'),attestationType:'none',supportedAlgorithmIDs:[-7,-257],authenticatorSelection:{residentKey:'required',userVerification:'required'},excludeCredentials:credentials.map(c=>({id:c.credentialId,transports:c.transports})),timeout:120000})
-  const ceremony=await saveCeremony({purpose:'register',challenge:options.challenge,owner:owner.key,origin:cfg.origin,...(invitation?{invitationId:invitation._id,invitationVersion:invitation.version}:{}),...(identity?{sessionId:identity.session._id}:{})})
-  return {options,ceremony}
+  const options=await generateRegistrationOptions({rpName:'FluffyTail staff',rpID:cfg.rpID,userName:ownerNames[owner.key],userDisplayName:ownerNames[owner.key],userID:Buffer.from(owner.handle,'base64url'),attestationType:'none',supportedAlgorithmIDs:[-7,-257],...(invitation?{preferredAuthenticatorType:'localDevice' as const}:{}),authenticatorSelection:{residentKey:'required',userVerification:'required'},excludeCredentials:credentials.map(c=>({id:c.credentialId,transports:c.transports})),timeout:120000})
+  const ceremony=await saveCeremony({purpose:'register',challenge:options.challenge,owner:owner.key,origin:cfg.origin,...(invitation?{invitationId:invitation._id,invitationVersion:invitation.version,localEnrollment:true}:{}),...(identity?{sessionId:identity.session._id}:{})})
+  return {options,ceremony,owner:ownerNames[owner.key],ownerKey:owner.key,expiresAt:Date.now()+5*minute}
 }
 export async function register(req:Request,input:Record<string,unknown>){
   const cfg=passkeyConfig(),ceremony=await consumeCeremony(req,'register')
@@ -123,6 +147,7 @@ export async function register(req:Request,input:Record<string,unknown>){
   if(ceremony.invitationId){invitation=await get<Invitation>(ceremony.invitationId,'staffInvitation');if(passkeyMode()!=='transition'||!invitation||invitation.owner!==owner.key||invitation.usedAt||invitation.expiresAt<=Date.now()||invitation.version!==ceremony.invitationVersion||owner.enrolledAt)throw new StaffAuthError()}
   else{const identity=await needIdentity(req,{recovery:true,fresh:true});if(identity.session._id!==ceremony.sessionId||identity.owner.key!==owner.key)throw new StaffAuthError()}
   sameTopLevel(input.response as RegistrationResponseJSON)
+  if(ceremony.localEnrollment&&(input.response as RegistrationResponseJSON).authenticatorAttachment==='cross-platform')throw new StaffAuthError('This setup is for the device in your hand. A nearby phone or security key did not enroll this device. Your invitation is still available.',409)
   const verified=await verifyRegistrationResponse({response:input.response as RegistrationResponseJSON,expectedChallenge:ceremony.challenge,expectedOrigin:cfg.origin,expectedRPID:cfg.rpID,requireUserVerification:true,supportedAlgorithmIDs:[-7,-257]})
   if(!verified.verified)throw new StaffAuthError()
   const info=verified.registrationInfo,codes=!owner.recoveryHashes.length?freshCodes():undefined
@@ -131,9 +156,9 @@ export async function register(req:Request,input:Record<string,unknown>){
   const tx=client().transaction().create(credential).create(session.document).patch(owner._id,p=>p.ifRevisionId(owner._rev).set({enrolledAt:owner.enrolledAt||now,...(codes?{recoveryHashes:codes.map(c=>codeHash(owner.key,c)),recoveryConfirmedAt:0}:{})}))
   if(invitation)tx.patch(invitation._id,p=>p.ifRevisionId(invitation!._rev).set({usedAt:now}))
   await tx.commit({visibility:'sync'})
-  return {token:session.token,codes,owner:ownerNames[owner.key]}
+  return {token:session.token,codes,owner:ownerNames[owner.key],ownerKey:owner.key}
 }
-export async function authenticationOptions(){const cfg=passkeyConfig();const options=await generateAuthenticationOptions({rpID:cfg.rpID,userVerification:'required',timeout:120000});const ceremony=await saveCeremony({purpose:'authenticate',challenge:options.challenge,origin:cfg.origin});return {options,ceremony}}
+export async function authenticationOptions(input:Record<string,unknown>={}){const cfg=passkeyConfig();if(input.owner&&!ownerKey(input.owner))throw new StaffAuthError('Choose Jeanne or Jason.',400);const options=await generateAuthenticationOptions({rpID:cfg.rpID,userVerification:'required',timeout:120000});const ceremony=await saveCeremony({purpose:'authenticate',challenge:options.challenge,origin:cfg.origin,...(ownerKey(input.owner)?{owner:input.owner}:{})});return {options,ceremony}}
 export async function authenticate(req:Request,input:Record<string,unknown>){
   const cfg=passkeyConfig(),ceremony=await consumeCeremony(req,'authenticate'),response=input.response as AuthenticationResponseJSON
   if(!response||typeof response.id!=='string'||response.id.length>2000)throw new StaffAuthError()
@@ -142,9 +167,10 @@ export async function authenticate(req:Request,input:Record<string,unknown>){
   const owner=await get<Owner>(authId('staffOwner',cred.owner),'staffOwner');if(!owner||owner.disabled||owner.epoch!==cred.epoch||response.response.userHandle&&response.response.userHandle!==owner.handle)throw new StaffAuthError()
   const result=await verifyAuthenticationResponse({response,expectedChallenge:ceremony.challenge,expectedOrigin:cfg.origin,expectedRPID:cfg.rpID,credential:{id:cred.credentialId,publicKey:Buffer.from(cred.publicKey,'base64url'),counter:cred.counter,transports:cred.transports},requireUserVerification:true})
   if(!result.verified)throw new StaffAuthError()
+  if(ceremony.owner&&ceremony.owner!==owner.key)throw new StaffAuthError('That passkey signs in as '+ownerNames[owner.key]+'. This screen is signing in as '+ownerNames[ceremony.owner]+'. Use that owner’s own passkey.',409)
   const now=Date.now(),session=newSession(owner,'passkey',cred.credentialId)
   await client().transaction().patch(cred._id,p=>p.ifRevisionId(cred._rev).set({counter:result.authenticationInfo.newCounter,lastUsedAt:now,backedUp:result.authenticationInfo.credentialBackedUp})).patch(owner._id,p=>p.ifRevisionId(owner._rev).set({signInVerifiedAt:now})).create(session.document).commit({visibility:'sync'})
-  return {token:session.token,needsRecovery:!owner.recoveryConfirmedAt}
+  return {token:session.token,needsRecovery:!owner.recoveryConfirmedAt,owner:ownerNames[owner.key],ownerKey:owner.key}
 }
 export async function recover(input:Record<string,unknown>){
   if(!ownerKey(input.owner)||typeof input.code!=='string'||input.code.length>100)throw new StaffAuthError()
@@ -164,7 +190,12 @@ export async function securityStatus(req:Request){
 export async function manageAccess(req:Request,input:Record<string,unknown>){
   if(input.action==='logout'){const i=await getStaffIdentity(req,{recovery:true});if(i)await client().patch(i.session._id).ifRevisionId(i.session._rev).set({revokedAt:Date.now()}).commit({visibility:'sync'});return {signedOut:true}}
   const {owner,session}=await needIdentity(req,{recovery:true,fresh:true})
+  if(input.action==='invite-owner'){
+    if(session.assurance!=='passkey'||!ownerKey(input.owner))throw new StaffAuthError('Verify your passkey and choose an approved owner.',403)
+    return inviteOwner(input.owner)
+  }
   if(input.action==='confirm-recovery'){
+    if(input.owner&&input.owner!==owner.key)throw new StaffAuthError('This browser is signed in as a different owner. Verify recovery under your own name.',409)
     if(session.assurance!=='passkey'||typeof input.code!=='string'||input.code.length>100)throw new StaffAuthError()
     const value=codeHash(owner.key,input.code);if(!owner.recoveryHashes.includes(value))throw new StaffAuthError('Enter one of your saved, unused recovery codes.')
     await client().patch(owner._id).ifRevisionId(owner._rev).set({recoveryConfirmedAt:Date.now(),recoveryHashes:owner.recoveryHashes.filter(c=>c!==value)}).commit({visibility:'sync'});return {ok:true}
