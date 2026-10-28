@@ -79,6 +79,10 @@
 .brand-site .puppyCard { border: 1px solid var(--brand-line); border-radius: 6px; box-shadow: none; transition: border-color .15s ease; }
 .brand-site .puppyCard:hover { border-color: var(--brand-brown); transform: none; box-shadow: none; }
 .brand-site .puppyImageWrap { aspect-ratio: 4 / 3; }
+.brand-site .puppyImageWrap-cutout { background: transparent; }
+.brand-site .puppy-cutout-stage { position: relative; isolation: isolate; width: 75%; aspect-ratio: 1; margin-inline: auto; }
+.brand-site .puppyImageWrap-cutout .puppyImage { position: relative; height: auto; object-fit: contain; }
+.brand-site .puppy-ground-shadow { position: absolute; left: 22%; top: 83%; width: 65%; height: 10%; border-radius: 50%; background: radial-gradient(ellipse, rgb(88 73 61 / 16%) 0%, rgb(88 73 61 / 7%) 42%, transparent 72%); filter: blur(7px); pointer-events: none; }
 .brand-site .puppyCardBody { padding: 18px 20px; }
 .brand-site .puppyName { font-size: 27px; }
 .brand-site .puppyMetaLine, .brand-site .puppyNotes { font-size: 14px; line-height: 1.6; }

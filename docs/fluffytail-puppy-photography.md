@@ -1,5 +1,27 @@
 # Puppy profile photography pilot — October 27, 2026
 
+## Current version: approved Photoshop export v2
+
+The owner approved `elsie-girl2-profile-v2.png` and requested proceeding with
+Girl 2's homepage card, Available Puppies card, and detail page. This supersedes
+the first pilot's detail-only scope below. The homepage hero remains unchanged.
+
+- The supplied 1254 × 1254 RGBA PNG is copied unchanged to
+  `public/puppies/elsie-girl2-profile-v2.png`.
+- It was made from the owner's preferred generated concept and finished in
+  Photoshop with a layer mask and a transparent bottom/right wrist fade.
+  This is not represented as a pixel-identical edit of the original puppy.
+- The exact puppy/source-image matching guard remains, so a newer Sanity
+  photograph takes precedence. No Sanity record or schema is changed.
+- Both card contexts and the detail page use the same asset and shared
+  `.puppy-ground-shadow` CSS. The shadow is separate from the PNG.
+- Cards preserve their approved 4:3 image area. A centered square stage fits
+  the whole PNG inside it without cropping the ears or outstretched paws.
+- The small straight edge at the lower-left wrist remains a review item at
+  actual display size. Original exports and the owner's editable PSD remain.
+
+## First pilot (superseded)
+
 The owner requested putting the first Photoshop export on the website before
 processing the other two puppies. This authorizes this focused photo release.
 

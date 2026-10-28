@@ -1,14 +1,19 @@
 import Link from 'next/link'
 import {formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
+import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
 
 export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; browsing?: boolean}) {
   const age = getAgeInWeeks(puppy.birthDate)
   const ready = getReadyDate(puppy.birthDate)
   const pricing = tryPricing(puppy)
+  const profilePortrait = getPuppyProfilePortrait(puppy)
   const content = <>
-    <div className="puppyImageWrap">
-      {puppy.photoUrl ? <img className="puppyImage" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} /> : null}
+    <div className={`puppyImageWrap${profilePortrait ? ' puppyImageWrap-cutout' : ''}`}>
+      {profilePortrait ? <div className="puppy-cutout-stage">
+        <span className="puppy-ground-shadow" aria-hidden="true" />
+        <img className="puppyImage" src={profilePortrait} width={1254} height={1254} alt={`${puppy.name || 'Puppy'} held in caring hands`} loading="lazy" decoding="async" />
+      </div> : puppy.photoUrl ? <img className="puppyImage" src={puppy.photoUrl} alt={puppy.name || 'Puppy'} /> : null}
     </div>
     <div className="puppyCardBody">
       <div className="puppyCardTop">
