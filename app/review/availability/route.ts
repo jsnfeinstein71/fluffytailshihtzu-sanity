@@ -1,0 +1,3 @@
+import {NextResponse} from 'next/server'
+import {publicReviewEnabled,reviewCookie,reviewScenarios} from '@/lib/public-review'
+export async function GET(req:Request){if(!publicReviewEnabled())return new NextResponse(null,{status:404});const url=new URL(req.url),scenario=url.searchParams.get('scenario');if(!reviewScenarios.some(s=>s===scenario))return new NextResponse('Choose a review scenario.',{status:400});const r=NextResponse.redirect(new URL('/',url));r.cookies.set(reviewCookie,scenario!,{httpOnly:true,secure:url.protocol==='https:',sameSite:'lax',path:'/',maxAge:86400});r.headers.set('Cache-Control','no-store');r.headers.set('X-Robots-Tag','noindex, nofollow');return r}

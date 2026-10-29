@@ -411,7 +411,7 @@ test('homepage communicates actual availability for one sex and pluralizes litte
   dataset.push(puppy('second-girl', 'current'))
   assert.match(await render(Home), /2 available puppies/)
   dataset.filter(doc => doc._type === 'puppy').forEach(doc => {doc.status = 'reserved'})
-  assert.match(await render(Home), /Ask about future puppies/)
+  assert.match(await render(Home), /Families waiting/)
 })
 
 test('puppy detail omits a duplicate color note but retains distinct public notes and stored values', async () => {

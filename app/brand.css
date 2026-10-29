@@ -1,4 +1,9 @@
 /* Brand colors/typefaces are verified against the existing Adobe libraries. */
+.public-review-bar { margin-block: 16px; padding-block: 14px; border-block: 1px solid var(--brand-champagne); font-size: 14px; }
+.public-review-bar p { margin: 6px 0; }
+.public-review-bar form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.public-review-bar select { max-width: 100%; padding: 8px; border: 1px solid var(--brand-champagne); background: #fbf8f3; color: var(--brand-brown); }
+.home-next .ctaRow { flex-wrap: wrap; }
 .brand-site {
   --brand-brown: #58493d;
   --brand-champagne: #d8bd9d;

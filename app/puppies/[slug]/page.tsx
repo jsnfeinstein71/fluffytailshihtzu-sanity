@@ -12,6 +12,8 @@ import {puppyBreadcrumbs, puppyMetadata} from '@/lib/seo'
 import StructuredData from '../../components/StructuredData'
 import PublicImage from '../../components/PublicImage'
 import PriceDetails from '../../components/PriceDetails'
+import {getBrowsingContext} from '@/sanity/lib/public-availability'
+import {AvailabilityScope,AvailabilityNotice} from '../../components/Availability'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -31,8 +33,9 @@ export default async function PuppyDetailPage({params}: Props) {
   const age = getAgeInWeeks(puppy.birthDate)
   const ready = canInquire ? getReadyDate(puppy.birthDate) : ''
   const profilePortrait = getPuppyProfilePortrait(puppy)
+  const {availability}=await getBrowsingContext()
 
-  return <main className="wrap puppy-detail-page">
+  return <AvailabilityScope initial={availability}><main className="wrap puppy-detail-page">
     <StructuredData data={puppyBreadcrumbs(puppy, slug)} />
     <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
     <div className="puppy-detail-layout">
@@ -58,9 +61,9 @@ export default async function PuppyDetailPage({params}: Props) {
         <PriceDetails name={puppy.name || 'This puppy'} pricing={{overridePrice:puppy.overridePrice,litterPrice:puppy.litterPrice,litterDeposit:puppy.litterDeposit}} pricingStatus={puppy.litterPricingStatus} />
         <div className="puppy-detail-action">{canInquire ? <Link className="brand-button" href={puppyInquiryUrl}>Ask Jeanne about {puppy.name || 'this puppy'} <span aria-hidden="true">&rarr;</span></Link> : <>
           <p>{unavailablePuppyNotice(puppy.name || 'This puppy',puppy.status)}</p>
-          <Link className="brand-button" href="/available-puppies">See available puppies</Link><Link className="text-link" href="/puppy-inquiry?interest=waitlist">Ask about future puppies</Link>
+          <AvailabilityNotice/>
         </>}</div>
       </div>
     </div>
-  </main>
+  </main></AvailabilityScope>
 }
