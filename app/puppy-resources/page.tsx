@@ -94,11 +94,11 @@ export default async function PuppyResourcesPage() {
                 </div>
                 <div>
                   <div className="q">
-                    {'Build on the beginning we’ve made.'}
+                    {'Build on the beginning I have made.'}
                   </div>
                   <div className="a">
                     {
-                      'We start socialization and potty-training work before pickup. Continue with a predictable routine, patient practice, and rewards. Accidents are part of learning.'
+                      'I start socialization and potty-training work before pickup. Continue with a predictable routine, patient practice, and rewards. Accidents are part of learning.'
                     }
                   </div>
                 </div>

@@ -61,14 +61,14 @@ export default async function HomePage() {
 
     <section className="brand-container home-puppies" aria-labelledby="puppies-title">
       <div className="section-heading">
-        <div><p className="eyebrow">Meet the little ones</p><h2 id="puppies-title">Our current litters</h2><p>See who’s here, who’s available, and who already has a family waiting.</p></div>
+        <div><p className="eyebrow">Meet the little ones</p><h2 id="puppies-title">Current litters</h2><p>See who’s here, who’s available, and who already has a family waiting.</p></div>
         <span className="pill"><span className="dot" />{availableCount ? `${availableCount} available ${availableCount === 1 ? 'puppy' : 'puppies'}` : 'Ask about future puppies'}</span>
       </div>
-      {activeLitters.length ? activeLitters.map(litter => <LitterSection key={litter._id} litter={litter} puppies={puppies} />) : <div className="litter-section"><h3>Looking for our next litter?</h3><p>We don’t have a current litter listed here. See what’s coming up, or tell Jeanne when you hope to bring a puppy home.</p><Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>}
+      {activeLitters.length ? activeLitters.map(litter => <LitterSection key={litter._id} litter={litter} puppies={puppies} />) : <div className="litter-section"><h3>Looking for the next litter?</h3><p>No current litter is listed here. See what’s coming up, or tell me when you hope to bring a puppy home.</p><Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>}
     </section>
 
     <section className="home-next">
-      <div className="brand-container home-next-inner"><div><p className="eyebrow">Not quite ready yet?</p><h2>Let’s talk about your timing.</h2><p>You can start a conversation before you’re ready to choose. See our upcoming litters and tell Jeanne what you have in mind.</p></div><Link className="brand-button" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>
+      <div className="brand-container home-next-inner"><div><p className="eyebrow">Not quite ready yet?</p><h2>Let’s talk about your timing.</h2><p>You can start a conversation before you’re ready to choose. See the upcoming litters and tell me what you have in mind.</p></div><Link className="brand-button" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>
     </section>
   </main>
 }

@@ -57,13 +57,13 @@ export default async function AvailablePuppiesPage() {
         </section>
       })}
       {!activeLitters.length ? <section className="available-empty">
-        <h2>Looking for our next litter?</h2>
-        <p>We don’t have a current litter listed here. See what’s coming up, or tell Jeanne when you hope to bring a puppy home.</p>
+        <h2>Looking for the next litter?</h2>
+        <p>No current litter is listed here. See what’s coming up, or tell me when you hope to bring a puppy home.</p>
         <Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link>
       </section> : null}
 
       {pastLitters.length ? <section className="available-archive" aria-labelledby="past-litters-title">
-        <h2 id="past-litters-title">Past litters</h2><p>A look back at our earlier litters. Prices and details below belong to those litters; see current puppies for today’s availability.</p>
+        <h2 id="past-litters-title">Past litters</h2><p>A look back at earlier litters. Prices and details below belong to those litters; see current puppies for today’s availability.</p>
         {pastLitters.map(litter => {
           const members = getPuppiesForLitter(puppies, litter._id)
           return <details className="available-past-litter" key={litter._id} data-past-litter-id={litter._id}>

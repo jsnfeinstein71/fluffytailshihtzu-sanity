@@ -48,7 +48,7 @@ export default function SiteChrome({children}: {children: ReactNode}) {
       <div className="site-footer-inner">
         <div className="site-footer-brand">
           <img src="/brand/fluffytail-logo-white.svg" width={96} height={96} alt="FluffyTail Shih Tzu" />
-          <div><p className="footer-tagline">Tiny Paws, Big Love</p><p>Raised in our home in the Mobile, Alabama area.</p></div>
+          <div><p className="footer-tagline">Tiny Paws, Big Love</p><p>Raised in my home in the Mobile, Alabama area.</p></div>
         </div>
         <nav aria-label="Explore FluffyTail">
           <Link href="/available-puppies">Our puppies</Link>

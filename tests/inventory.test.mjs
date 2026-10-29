@@ -24,7 +24,7 @@ test('homepage respects actual CMS headlines in every environment and uses manus
       process.env.VERCEL_ENV=env;dataset=[{_id:'settings',_type:'siteSettings',homepageHeadline:'CMS-managed headline',homepageIntro:'An editable first paragraph.\n\nA second paragraph.'}]
       const html=await render(Home);assert.match(html,/<h2>CMS-managed headline<\/h2>/);assert.match(html,/<p>An editable first paragraph.<\/p><p>A second paragraph.<\/p>/);assert.match(html,/IMG_6731/)
     }
-    dataset=[];assert.match(await render(Home),/<h2>From our home to yours.<\/h2>/)
+    dataset=[];assert.match(await render(Home),/<h2>From my home to yours.<\/h2>/)
   }finally{if(original===undefined)delete process.env.VERCEL_ENV;else process.env.VERCEL_ENV=original}
 })
 
@@ -38,7 +38,7 @@ test('zero, one and three active litters render in oldest-first order, with only
       const html = await render(Component)
       assert.equal((html.match(/data-litter-id=/g) || []).length, size)
       assert.equal((html.match(/data-puppy-id=/g) || []).length, size)
-      if (!size) assert.match(html, /Looking for our next litter\?/)
+      if (!size) assert.match(html, /Looking for the next litter\?/)
       if (size === 3) assert.ok(html.indexOf('data-litter-id="l2"') < html.indexOf('data-litter-id="l0"'))
       for (let i = 0; i < size; i++) assert.match(html, new RegExp(`data-litter-id="l${i}"[\\s\\S]*?data-puppy-id="p${i}"`))
     }
@@ -104,7 +104,7 @@ test('browsing handles empty litters and invalid pricing without invented dates 
   assert.match(cents, /\$400\.25/)
   dataset = []
   const empty = await render(Available)
-  assert.match(empty, /Looking for our next litter\?/)
+  assert.match(empty, /Looking for the next litter\?/)
   assert.match(empty, /href="\/upcoming-litters"/)
 })
 
@@ -391,8 +391,8 @@ test('Meet Jeanne uses her supplied portrait and introduction without duplicate 
     {_id: 'settings', _type: 'siteSettings', homepageIntro: 'Redundant sidebar copy.', serviceArea: 'Synthetic service area'},
   ]
   const html = await render(About)
-  assert.match(html, /Hi, I’m Jeanne/)
-  assert.match(html, /My husband, Jason, and I share our home/)
+  assert.match(html, /Hi, I am Jeanne/)
+  assert.match(html, /I share my home in the Mobile, Alabama area with my Shih Tzus/)
   assert.doesNotMatch(html, /not a system|not about volume/)
   assert.match(html, /src="\/brand\/jeanne-portrait.webp"/)
   assert.doesNotMatch(html, /Synthetic service area|unchanged-adult.jpg/);assert.match(html,/wearing pink glasses and a teal shirt/)
