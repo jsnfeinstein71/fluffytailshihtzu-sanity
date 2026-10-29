@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import './brand.css'
 import SiteChrome from './components/SiteChrome'
-import PublicAnalytics from './components/PublicAnalytics'
+import RetiredAnalyticsCleanup from './components/RetiredAnalyticsCleanup'
 
 export const metadata: Metadata = {
   referrer: 'no-referrer',
@@ -44,9 +44,8 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://use.typekit.net/mun1gwi.css" />
       </head>
       <body className="min-h-full flex flex-col">
-        <PublicAnalytics production={process.env.VERCEL_ENV === 'production'}>
-          <SiteChrome>{children}</SiteChrome>
-        </PublicAnalytics>
+        <RetiredAnalyticsCleanup />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   )

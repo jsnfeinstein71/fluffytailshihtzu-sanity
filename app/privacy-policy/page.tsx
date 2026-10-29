@@ -63,33 +63,11 @@ export default function PrivacyPolicyPage() {
           <div className="divider"></div>
 
           <section className="section" id="website-analytics">
-            <h2>Optional website analytics</h2>
+            <h2>Website analytics and storage</h2>
             <p className="lead">
-              If you accept analytics, we use Google Analytics and Vercel Analytics to understand
-              visits to our public information and published puppy pages. Analytics is not loaded
-              until you choose to accept. Declining does not affect browsing or inquiries.
-            </p>
-            <p className="lead">
-              Google uses analytics cookies to recognize a browser and connect visits. It receives
-              public page-view information and basic device, browser, language, session and engagement
-              information. Providers also receive network information such as your IP address when
-              processing requests; Google may derive approximate location from it. This information
-              is not necessarily anonymous. We do not enable advertising personalization, Google
-              Signals, user-provided data, User-ID, form tracking or payment conversions.
-            </p>
-            <p className="lead">
-              Contact and inquiry forms, payments, staff tools and unknown pages are excluded.
-              We do not send form contents, customer details, messages, payment tokens or URL query
-              values to these analytics services. Some visits are omitted when referral information
-              or a URL cannot be handled within these limits. Basic Google session and engagement
-              events accompany permitted page views; this is not a measure of inquiries or sales.
-            </p>
-            <p className="lead">
-              Use <strong>Analytics settings</strong> on public pages to accept or decline at any time.
-              We remember your choice in this browser for up to 180 days. Withdrawing an accepted
-              choice stops collection, removes the Google Analytics cookies this site controls and
-              reloads the page. It does not delete information already received by a provider.
-              Clearing browser storage also clears your saved choice.
+              Google Analytics and Vercel Analytics are disabled on this website.
+              We use essential cookies and browser storage for features such as staff sign-in,
+              inquiry forms and payments. Removing optional analytics does not change those features.
             </p>
           </section>
 

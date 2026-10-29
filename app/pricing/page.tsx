@@ -90,7 +90,7 @@ export default async function PricingPage() {
           </p>
           <p className="">
             {
-              'Your deposit is non-refundable and counts toward your puppy’s total price. It is not an extra charge. Jeanne will confirm the puppy and next steps with you before you pay.'
+              'Your deposit counts toward your puppy’s total price. It is not an extra charge. Jeanne will confirm the puppy and next steps with you before you pay.'
             }
           </p>
           {example ? (
