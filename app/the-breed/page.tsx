@@ -86,7 +86,7 @@ export default async function TheBreedPage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              AKC’s Shih Tzu breed guide
+              Shih Tzu breed guide — American Kennel Club
             </a>
           </div>
         </aside>

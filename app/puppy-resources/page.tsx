@@ -123,7 +123,7 @@ export default async function PuppyResourcesPage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              AAHA’s guide to a puppy’s first days
+              Bringing your puppy home — American Animal Hospital Association
             </a>
           </div>
         </aside>
