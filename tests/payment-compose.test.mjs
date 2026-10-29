@@ -13,6 +13,7 @@ test('changing from a litter deposit to a final request changes attachment and s
  const patch=paymentEmailPatch(value,final,requests)
  assert.equal(patch.paymentRequestId,final._id);assert.equal(patch.subject,'FluffyTail final payment request — Juniper — TEST')
  assert.equal(patch.body,value.body.replace(deposit.checkoutUrl,final.checkoutUrl));assert.equal({...value,...patch}.replyToId,'incoming');assert.deepEqual({...value,...patch}.attachmentIds,['photo'])
+ const pending=paymentEmailPatch(value,{...final,checkoutUrl:undefined},requests);assert.equal(pending.paymentRequestId,final._id);assert(!pending.body.includes(deposit.checkoutUrl));assert(!pending.body.includes('undefined'));assert(pending.body.includes('Juniper is doing well!'));
  assert(!patch.body.includes(deposit.checkoutUrl));assert.equal(paymentEmailPatch({...value,...patch},final,requests).body,patch.body)
  const text=`Hi Rowan, here is Juniper’s update.\n${paymentSnippet(deposit)}`
  const next=paymentTextBody(text,final,requests);assert(next.startsWith('Hi Rowan, here is Juniper’s update.'));assert(!next.includes(deposit.checkoutUrl));assert(!next.includes('450.00 deposit'));assert(next.includes('1,500.00 final payment'));assert.equal(paymentTextBody(next,final,requests),next)

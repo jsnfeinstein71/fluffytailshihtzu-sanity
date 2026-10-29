@@ -139,13 +139,13 @@ export default function Workspace({live=false,paymentTesting=false}:{live?:boole
     finally{textLock.current=false;setTextSending(false)}
   }
   function insertPayment(request:PaymentRequest,nextChannel:Channel,targetId=family.id){
-    if(!request.checkoutUrl)return
+    if(!request.checkoutUrl&&nextChannel!=='Email')return
     const requests=(email.data?.paymentRequests||[]).filter(p=>p.familyId===targetId)
     if(nextChannel==='Email'){
       const entry=email.entriesLatest.current[targetId];if(!entry)return
       void email.saveEdited(targetId,paymentEmailPatch(entry.value,request,requests))
     }else{const current=stateLatest.current.drafts[draftKey(targetId,'Text')]||'',body=paymentTextBody(current,request,requests);dispatch({type:'draft',familyId:targetId,channel:'Text',body});void saved.mutate({type:'draft',familyId:targetId,channel:'Text',body,base:saved.base(targetId,'Text')})}
-    if(targetId===family.id){setChannel(nextChannel);setView('Conversations');setMobilePanel('thread')}setNotice(email.data?.capabilities?.canDispatch?'Payment request added. Your existing message is kept; edit it and choose Send when ready.':'Payment request added to your saved draft. Sending is disabled in this Preview; open or copy the link in Payment requests to test checkout.')
+    if(targetId===family.id){setChannel(nextChannel);setView('Conversations');setMobilePanel('thread')}setNotice(!request.checkoutUrl?'Existing request selected. Its link still needs preparation in Payment requests. Nothing was sent.':email.data?.capabilities?.canDispatch?'Payment request added. Your existing message is kept; edit it and choose Send when ready.':'Payment request added to your saved draft. Sending is disabled in this Preview; open or copy the link in Payment requests to test checkout.')
   }
   function simulate() {
     const action = {type:'attempt' as const, familyId:family.id, channel, outcome:scenario}

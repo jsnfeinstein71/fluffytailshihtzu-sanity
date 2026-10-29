@@ -219,7 +219,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
   if(!value.subject.trim()||!value.body.trim()&&!value.attachmentIds?.length)throw new EmailWorkflowError('Enter a subject and a message or attachment before sending.')
   const parent=await checkReply(family,value)
   const payment=value.paymentRequestId?await checkedPayment(value.paymentRequestId,family):null
-  if(liveWorkspaceEnabled()&&payment&&!payment.checkoutUrl)throw new EmailWorkflowError('Create and verify the payment checkout link before reviewing this email.',409)
+  if((liveWorkspaceEnabled()||paymentTestWorkspaceEnabled())&&payment&&!payment.checkoutUrl)throw new EmailWorkflowError('Create and verify the payment checkout link before reviewing this email.',409)
   const testUrl=payment?(payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${testUrl}`:value.body
   const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)

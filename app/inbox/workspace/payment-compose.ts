@@ -7,7 +7,7 @@ export function paymentSnippet(request:PaymentRequest){
 export function paymentEmailPatch(value:EmailValue,request:PaymentRequest,requests:PaymentRequest[]):Partial<EmailValue>{
  let body=value.body
  // Change only known payment addresses; Jeanne's own prose and other links stay.
- for(const prior of requests)if(prior._id!==request._id&&prior.checkoutUrl)body=body.replaceAll(prior.checkoutUrl,request.checkoutUrl!)
+ for(const prior of requests)if(prior._id!==request._id&&prior.checkoutUrl)body=body.replaceAll(prior.checkoutUrl,request.checkoutUrl||'')
  const defaults=['Here is the deposit request for your approved litter selection position.','I’m happy to share your puppy’s deposit request.','Here is the final payment request for your puppy.'].map(s=>s+' Please reply if you have any questions.')
  if(!body.trim()||defaults.includes(body))body=`${request.kind==='deposit'?request.litterReservationId?'Here is the deposit request for your approved litter selection position.':'I’m happy to share your puppy’s deposit request.':'Here is the final payment request for your puppy.'} Please reply if you have any questions.`
  return {subject:`FluffyTail ${request.kind==='deposit'?'deposit':'final payment'} request — ${request.puppyName}`,body,paymentRequestId:request._id}
