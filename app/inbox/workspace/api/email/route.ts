@@ -14,6 +14,12 @@ const headers={'Cache-Control':'private, no-store'}
 function failure(error:unknown){
   if(error instanceof EmailWorkflowError)return NextResponse.json({error:error.message,conflict:error.conflict},{status:error.status,headers})
   if(error instanceof WorkspaceError||error instanceof InquiryError)return NextResponse.json({error:error.message},{status:error.status,headers})
+  // Diagnose provider failures without logging personal messages, addresses,
+  // tokens, request bodies or the provider's potentially sensitive message.
+  if(error&&typeof error==='object'){
+    const fields=error as Record<string,unknown>,safe=(key:string)=>typeof fields[key]==='string'&&/^[A-Za-z0-9_.-]{1,100}$/.test(fields[key] as string)?fields[key]:undefined
+    console.error('Staff email action failed',{name:safe('name'),type:safe('type'),code:safe('code'),param:safe('param')})
+  }
   return NextResponse.json({error:'The email workspace could not confirm this action. Your draft is kept; review and retry after reconnecting.'},{status:503,headers})
 }
 export async function GET(req:Request){
