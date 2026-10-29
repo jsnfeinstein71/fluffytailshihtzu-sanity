@@ -13,7 +13,7 @@ export default function AddToMessage({family,email,channel,onPayment}:{family:Fa
  const eligible=!!balance&&balance.remainingCents>0&&!family.historicalBalanceNeedsReview&&!!puppy&&(kind==='deposit'?['Available','Hold'].includes(puppy.status)&&balance.paidCents===0:!!family.puppyId)
  const files=(email.data?.attachmentLibrary||[]).filter(f=>f.familyId===family.id)
  async function choose(value:string){
-  if(value==='payment'){const id=family.id,target=channel;const request=await email.createPaymentLink(id,family.puppyId!,kind);if(request)callback.current(request,target,id)}
+  if(value==='payment'){const id=family.id,target=channel,existing=email.data?.paymentRequests.find(p=>p.familyId===id&&p.puppyId===family.puppyId&&p.kind===kind&&!p.webhookVerifiedAt&&!p.checkoutOutcome&&Date.parse(p.expiresAt)>Date.now());if(existing&&target==='Email')callback.current(existing,target,id);const request=await email.createPaymentLink(id,family.puppyId!,kind);if(request)callback.current(request,target,id)}
   else if(value==='photos')photos.current?.click()
   else if(value==='documents')documents.current?.click()
   else if(value==='saved')setLibrary(v=>!v)

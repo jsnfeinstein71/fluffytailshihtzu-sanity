@@ -1,6 +1,6 @@
 export type ContactMethod = 'Email' | 'Text' | 'Either'
 export type InquiryInput = {
-  name: string; email: string; phone: string; preferredContactMethod: ContactMethod
+  litterId?:string; name: string; email: string; phone: string; preferredContactMethod: ContactMethod
   message: string; smsConsent: boolean; puppySlug: string; interest: 'puppy' | 'waitlist' | 'general'
 }
 
@@ -43,7 +43,10 @@ export function validateInquiry(value: unknown): InquiryInput {
   const puppySlug = typeof body.puppySlug === 'string' ? body.puppySlug.trim() : ''
   if (puppySlug.length > 200 || /[\s/?#\\]/.test(puppySlug)) throw new InquiryError('Invalid puppy selection.')
   const interest = puppySlug ? 'puppy' : body.interest === 'waitlist' ? 'waitlist' : 'general'
-  return {name, email, phone, preferredContactMethod: preferredContactMethod as ContactMethod, message,
+  const litterId=typeof body.litterId==='string'?body.litterId.trim():''
+  if(litterId.length>150||!/^[a-zA-Z0-9_.-]*$/.test(litterId)||/^(private|drafts|versions)\./.test(litterId))throw new InquiryError('Invalid litter selection.')
+  if(litterId&&puppySlug)throw new InquiryError('Choose a puppy or a litter, not both.')
+  return {...(litterId?{litterId}:{}),name, email, phone, preferredContactMethod: preferredContactMethod as ContactMethod, message,
     smsConsent: preferredContactMethod !== 'Email' && body.smsConsent === true, puppySlug, interest}
 }
 

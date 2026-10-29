@@ -43,11 +43,12 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
     },
     patch(id){
       let expected
-      const sets={};const appends={};const unsets=[]
+      const sets={};const appends={};const unsets=[];const increments={}
       const patch={
         ifRevisionId(rev){expected=rev;return patch},
         unset(fields){unsets.push(...fields);return patch},
         set(values){Object.assign(sets,structuredClone(values));return patch},
+        inc(values){Object.assign(increments,values);return patch},
         append(field,values){appends[field]=structuredClone(values);return patch},
         async commit(){
           if(beforePatch){const fn=beforePatch;beforePatch=null;await fn(documents,id)}
@@ -61,6 +62,7 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
             cursor[segments.at(-1)]=value
           }
           for(const [key,values]of Object.entries(appends))updated[key]=[...updated[key],...values]
+          for(const [key,value]of Object.entries(increments))updated[key]=(updated[key]||0)+value
           for(const field of unsets)delete updated[field]
           updated._rev=`fixture-${randomUUID()}`;documents.set(id,updated)
           await save()

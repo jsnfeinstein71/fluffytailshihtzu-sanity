@@ -4,6 +4,8 @@ import '../home.css'
 import './upcoming.css'
 import {pageDescriptions} from '@/lib/public-copy'
 import Link from 'next/link'
+import LitterPlaces from './LitterPlaces'
+import {litterReservationMode,litterReservationsEnabled} from '@/lib/litter-reservations'
 import {getInventory} from '@/sanity/lib/inventory'
 import {formatCurrency, formatDate, getLitterDate, getLittersByStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
@@ -24,6 +26,7 @@ export default async function UpcomingLittersPage() {
       <p className="lead">Not choosing a puppy today? Here’s what we’re looking forward to. Tell Jeanne when you hope to bring your little one home.</p>
     </header>
 
+    {litterReservationMode()==='test'?<p className="expected-status" role="status">TEST — fictional litters only. No real charges or inventory changes. Use a fictional @example.test email for inquiries; messages are disabled.</p>:null}
     {expectedLitters.map((litter, index) => {
       const date = formatDate(getLitterDate(litter))
       const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
@@ -62,11 +65,11 @@ export default async function UpcomingLittersPage() {
               </dl>
               <p>See each puppy’s profile for the exact price. The deposit counts toward that total.</p>
             </div> : null}
-            <div className="expected-inquiry">
+            {litterReservationsEnabled()?<LitterPlaces litterId={litter._id} title={litter.title||'Upcoming litter'}/>:<>            <div className="expected-inquiry">
               <h3>Interested in this litter?</h3>
               <p>Tell Jeanne which litter you’re following and a little about the home you have in mind. Asking now starts a conversation; it doesn’t reserve a puppy.</p>
               <Link className="brand-button" href="/puppy-inquiry?interest=waitlist">Ask Jeanne about this litter <span aria-hidden="true">&rarr;</span></Link>
-            </div>
+            </div></>}
           </div>
         </div>
       </section>

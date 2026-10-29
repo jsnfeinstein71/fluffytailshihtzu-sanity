@@ -1,9 +1,11 @@
+import {litterDepositTerms,pickLabels} from '@/lib/litter-reservations'
 import {paymentCopy} from '@/lib/public-copy'
+
 
 // Shared, deterministic presentation only. Payment facts must be verified by the
 // application before creating a confirmation. Never accept HTML from a browser.
 export type PaymentEmailKind='deposit-request'|'balance-request'|'deposit-confirmation'|'paid-confirmation'
-export type PaymentEmail={version:1|2|3;reserved?:boolean;kind:PaymentEmailKind;name:string;message:string;puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;url:string;testOnly:boolean}
+export type PaymentEmail={version:1|2|3|4|5;litterTitle?:string;selectionPosition?:number;reserved?:boolean;kind:PaymentEmailKind;name:string;message:string;puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;url:string;testOnly:boolean}
 // Sanity may reorder object keys during storage; compare field values, not insertion order.
 export const samePaymentEmail=(a:PaymentEmail|undefined,b:PaymentEmail|undefined)=>JSON.stringify(a,Object.keys(a||{}).sort())===JSON.stringify(b,Object.keys(b||{}).sort())
 export const confirmationMessage='Thank you for your payment. Please reply if you have any questions about your puppy or pickup.'
@@ -13,11 +15,19 @@ export const paymentEmailLabels:Record<PaymentEmailKind,{title:string;button:str
   'deposit-confirmation':{title:'Your deposit is confirmed',button:'View payment confirmation'},
   'paid-confirmation':{title:'Paid in full',button:'View payment confirmation'},
 }
-export function paymentRequestEmail(request:{publicToken?:string;checkoutUrl?:string;kind:'deposit'|'balance';puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;testOnly:boolean},name:string,message:string):PaymentEmail|null{
+export function paymentRequestEmail(request:{litterReservationId?:string;litterId?:string;selectionPosition?:number;publicToken?:string;checkoutUrl?:string;kind:'deposit'|'balance';puppyName:string;amountCents:number;totalCents:number;paidCents:number;depositCents:number;testOnly:boolean},name:string,message:string):PaymentEmail|null{
   if(!request.checkoutUrl||request.testOnly&&!request.publicToken)return null
   const url=new URL(request.checkoutUrl)
   if(!/^\/pay\/(?:[a-f0-9]{48}|cs_live_[A-Za-z0-9]+)$/.test(url.pathname))return null
-  return {version:3,kind:request.kind==='deposit'?'deposit-request':'balance-request',name,message,puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:request.paidCents,depositCents:request.depositCents,url:request.checkoutUrl,testOnly:request.testOnly}
+  return {...(request.litterReservationId?{litterTitle:request.puppyName,selectionPosition:request.selectionPosition}:{}),version:request.litterReservationId?(request.testOnly?4:5):3,kind:request.kind==='deposit'?'deposit-request':'balance-request',name,message,puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:request.paidCents,depositCents:request.depositCents,url:request.checkoutUrl,testOnly:request.testOnly}
+}
+export function paymentDraftEmail(request:Parameters<typeof paymentRequestEmail>[0]&{webhookVerifiedAt?:string;verifiedPaid?:boolean;verifiedPaidCents?:number;verifiedReserved?:boolean},name:string,message:string,purpose:'request'|'confirmation'='request'):PaymentEmail|null{
+ const paid=request.verifiedPaid===true||!!request.webhookVerifiedAt
+ if(purpose==='request')return paid?null:paymentRequestEmail(request,name,message)
+ if(!paid)return null
+ const base=paymentRequestEmail(request,name,message);if(!base)return null
+ const paidCents=request.verifiedPaidCents??request.paidCents+request.amountCents
+ return {...base,version:request.litterReservationId?5:3,kind:!request.litterReservationId&&paidCents>=request.totalCents?'paid-confirmation':'deposit-confirmation',paidCents,reserved:request.verifiedReserved===true}
 }
 const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const money=(cents:number)=>'$'+(cents/100).toFixed(2)
@@ -42,6 +52,7 @@ function renderPaymentEmailV1(email:PaymentEmail){
 }
 
 
+
 // Version one remains byte-for-byte available for immutable earlier attempts.
 // New emails use the already-approved transparent white logo on a brown header.
 function renderHistoricalPaymentEmail(email:PaymentEmail){
@@ -57,9 +68,33 @@ function renderHistoricalPaymentEmail(email:PaymentEmail){
  return {html,text}
 }
 
+
 // Earlier snapshots retain their exact rendering. New messages apply the owner’s
 // manuscript without changing quotes, ledger verification or send behavior.
-export function renderPaymentEmail(email:PaymentEmail){
+export function renderPaymentEmail(email:PaymentEmail):{html:string;text:string}{
+ if(email.version===5){
+  if(!email.litterTitle||!Number.isInteger(email.selectionPosition)||email.selectionPosition!<1||email.selectionPosition!>4)throw new Error('Choose a valid litter position.')
+  const confirmed=email.kind==='deposit-confirmation'
+  if(!confirmed&&email.kind!=='deposit-request')throw new Error('Use a litter deposit template.')
+  const rendered=renderPaymentEmail({...email,version:3,reserved:false})
+  const intro=confirmed?paymentCopy.verifiedDeposit(money(email.amountCents),email.puppyName,money(email.totalCents-email.paidCents)):paymentCopy.deposit(email.puppyName,money(email.depositCents),money(email.totalCents))
+  const copy=confirmed?`Your ${money(email.amountCents)} deposit payment is confirmed for ${pickLabels[email.selectionPosition!-1]} in ${email.litterTitle}. It secures a litter selection position, not an individual puppy.`:`A verified ${money(email.amountCents)} deposit secures ${pickLabels[email.selectionPosition!-1]} in ${email.litterTitle}, not an individual puppy. Jeanne confirms the selected puppy’s price separately.`
+  const status=confirmed?'Four is the reservation limit, not a guaranteed litter size. Litter size, sex, and color are not guaranteed.':'Your selection position is held while this checkout remains payable or processing. Four is the reservation limit, not a guaranteed litter size. Litter size, sex, and color are not guaranteed.'
+  const transform=(value:string,html:boolean)=>value.replace(html?escape(intro):intro,html?escape(copy):copy).replace('The deposit is non-refundable and applies toward the total puppy price.',litterDepositTerms).replace(html?'>Puppy</td>':'Puppy:',html?'>Litter</td>':'Litter:').replace('Total puppy price','Price quoted with this deposit').replace('Balance after this payment','Provisional balance after deposit').replace('Remaining balance','Provisional balance').replace(html?escape(paymentCopy.unpaid):paymentCopy.unpaid,html?escape(status):status)
+  return {html:transform(rendered.html,true),text:transform(rendered.text,false)}
+ }
+ if(email.version===4){
+  if(!email.litterTitle||!Number.isInteger(email.selectionPosition)||email.selectionPosition!<1||email.selectionPosition!>4)throw new Error('Choose a valid litter position.')
+  const rendered=renderPaymentEmail({...email,version:3,reserved:false})
+  const intro=paymentCopy.deposit(email.puppyName,money(email.depositCents),money(email.totalCents))
+  const copy=`A verified ${money(email.amountCents)} deposit secures ${pickLabels[email.selectionPosition!-1]} in ${email.litterTitle}, not an individual puppy. The deposit is credited toward the selected puppy’s price. Four is the reservation limit, not a guaranteed litter size. Litter size, sex, and color are not guaranteed.`
+  const terms='The deposit is non-refundable and applies toward the total puppy price.'
+  const html=rendered.html.replace(escape(intro),escape(copy)).replace(terms,escape(litterDepositTerms)).replace('>Puppy</td>','>Litter</td>').replace('Total puppy price','Current litter price').replace('Balance after this payment','Provisional balance after deposit').replace(escape(paymentCopy.unpaid),'This request is unpaid until verified by Stripe. Your selection position is held while this checkout remains payable or processing.')
+  const text=rendered.text.replace(intro,copy).replace(terms,litterDepositTerms).replace('Puppy:','Litter:').replace('Total puppy price','Current litter price').replace('Balance after this payment','Provisional balance after deposit').replace(paymentCopy.unpaid,'This request is unpaid until verified by Stripe. Your selection position is held while this checkout remains payable or processing.')
+  return {html,text}
+ }
+
+
  if(email.version!==3)return renderHistoricalPaymentEmail(email)
  const rendered=renderHistoricalPaymentEmail({...email,version:2})
  const confirmed=email.kind.endsWith('confirmation'),deposit=email.kind.startsWith('deposit'),remaining=email.totalCents-email.paidCents

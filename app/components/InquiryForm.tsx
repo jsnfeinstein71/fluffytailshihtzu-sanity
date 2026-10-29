@@ -12,8 +12,8 @@ function fitMessage(field: HTMLTextAreaElement | null) {
   field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`
 }
 
-export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoUrl = '', litterTitle = '', interest = 'general'}: {
-  puppySlug?: string; puppyName?: string; puppyPhotoUrl?: string; litterTitle?: string; interest?: 'puppy' | 'waitlist' | 'general'
+export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoUrl = '', litterId = '', litterTitle = '', interest = 'general'}: {
+  litterId?:string; puppySlug?: string; puppyName?: string; puppyPhotoUrl?: string; litterTitle?: string; interest?: 'puppy' | 'waitlist' | 'general'
 }) {
   const [method, setMethod] = useState<ContactMethod>('Email')
   const [token, setToken] = useState('')
@@ -60,7 +60,7 @@ export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoU
         body: JSON.stringify({
           name: form.get('name'), email: form.get('email'), phone: form.get('phone') || '',
           preferredContactMethod: method, message: form.get('message'), smsConsent: form.get('smsConsent') === 'on',
-          website: form.get('website') || '', puppySlug, interest,
+          website: form.get('website') || '', puppySlug, litterId, interest,
         }),
       })
       const data = await response.json()
@@ -76,11 +76,12 @@ export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoU
     <div><strong>{puppyName}</strong>{litterTitle ? <span>Litter: {litterTitle}</span> : null}</div>
   </div> : null
 
-  if (confirmation) return <div className="inquiry-confirmation" role="status" tabIndex={-1} ref={feedbackRef}>{puppyContext}<h2>Thank you — your message is saved.</h2><p>{confirmation}</p><Link className="text-link" href="/available-puppies">Back to puppies <span aria-hidden="true">&rarr;</span></Link></div>
+  const litterContext=litterId?<div className="inquiry-context"><div><strong>{litterTitle}</strong><span>Reservation inquiry · This free inquiry does not secure a selection position.</span></div></div>:null
+  if (confirmation) return <div className="inquiry-confirmation" role="status" tabIndex={-1} ref={feedbackRef}>{puppyContext}{litterContext}<h2>Thank you — your message is saved.</h2><p>{confirmation}</p><Link className="text-link" href="/available-puppies">Back to puppies <span aria-hidden="true">&rarr;</span></Link></div>
 
   return (
     <form className="inquiry-form" onSubmit={submit} aria-label="Puppy inquiry" aria-busy={busy}>
-      {puppyContext}
+      {puppyContext}{litterContext}
       <div className="inquiry-fields">
         <label>Your name<input name="name" autoComplete="name" maxLength={100} minLength={2} required /></label>
         <label>Email address<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
@@ -89,7 +90,7 @@ export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoU
         <label key={value} className={method === value ? 'inquiry-method-selected' : undefined}><input type="radio" name="preferredContactMethod" value={value} checked={method === value} onChange={() => setMethod(value)} />{value}</label>
       ))}</div></fieldset>
       <label>Phone number {textRequested ? '' : '(optional)'}<input name="phone" type="tel" autoComplete="tel" maxLength={40} required={textRequested} /></label>
-      <label>Message<textarea name="message" rows={4} ref={messageRef} onInput={event => fitMessage(event.currentTarget)} onFocus={event => fitMessage(event.currentTarget)} minLength={5} maxLength={2000} placeholder={!puppySlug && interest === 'general' ? 'Tell Jeanne what you’d like to know.' : undefined} defaultValue={puppySlug ? `Hi Jeanne, I’d like to know more about ${puppyName}.` : interest === 'waitlist' ? 'Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:' : ''} required /></label>
+      <label>Message<textarea name="message" rows={4} ref={messageRef} onInput={event => fitMessage(event.currentTarget)} onFocus={event => fitMessage(event.currentTarget)} minLength={5} maxLength={2000} placeholder={!puppySlug && interest === 'general' ? 'Tell Jeanne what you’d like to know.' : undefined} defaultValue={litterId?`Hi Jeanne, I’d like to ask about reserving a selection position in ${litterTitle}. Here’s what I have in mind:`:puppySlug ? `Hi Jeanne, I’d like to know more about ${puppyName}.` : interest === 'waitlist' ? 'Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:' : ''} required /></label>
       {textRequested ? <label className="inquiry-consent"><input type="checkbox" name="smsConsent" required />
         <span>By checking this box and submitting this puppy inquiry form, I agree to receive conversational and customer-care SMS messages from FluffyTail Shih Tzu at the phone number provided about my puppy inquiry, puppy availability, scheduling, and next steps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out and HELP for help. Consent is not a condition of purchase. See our <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" title="Opens in a new tab; your inquiry stays here">Privacy Policy</Link> and <Link href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" title="Opens in a new tab; your inquiry stays here">Terms and Conditions</Link>.</span>
       </label> : null}

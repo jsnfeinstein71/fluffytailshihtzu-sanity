@@ -1,3 +1,4 @@
+import {applyLitterPayment} from '@/sanity/lib/litter-reservations'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {applyLiveStaffPayment} from '@/sanity/lib/live-payment'
 import {ensureLivePaymentConfirmation} from '@/sanity/lib/email-workflow'
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
   if(process.env.VERCEL_ENV==='production'&&event.livemode!==true)return new NextResponse('Live events are required', {status:400})
   try {
     const session=event.data.object as Stripe.Checkout.Session
+    if(event.type.startsWith('checkout.session.')&&session.metadata?.litterReservationId){const result=await applyLitterPayment(event);if(result&&'confirmationEligible' in result&&result.confirmationEligible)await ensureLivePaymentConfirmation(session.id);return NextResponse.json({received:true})}
     if(event.type.startsWith('checkout.session.')&&session.metadata?.staffPaymentRequestId&&liveWorkspaceEnabled()){
       const result=await applyLiveStaffPayment(event)
       if(result.confirmationEligible)await ensureLivePaymentConfirmation(session.id)

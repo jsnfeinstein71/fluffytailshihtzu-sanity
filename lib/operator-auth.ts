@@ -1,3 +1,4 @@
+import {litterReservationMode} from './litter-reservations'
 import {createHash, timingSafeEqual} from 'node:crypto'
 import {NextResponse} from 'next/server'
 import {isolatedStaffPreview,staffWorkspaceAvailable,validStaffSession} from './staff-session'
@@ -9,6 +10,7 @@ function equal(a: string, b: string) {
 }
 
 export function requireOperator(req: Request) {
+  if(process.env.FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED==='1'&&litterReservationMode()!=='test')return NextResponse.json({error:'The isolated litter workspace is not configured.'},{status:503})
   if(passkeyMode()!=='off')return requirePasskeyOrTransition(req)
   return requireLegacyOperator(req)
 }

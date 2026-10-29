@@ -1,9 +1,13 @@
+import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
+import {litterRequestForIdentifier,customerLitterPayment} from './litter-reservations'
 import 'server-only'
 import type {OutgoingEmail} from '@/app/inbox/workspace/email-model'
 import {findLiveLedger,ledgerMatches,liveContextForIdentifier,livePaidRecords,liveConfirmationId} from './live-payment'
 import {getPaymentContext} from './payment-context'
 
 export async function customerLivePayment(identifier:string){
+ requireLivePaymentConfiguration()
+ const litter=await litterRequestForIdentifier(identifier);if(litter)return await customerLitterPayment(litter)
  const context=await liveContextForIdentifier(identifier),{client,request,session,puppy,family}=context
  const [{records,paidCents,foreign},ledger,confirmation]=await Promise.all([livePaidRecords(context),findLiveLedger(session.id),client.getDocument<OutgoingEmail>(liveConfirmationId(session.id))])
  if(ledger&&!ledgerMatches(ledger,context))throw new Error('This payment needs reconciliation. Please contact Jeanne.')

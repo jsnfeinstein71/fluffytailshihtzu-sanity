@@ -115,6 +115,9 @@ async function dispatch(reviewId:string,scenario:string|undefined,origin:string)
   // acknowledgement leaves a blocked claim, never an implicit second send.
   try{await getOperatorClient().patch(record._id).ifRevisionId(record._rev).set({state:'sending',attempts,source:provider.capabilities.provider}).commit({visibility:'sync'})}catch(error){if(conflict(error))return;throw error}
   const claimed={...record,state:'sending' as const,attempts,source:provider.capabilities.provider}
+  // Recheck the current provider/verified ledger at the submission boundary.
+  // A payment arriving after review/guard acquisition must not become a stale ask.
+  try{await validateSavedEmailReview(reviewId,origin)}catch(error){await finishAttempt(claimed,'failed','DRAFT_OR_PAYMENT_CHANGED_BEFORE_SEND');throw error}
   let result
   try{result=await provider.send({...claimed,...(parts.length?{attachmentParts:parts}:{})},scenario)}catch{result={outcome:'uncertain',code:'PROVIDER_OUTCOME_UNCERTAIN'}}
   const state:OutgoingState=result.outcome==='accepted'?'accepted':result.outcome==='rejected'?'failed':'uncertain'
