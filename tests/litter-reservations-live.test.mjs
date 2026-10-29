@@ -57,3 +57,13 @@ test('manual-review credit floor and live/test identity validation preserve ledg
  const p=await offer();assert.equal((await deliver(p,{valid:false})).status,400);assert.equal((await deliver(p,{live:false})).status,400);await ok(await deliver(p));await action({type:'transfer',confirmed:true,id:p.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:''});db.documents.get('fictional-spring').status='current';db.documents.get('fictional-puppy').overridePrice=300
  const before=JSON.stringify([...db.documents]);assert.equal((await route.POST(req({type:'assign',confirmed:true,id:p.litterReservationId,puppyId:'fictional-puppy',requestId:randomUUID()}))).status,409);assert.equal(JSON.stringify([...db.documents]),before)
 })
+
+
+test('litter credit assignment respects an individual-puppy claim and blocks stale competing checkout snapshots',async()=>{
+ const p=await offer();await ok(await deliver(p));await action({type:'transfer',confirmed:true,id:p.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:''});db.documents.get('fictional-spring').status='current'
+ const {getPaymentContext}=await import('../sanity/lib/payment-context.ts'),{privateRecordId}=await import('../sanity/lib/private-records.ts'),{createDepositCheckout}=await import('../sanity/lib/deposit-checkout.ts')
+ const earlier=await getPaymentContext('practice-willow-litter'),claimId=privateRecordId('deposit','fictional-puppy');db.documents.set(claimId,{_id:claimId,_rev:'claim-initial',_type:'depositLink',active:true,token:'historical-token',stripeCheckoutUrl:'https://checkout.stripe.com/prior'})
+ const assign={type:'assign',confirmed:true,id:p.litterReservationId,puppyId:'fictional-puppy',requestId:randomUUID()};assert.equal((await route.POST(req(assign))).status,409);assert.equal(db.documents.get('fictional-puppy').status,'available')
+ db.documents.get(claimId).active=false;await action(assign);assert.equal(db.documents.get(claimId).token,'historical-token');assert.equal(db.documents.get(claimId).stripeCheckoutUrl,'https://checkout.stripe.com/prior');const count=sessions.size
+ await assert.rejects(()=>createDepositCheckout(earlier,{customerName:'Other fixture family',customerEmail:'other@example.test',customerPhone:''},origin,{staffTestOnly:'0'}),/applied litter deposit/);assert.equal(sessions.size,count)
+})

@@ -92,3 +92,8 @@ test('unknown checkout-creation outcome keeps its hold and recovers the original
  assert.equal((await route.POST(req(body))).status,503);assert.equal(sessions.size,1);assert.equal((await core.publicLitterPlaces('fictional-autumn'))[0].status,'Pending deposit')
  const recovered=await action(body);assert.equal(sessions.size,1);assert.equal(recovered.paymentRequest.checkoutSessionId,[...sessions.keys()][0]);assert.equal([...db.documents.values()].filter(d=>d._type==='litterReservation').length,1)
 })
+
+
+test('synthetic litter capability cannot be used through the live customer payment endpoint',async()=>{
+ const p=await offer(),before=JSON.stringify([...db.documents]);const live=await import('../app/api/payment/[token]/route.ts');const response=await live.GET(new Request(origin+'/api/payment/'+p.publicToken),{params:Promise.resolve({token:p.publicToken})});assert.equal(response.status,404);assert.equal(JSON.stringify([...db.documents]),before)
+})

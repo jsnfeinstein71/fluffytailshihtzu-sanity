@@ -1,5 +1,5 @@
 import 'server-only'
-import {randomBytes,randomUUID} from 'node:crypto'
+import {createHash,randomBytes,randomUUID} from 'node:crypto'
 import type Stripe from 'stripe'
 import {litterReservationMode,litterReservationsEnabled,type LitterBoard,type LitterReservation} from '@/lib/litter-reservations'
 import {requirePaymentTestConfiguration} from '@/lib/payment-test-mode'
@@ -83,7 +83,7 @@ export async function litterPaymentContext(sessionId:string){
  enabled();const s=await getStripe().checkout.sessions.retrieve(sessionId),m=s.metadata
  if(s.livemode!==!testing()||!s.id.startsWith(testing()?'cs_test_':'cs_live_')||s.currency!=='usd'||m?.staffTestOnly!==(testing()?'1':'0')||!m.litterReservationId)throw new LitterError('This is not an isolated litter checkout.')
  const r=await reservation(m.litterReservationId),p=await client().getDocument<PaymentRequest>(r.paymentRequestId),f=await family(r.familyId)
- if(!p||p._type!=='staffPaymentRequest'||p.workspace!==workspaceNamespace()||p.testOnly!==testing()||p.checkoutSessionId!==s.id||p._id!==m.staffPaymentRequestId||m.staffFamilyId!==f.familyKey||s.client_reference_id!==r._id||s.amount_total!==r.depositCents||p.amountCents!==r.depositCents||m.customerPaymentToken!==p.publicToken||m.litterId!==p.litterId||m.selectionPosition!==String(p.selectionPosition)||m.depositCents!==String(p.depositCents)||s.customer_email?.toLowerCase()!==f.profile.email)throw new LitterError('The saved reservation and Stripe quote do not match.')
+ if(!p||p.checkoutUrl!==configuration()+'/pay/'+p.publicToken||!(/^[a-f0-9]{48}$/.test(p.publicToken||''))||p._type!=='staffPaymentRequest'||p.workspace!==workspaceNamespace()||p.testOnly!==testing()||p.checkoutSessionId!==s.id||p._id!==m.staffPaymentRequestId||m.staffFamilyId!==f.familyKey||s.client_reference_id!==r._id||s.amount_total!==r.depositCents||p.amountCents!==r.depositCents||m.customerPaymentToken!==p.publicToken||m.litterId!==p.litterId||m.selectionPosition!==String(p.selectionPosition)||m.depositCents!==String(p.depositCents)||s.customer_email?.toLowerCase()!==f.profile.email)throw new LitterError('The saved reservation and Stripe quote do not match.')
  return {s,r,p,f}
 }
 async function terminal(s:Stripe.Checkout.Session){
@@ -156,7 +156,15 @@ export async function assignLitterPuppy(input:{id:string;puppyId:string;requestI
  if(Number.isFinite(puppy.overridePrice??l.price)&&Math.round((puppy.overridePrice??l.price)*100)<paidCents)throw new LitterError('This puppy costs less than the deposit credit. Jeanne must decide how to handle the excess before assignment.')
  const quote=getPricing({litterPrice:l.price,litterDeposit:paidCents/100,overridePrice:puppy.overridePrice})
  const prior=await client().fetch<{_id:string}[]>('*[_type=="paymentRecord" && puppyId==$puppyId && paymentStatus=="paid"]{_id}',{puppyId:puppy._id},{cache:'no-store'});if(prior.length)throw new LitterError('This puppy already has a payment; reconcile it before assigning another deposit.')
- await client().transaction().create({_id:litterRecordId('litterCreditApplication',r.ledgerId),_type:'litterCreditApplication',workspace:workspaceNamespace(),reservationId:r._id,ledgerId:r.ledgerId,puppyId:puppy._id,amountCents:paidCents,totalCents:quote.totalCents,createdAt:now()}).patch(r._id,p=>p.ifRevisionId(r._rev).set({puppyId:puppy._id,history:[...r.history,{...entry('puppy-selected',{puppyId:puppy._id}),_key:input.requestId}]})).patch(puppy._id,p=>p.ifRevisionId(puppy._rev).set({status:'reserved',litterReservationId:r._id})).patch(ledger._id,p=>p.ifRevisionId(ledger._rev).set({puppyId:puppy._id,puppySlug:puppy.slug.current,puppyName:puppy.name,selectedLitterId:l._id,quotedTotalCents:quote.totalCents})).patch(f._id,p=>p.ifRevisionId(f._rev).set({'profile.puppyId':puppy._id,'profile.puppySlug':puppy.slug.current,'profile.agreedTotalCents':quote.totalCents,'profile.stage':(quote.totalCents===paidCents?'Paid in full':'Deposit applied')+(testing()?' — TEST':''),'profile.litterId':l._id,'profile.litterTitle':l.title})).commit({visibility:'sync'})
+ const claimId=privateRecordId('deposit',puppy._id)
+ const [claim,legacyClaim]=await Promise.all([client().getDocument<{_id:string;_rev:string;active?:boolean;litterCreditSelectionId?:string}>(claimId),client().getDocument<{active?:boolean}>('deposit-active-'+createHash('sha256').update(puppy._id).digest('hex'))])
+ if(claim?.active||claim?.litterCreditSelectionId||legacyClaim?.active)throw new LitterError('This puppy has an existing deposit checkout or selection. Close and reconcile it before applying this litter credit.')
+ // Share the existing per-puppy deposit claim slot. CAS/create makes assignment
+ // and an individual-puppy checkout mutually exclusive without changing old links.
+ const tx=client().transaction()
+ if(claim)tx.patch(claimId,p=>p.ifRevisionId(claim._rev).set({litterCreditSelectionId:r._id}))
+ else tx.create({_id:claimId,_type:'puppySelectionLock',active:false,litterCreditSelectionId:r._id})
+ await tx.create({_id:litterRecordId('litterCreditApplication',r.ledgerId),_type:'litterCreditApplication',workspace:workspaceNamespace(),reservationId:r._id,ledgerId:r.ledgerId,puppyId:puppy._id,amountCents:paidCents,totalCents:quote.totalCents,createdAt:now()}).patch(r._id,p=>p.ifRevisionId(r._rev).set({puppyId:puppy._id,history:[...r.history,{...entry('puppy-selected',{puppyId:puppy._id}),_key:input.requestId}]})).patch(puppy._id,p=>p.ifRevisionId(puppy._rev).set({status:'reserved',litterReservationId:r._id})).patch(ledger._id,p=>p.ifRevisionId(ledger._rev).set({puppyId:puppy._id,puppySlug:puppy.slug.current,puppyName:puppy.name,selectedLitterId:l._id,quotedTotalCents:quote.totalCents})).patch(f._id,p=>p.ifRevisionId(f._rev).set({'profile.puppyId':puppy._id,'profile.puppySlug':puppy.slug.current,'profile.agreedTotalCents':quote.totalCents,'profile.stage':(quote.totalCents===paidCents?'Paid in full':'Deposit applied')+(testing()?' — TEST':''),'profile.litterId':l._id,'profile.litterTitle':l.title})).commit({visibility:'sync'})
  return await reservation(r._id)
 }
 export async function editLitterPreferences(id:string,value:unknown){enabled();const r=await reservation(id);await client().patch(id).ifRevisionId(r._rev).set({preferences:preferences(value)}).commit({visibility:'sync'})}

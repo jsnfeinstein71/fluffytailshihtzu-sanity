@@ -7,6 +7,7 @@ import {getStripe} from './stripe'
 import {getPaymentContext,paymentMetadata,PaymentError} from './payment-context'
 type DepositLink = {
   _id: string; _rev?: string; token: string; active: boolean; expiresAt: string
+  litterCreditSelectionId?: string
   customerName: string; customerEmail: string; customerPhone: string
   checkoutMetadata: Record<string, string>; stripeCheckoutUrl?: string
 }
@@ -38,6 +39,9 @@ export async function createDepositCheckout(context:Awaited<ReturnType<typeof ge
       puppySlug: puppy.slug, puppyName: puppy.name, puppyId: puppy._id, litterId: puppy.litterId,
       customerName, customerEmail, customerPhone, checkoutMetadata: metadata, createdAt: new Date().toISOString(),
     })
+    // A litter-credit assignment atomically uses this same private claim slot.
+    // Even a checkout holding an earlier available-puppy snapshot must stop.
+    if(link.litterCreditSelectionId)throw new PaymentError('This puppy already has an applied litter deposit. Review its existing reservation.',409)
     if (link.token !== token) {
       if (link.active && Date.parse(link.expiresAt) > Date.now()) {
         if (link.customerEmail !== customerEmail || link.customerPhone !== customerPhone || link.checkoutMetadata.totalPriceCents !== metadata.totalPriceCents || link.checkoutMetadata.depositCents !== metadata.depositCents || link.checkoutMetadata.puppyId !== metadata.puppyId || link.checkoutMetadata.litterId !== metadata.litterId) {
