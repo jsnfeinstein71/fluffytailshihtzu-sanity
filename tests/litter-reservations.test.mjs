@@ -72,3 +72,23 @@ test('free litter inquiry carries its identity into a saved family and conversat
 test('production and wrong-storage configuration fail closed without touching saved records',async()=>{
  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID='3glz6dkx';assert.equal((await route.POST(req({type:'offer'}))).status,503);assert.equal(sessions.size,0);process.env.VERCEL_ENV='production';assert.equal((await route.POST(req({type:'offer'}))).status,503)
 })
+
+
+test('late credit can be explicitly placed after closing the same family’s newer unpaid offer',async()=>{
+ const old=await offer(),s=sessions.get(old.checkoutSessionId);s.status='expired';await deliver(event(s.id,'checkout.session.expired',false))
+ const newer=await offer();await deliver(event(s.id,'checkout.session.async_payment_succeeded'))
+ const transfer={type:'transfer',confirmed:true,id:old.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:'Place verified late deposit after review.'}
+ assert.equal((await route.POST(req(transfer))).status,409)
+ await action({type:'close',id:newer.litterReservationId});await action(transfer)
+ const anchor=db.documents.get(core.litterRecordId('litterFamily',familyId(1)));assert.equal(anchor.reservationId,old.litterReservationId)
+ assert.equal(db.documents.get(old.litterReservationId).state,'reserved');assert.equal([...db.documents.values()].filter(d=>d._type==='paymentRecord').length,1)
+})
+
+
+test('unknown checkout-creation outcome keeps its hold and recovers the original idempotent session',async()=>{
+ const create=globalThis.fixtureStripe.checkout.sessions.create;let uncertain=true
+ globalThis.fixtureStripe.checkout.sessions.create=async(...args)=>{const result=await create(...args);if(uncertain){uncertain=false;throw new Error('Provider response lost after creation.')}return result}
+ const body={type:'offer',confirmed:true,familyId:familyId(1),litterId:'fictional-autumn',position:1,preferences:'',requestId:randomUUID()}
+ assert.equal((await route.POST(req(body))).status,503);assert.equal(sessions.size,1);assert.equal((await core.publicLitterPlaces('fictional-autumn'))[0].status,'Pending deposit')
+ const recovered=await action(body);assert.equal(sessions.size,1);assert.equal(recovered.paymentRequest.checkoutSessionId,[...sessions.keys()][0]);assert.equal([...db.documents.values()].filter(d=>d._type==='litterReservation').length,1)
+})

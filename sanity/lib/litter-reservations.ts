@@ -131,8 +131,12 @@ export async function moveLitterReservation(input:{id:string;litterId:string;pos
  if(!['reserved','reconciliation'].includes(r.state)||!r.ledgerId||r.puppyId)throw new LitterError('Only a verified, unassigned deposit can move. Pending or selected-puppy reservations require review.')
  const l=await litter(input.litterId);if(!['planned','upcoming'].includes(l.status)||l._id===r.litterId&&r.state==='reserved')throw new LitterError('Choose another upcoming litter.')
  const destination=await board(l._id,true),source=await board(r.litterId),anchorId=litterRecordId('litterFamily',r.familyId),anchor=await client().getDocument<{_rev:string;reservationId:string}>(anchorId)
- if(!destination||nextPlace(destination)!==input.position||anchor?.reservationId!==r._id)throw new LitterError('The destination position or family’s deposit changed. Refresh and confirm the available place.')
+ if(!destination||nextPlace(destination)!==input.position||!anchor)throw new LitterError('The destination position or family’s deposit changed. Refresh and confirm the available place.')
+ // Late money may arrive after the same family received a newer offer. Never
+ // displace that active hold. Close it first, then atomically restore this credit.
+ if(anchor.reservationId!==r._id){const newer=await reservation(anchor.reservationId);if(r.state!=='reconciliation'||newer.state!=='released'||newer.ledgerId)throw new LitterError('This family has another active offer or paid deposit. Close its unpaid offer before placing this late payment; paid deposits require review.')}
  const tx=client().transaction().patch(destination._id,p=>p.ifRevisionId(destination._rev).set({places:[...destination.places,{_key:String(input.position),position:input.position,reservationId:r._id,state:'reserved'}]})).patch(r._id,p=>p.ifRevisionId(r._rev).set({state:'reserved',litterId:l._id,litterTitle:l.title,position:input.position,history:[...r.history,{...entry(r.state==='reconciliation'?'late-payment-placed':'transferred',{fromLitter:r.litterId,fromPosition:r.position,toLitter:l._id,toPosition:input.position,note:preferences(input.note)}),_key:input.requestId}]}))
+ tx.patch(anchorId,p=>p.ifRevisionId(anchor._rev).set({reservationId:r._id}))
  if(source&&source._id!==destination._id)tx.patch(source._id,p=>p.ifRevisionId(source._rev).set({places:source.places.filter(p=>p.reservationId!==r._id)}))
  await tx.commit({visibility:'sync'});return await reservation(r._id)
 }
