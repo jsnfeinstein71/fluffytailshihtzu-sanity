@@ -9,6 +9,8 @@ import {createBalanceCheckout} from './balance-checkout'
 import {paymentTestWorkspaceEnabled,requirePaymentTestConfiguration} from '@/lib/payment-test-mode'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
+import {litterReservationsEnabled} from '@/lib/litter-reservations'
+import {customerLitterPayment} from './litter-reservations'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {privateRecordId} from './private-records'
 import {families,puppies} from '@/app/inbox/workspace/model'
@@ -123,6 +125,7 @@ async function checkedPayment(id:string,family:SavedFamily,requireCurrent=true){
   const request=await getOperatorClient().getDocument<PaymentRequest>(id)
   if(!request||request._type!=='staffPaymentRequest'||request.workspace!==workspaceNamespace()||request.familyId!==family.familyKey||request._id!==workspacePaymentId(request.requestId)||request.testOnly===liveWorkspaceEnabled())throw new EmailWorkflowError('That payment request does not belong to this family.',409)
   if(!requireCurrent)return request
+  if(request.litterReservationId){const current=await customerLitterPayment(request);if(current.state!=='ready')throw new EmailWorkflowError('This litter deposit request is no longer payable. Refresh its reservation before sending.',409);return request}
   if(!Number.isFinite(Date.parse(request.expiresAt))||Date.parse(request.expiresAt)<=Date.now())throw new EmailWorkflowError('This payment request has expired. Prepare a fresh request before reviewing the email.',409)
   const current=await quote(family,request.puppyId,request.kind)
   if(Object.entries(current).some(([key,value])=>request[key as keyof PaymentRequest]!==value))throw new EmailWorkflowError('The puppy’s price or confirmed balance has changed. Review the payment details and prepare a fresh request.',409)
@@ -143,7 +146,7 @@ export async function loadMailbox():Promise<MailData>{
   })
   const inventory=await client.fetch<{id:string;name:string;sex:string;color:string;litter:string;status:string;price:number;deposit:number;slug:string;paymentTestScenario?:string}[]>('*[_type == "puppy" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,sex,color,paymentTestScenario,"litter":litter->title,status,"price":coalesce(overridePrice,litter->price),"deposit":litter->deposit,"slug":slug.current}',{},{cache:'no-store'})
   const presentedPayments=liveWorkspaceEnabled()?paymentRequests.map(p=>{try{return {...p,checkoutUrl:livePaymentUrl(p)}}catch{return p}}):paymentRequests
-  return {attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests:presentedPayments,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
+  return {litterReservationsEnabled:litterReservationsEnabled(),attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests:presentedPayments,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
 }
 export async function prepareEmailAction(input:unknown,origin:string){
   requireWorkspace()
@@ -186,7 +189,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
         if(link)await client.patch(link._id).set({active:false,expiresAt:new Date().toISOString()}).commit({visibility:'sync'})
       }
     }
-    const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...(liveWorkspaceEnabled()||approvedTestCustomer(family.profile)?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
+    const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...(liveWorkspaceEnabled()||approvedTestCustomer(family.profile)||litterReservationsEnabled()&&family.profile.paymentTestScenario?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
     await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
     const stored=await checkedPayment(record._id,family)
     if(stored.puppyId!==record.puppyId||stored.kind!==record.kind)throw new EmailWorkflowError('That request ID already belongs to a different payment request.',409)

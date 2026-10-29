@@ -1,4 +1,5 @@
 import {loadTestSmsProfile,saveTestSmsConsent} from './workspace-sms'
+import {litterReservationsEnabled} from '@/lib/litter-reservations'
 import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {normalizePhone} from '@/lib/inquiry'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
@@ -140,7 +141,7 @@ export async function syncInquiryFamilies(){
   if(inquiries.length>500)throw new WorkspaceError('More than 500 inquiries require paginated review.',409)
   for(const inquiry of inquiries)await projectInquiryFamily(inquiry)
 }
-export type InquiryFamilySource={_id:string;name:string;email:string;phone?:string;preferredContactMethod:'Email'|'Text'|'Either';message:string;smsConsent:boolean;submittedAt:string;puppyId?:string;source:string}
+export type InquiryFamilySource={_id:string;name:string;email:string;phone?:string;preferredContactMethod:'Email'|'Text'|'Either';message:string;smsConsent:boolean;submittedAt:string;puppyId?:string;litterId?:string;litter?:string;source:string}
 export async function projectInquiryFamily(inquiry:InquiryFamilySource){
   requireWorkspace()
   // No real customer identities or existing mail may enter the synthetic test namespace.
@@ -151,7 +152,7 @@ export async function projectInquiryFamily(inquiry:InquiryFamilySource){
   if(liveWorkspaceEnabled()){let phone='';try{phone=normalizePhone(inquiry.phone||'')}catch{/* Email follow-up remains available if a legacy number needs correction. */}inquiry={...inquiry,email:inquiry.email.trim().toLowerCase(),phone}}
   const identity=liveWorkspaceEnabled()?privateRecordId('familyIdentity',JSON.stringify([inquiry.email.trim().toLowerCase(),inquiry.phone||'',inquiry.name.trim().replace(/\s+/g,' ').toLowerCase()])):inquiry._id
   const familyKey='inquiry-'+identity.split('.').at(-1)
-  const record={_id:workspaceId(familyKey),_type:'staffFamily',workspace:workspaceNamespace(),schemaVersion:1,familyKey,profile:{id:familyKey,inquiryId:inquiry._id,source:'inquiry',name:inquiry.name,initials:inquiry.name.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase(),email:inquiry.email.toLowerCase(),phone:inquiry.phone||'',location:'Location not yet recorded',preference:inquiry.preferredContactMethod,smsConsent:inquiry.smsConsent===true,stage:'New inquiry',next:'Review inquiry and respond',unread:true,records:[],messages:[{id:inquiry._id,direction:'in',channel:inquiry.preferredContactMethod==='Text'?'Text':'Email',body:inquiry.message,time:inquiry.submittedAt}],...(inquiry.puppyId?{interestPuppyId:inquiry.puppyId}:{})},drafts:{Email:'',Text:''},notes:[],checks:[]}
+  const record={_id:workspaceId(familyKey),_type:'staffFamily',workspace:workspaceNamespace(),schemaVersion:1,familyKey,profile:{id:familyKey,inquiryId:inquiry._id,source:'inquiry',...(inquiry.litterId?{litterId:inquiry.litterId,litterTitle:inquiry.litter||'',...(litterReservationsEnabled()?{paymentTestScenario:'litter-reservations-20261028'}:{})}:{}),name:inquiry.name,initials:inquiry.name.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase(),email:inquiry.email.toLowerCase(),phone:inquiry.phone||'',location:'Location not yet recorded',preference:inquiry.preferredContactMethod,smsConsent:inquiry.smsConsent===true,stage:'New inquiry',next:'Review inquiry and respond',unread:true,records:[],messages:[{id:inquiry._id,direction:'in',channel:inquiry.preferredContactMethod==='Text'?'Text':'Email',body:inquiry.message,time:inquiry.submittedAt}],...(inquiry.puppyId?{interestPuppyId:inquiry.puppyId}:{})},drafts:{Email:'',Text:''},notes:[],checks:[]}
   await getOperatorClient().transaction().createIfNotExists(record).commit({visibility:'sync'})
   if(liveWorkspaceEnabled()){for(let n=0;n<3;n++){const current=await getOperatorClient().getDocument<SavedFamily>(record._id);if(!current||current.profile.messages?.some(m=>m.id===inquiry._id))break;try{await getOperatorClient().patch(record._id).ifRevisionId(current._rev).set({'profile.messages':[...(current.profile.messages||[]),record.profile.messages[0]].sort((a,b)=>a.time.localeCompare(b.time)),...(inquiry.submittedAt>=(current.profile.messages||[]).reduce((latest,m)=>m.time>latest?m.time:latest,'')?{'profile.smsConsent':inquiry.smsConsent===true,'profile.preference':inquiry.preferredContactMethod}:{})}).commit({visibility:'sync'});break}catch(error){if(!isConflict(error))throw error}}}
   // Repeated projection never overwrites staff drafts, notes, identity or payment association.

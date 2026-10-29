@@ -9,6 +9,7 @@ function equal(a: string, b: string) {
 }
 
 export function requireOperator(req: Request) {
+  if(process.env.FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED==='1'&&!(process.env.VERCEL_ENV==='preview'&&process.env.NEXT_PUBLIC_SANITY_PROJECT_ID==='gu1xkpsg'&&process.env.NEXT_PUBLIC_SANITY_DATASET==='synthetic'))return NextResponse.json({error:'The isolated litter workspace is not configured.'},{status:503})
   if(passkeyMode()!=='off')return requirePasskeyOrTransition(req)
   return requireLegacyOperator(req)
 }

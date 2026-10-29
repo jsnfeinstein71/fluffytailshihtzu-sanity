@@ -66,3 +66,5 @@
   .upcoming-page .upcoming-current-grid .tileName { font-size: 24px; }
   .upcoming-page .upcoming-current-grid .tileMeta { padding: 16px; }
 }
+
+.litter-places {border-top:1px solid #D8BD9D;padding-top:22px;margin-top:22px}.litter-places ol {list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}.litter-places li {border:1px solid #D8BD9D;background:#F8F4ED;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:4px;color:#58493D}.litter-places li span{font-size:.875rem}.litter-places p{font-size:.95rem;line-height:1.6}

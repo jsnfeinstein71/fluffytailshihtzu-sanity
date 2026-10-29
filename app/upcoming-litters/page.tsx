@@ -4,6 +4,8 @@ import '../home.css'
 import './upcoming.css'
 import {pageDescriptions} from '@/lib/public-copy'
 import Link from 'next/link'
+import LitterPlaces from './LitterPlaces'
+import {litterReservationsEnabled} from '@/lib/litter-reservations'
 import {getInventory} from '@/sanity/lib/inventory'
 import {formatCurrency, formatDate, getLitterDate, getLittersByStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
@@ -62,11 +64,11 @@ export default async function UpcomingLittersPage() {
               </dl>
               <p>See each puppy’s profile for the exact price. The deposit counts toward that total.</p>
             </div> : null}
-            <div className="expected-inquiry">
+            {litterReservationsEnabled()?<LitterPlaces litterId={litter._id} title={litter.title||'Upcoming litter'}/>:<>            <div className="expected-inquiry">
               <h3>Interested in this litter?</h3>
               <p>Tell Jeanne which litter you’re following and a little about the home you have in mind. Asking now starts a conversation; it doesn’t reserve a puppy.</p>
               <Link className="brand-button" href="/puppy-inquiry?interest=waitlist">Ask Jeanne about this litter <span aria-hidden="true">&rarr;</span></Link>
-            </div>
+            </div></>}
           </div>
         </div>
       </section>

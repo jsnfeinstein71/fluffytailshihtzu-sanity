@@ -3,6 +3,7 @@ import type {SavedFamily} from './persistence'
 
 export type Channel = 'Email' | 'Text'
 export type Family = {
+  litterId?:string;litterTitle?:string;
   paymentConfirmationMessage?:string; testCommunicationsAllowed?:boolean;testSmsAvailable?:boolean; paymentTestScenario?:string; smsBlockedReason?:string; historicalBalanceNeedsReview?:boolean; agreedTotalCents?:number; inquiryId?:string; interestPuppyId?:string; puppySlug?:string; source?:'inquiry'|'fixture'
   id: string; name: string; initials: string; location: string; email: string; phone: string
   preference: Channel | 'Either'; smsConsent: boolean; stage: string; puppyId?: string

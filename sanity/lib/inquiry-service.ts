@@ -43,6 +43,8 @@ export async function acceptInquiry(input: InquiryInput, ip: string) {
     ? await client.fetch<Puppy | null>(puppyQuery, {slug: input.puppySlug}, {perspective: 'published', cache: 'no-store'})
     : null
   if (input.puppySlug && !puppy) throw new InquiryError('This puppy is no longer listed. Please refresh or send a general inquiry.', 409)
+  const litter=input.litterId?await sanity.fetch<{_id:string;title:string}|null>('*[_type=="litter" && _id==$id && isVisible!=false && status in ["planned","upcoming","current","active"] && !(_id in path("drafts.**"))][0]{_id,title}',{id:input.litterId},{cache:'no-store'}):null
+  if(input.litterId&&!litter)throw new InquiryError('This litter is no longer accepting inquiries. Ask Jeanne about future litters.',409)
   const id = privateRecordId('inquiry', inquiryHash('duplicate', JSON.stringify({...input, day: new Date().toISOString().slice(0, 10)})))
   const existingInquiry=await sanity.getDocument(id)
   if(existingInquiry){if((process.env.VERCEL_ENV==='preview'||liveWorkspaceEnabled())){try{await projectInquiryFamily(existingInquiry as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Saved inquiry remains accepted; staff can synchronize again. */}}return {duplicate:true}}
@@ -60,8 +62,8 @@ export async function acceptInquiry(input: InquiryInput, ip: string) {
     preferredContactMethod: input.preferredContactMethod, message: input.message,
     smsConsent: input.smsConsent, consentAt: input.smsConsent ? new Date().toISOString() : undefined,
     consentVersion: 'native-2026-10', interest: input.interest,
-    puppyId: puppy?._id, litterId: puppy?.litterId,
-    puppy: puppy?.name || '', litter: puppy?.litterTitle || '', puppyPageUrl,
+    puppyId: puppy?._id, litterId: puppy?.litterId||litter?._id,
+    puppy: puppy?.name || '', litter: puppy?.litterTitle || litter?.title || '', puppyPageUrl,
     source: 'fluffytail-native', notificationStatus: numbers.length ? 'pending' : 'preview',
   })
   if((process.env.VERCEL_ENV==='preview'||liveWorkspaceEnabled())){try{await projectInquiryFamily(record as unknown as Parameters<typeof projectInquiryFamily>[0])}catch{/* Inquiry is saved; staff synchronization can recover its family projection. */}}
