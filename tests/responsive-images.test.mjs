@@ -6,6 +6,7 @@ import {renderToStaticMarkup} from 'react-dom/server'
 import {imageSources} from './image-source-helpers.mjs'
 const {getSanityImageProps} = await import('../lib/responsive-images.ts')
 const {default: PublicImage} = await import('../app/components/PublicImage.tsx')
+const {default: LitterTile} = await import('../app/components/LitterTile.tsx')
 
 const original = 'https://cdn.sanity.io/images/3glz6dkx/production/3fa2bdd49dd9673a24c8a16ead795e9bb514b52b-2048x1984.jpg'
 
@@ -54,4 +55,21 @@ test('non-square CMS photos retain the existing CSS-controlled stage dimensions'
   assert.match(html, /srcSet=/)
   assert.doesNotMatch(html, /\s(?:width|height)="/)
   assert.match(html, /class="puppy-detail-photo"/)
+})
+
+test('historical litter images avoid eager React preloads without changing shared tile content or default callers', () => {
+  const litter = {_id: 'historical', title: 'Historical litter', status: 'past', birthDate: '2025-03-23', summary: 'Original litter summary.', groupPhotoUrl: original}
+  const before = renderToStaticMarkup(createElement(LitterTile, {litter}))
+  const after = renderToStaticMarkup(createElement(LitterTile, {litter, photoSizes: '(max-width: 380px) calc(100vw - 42px), 338px'}))
+  assert.match(before, /<link[^>]+rel="preload"[^>]+as="image"/)
+  assert.doesNotMatch(after, /<link[^>]+rel="preload"/)
+  assert.match(after, /loading="lazy"/)
+  assert.match(after, /srcSet=/)
+  assert.deepEqual(imageSources(after).map(src => {const url = new URL(src); return url.origin + url.pathname}), [original])
+  assert.doesNotMatch(after, /\s(?:width|height)="/)
+  const surroundingMarkup = html => html.replace(/<link\b[^>]*>/g, '').replace(/<img\b[^>]*>/g, '<img/>')
+  assert.equal(surroundingMarkup(after), surroundingMarkup(before))
+  // Only the historical listing opts in. Shared current/upcoming callers retain
+  // their original source, loading behavior and CSS-controlled dimensions.
+  assert.doesNotMatch(before, /loading=|srcSet=|sizes=/)
 })

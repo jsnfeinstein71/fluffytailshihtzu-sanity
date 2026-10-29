@@ -75,7 +75,7 @@ export default async function AvailablePuppiesPage() {
           const members = getPuppiesForLitter(puppies, litter._id)
           return <details className="available-past-litter" key={litter._id} data-past-litter-id={litter._id}>
             <summary><span className="available-past-summary"><span>{litter.title || 'Past litter'}</span><span>{members.length} {members.length === 1 ? 'puppy' : 'puppies'}</span></span></summary>
-            <div className="available-past-overview"><LitterTile litter={litter} /></div>
+            <div className="available-past-overview"><LitterTile litter={litter} photoSizes="(max-width: 380px) calc(100vw - 42px), 338px" /></div>
             <div className="puppyGrid">{members.map(puppy => <PuppyCard key={puppy._id} puppy={puppy} />)}</div>
           </details>
         })}
