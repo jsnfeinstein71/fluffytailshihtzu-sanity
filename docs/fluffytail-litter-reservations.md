@@ -6,6 +6,8 @@ Historical first Preview checkpoint: this release required `FLUFFYTAIL_LITTER_RE
 
 ## October 29 continuation — current release state
 
+**Production release authorized October 29:** the owner approved PR #21 merge/deploy and activation through the existing Production services. Final checks at `8ad6735` show GitHub verify and Vercel successful; all 368 tests, typecheck and lint pass locally (16 existing image warnings). The real `live-v1` adapter, live signature-verified callback and branded messages are included. Release verification is read-only: no customer sends, live payments or real selection-position offers. Preserve the completed Preview and all history. The earlier disabled-release checkpoints below describe development; final deployment evidence will supersede them after verification.
+
 PR #21 incorporates current main `9805029` (published responsive litter images) without resetting prior work. Both real and synthetic reservation adapters now use the same revision-guarded four-place workflow. Production is **still disabled**: the separate `FLUFFYTAIL_LITTER_RESERVATIONS_LIVE_ENABLED` switch has not been configured or activated. The earlier `FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED=1` remains synthetic-only; it cannot activate a real litter. Existing Production deployment, passkeys, inquiries, financial records, messages and migration remain unchanged.
 
 ### Fresh-device owner access
