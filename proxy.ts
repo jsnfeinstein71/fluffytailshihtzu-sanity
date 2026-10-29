@@ -18,7 +18,7 @@ function continueStaff(req:NextRequest){
 
 export async function proxy(req: NextRequest) {
   const path=req.nextUrl.pathname,mode=passkeyMode(),host=isPasskeyHost(req)
-  if(host&&path==='/inbox/unlock'&&req.nextUrl.searchParams.has('enroll')){const owner=req.nextUrl.searchParams.get('enroll');return NextResponse.redirect(new URL('/inbox/enroll'+(owner==='jeanne'||owner==='jason'?'?owner='+owner:''),req.url))}
+  if(host&&(path==='/inbox/enroll'&&mode==='cutover'||path==='/inbox/unlock'&&req.nextUrl.searchParams.has('enroll'))){const owner=req.nextUrl.searchParams.get(path==='/inbox/enroll'?'owner':'enroll');return NextResponse.redirect(new URL((mode==='cutover'?'/inbox/unlock':'/inbox/enroll')+(owner==='jeanne'||owner==='jason'?'?owner='+owner:''),req.url))}
   if(path==='/')return host?NextResponse.redirect(new URL('/inbox/workspace',req.url)):NextResponse.next()
   if(path==='/inbox/unlock'||path==='/inbox/enroll'||path==='/inbox/auth/api'||path==='/inbox/auth/invitation'){
     if(!host)return NextResponse.redirect(new URL('/inbox/unlock',adminOrigin))

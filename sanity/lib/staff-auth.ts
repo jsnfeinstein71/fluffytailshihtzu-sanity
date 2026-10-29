@@ -100,6 +100,7 @@ async function checkedInvitation(key:unknown,token:unknown){
   return invitation
 }
 export async function enrollmentContext(req:Request,input:Record<string,unknown>){
+  if(passkeyMode()!=='transition')throw new StaffAuthError('Initial owner enrollment is closed. Use your passkey or recovery code.',403)
   const {key,token}=enrollmentInput(req,input),identity=await getStaffIdentity(req,{recovery:true})
   const signedInAs=identity?{key:identity.owner.key,name:ownerNames[identity.owner.key]}:null
   if(!token)return {ready:false,ownerKey:ownerKey(key)?key:null,signedInAs}

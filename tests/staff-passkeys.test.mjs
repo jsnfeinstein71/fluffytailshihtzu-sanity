@@ -30,6 +30,29 @@ test('passkey and session management is owner-scoped and guards the last key and
 test('distributed rate limits fail closed across requests and storage errors',async()=>{for(let i=0;i<20;i++)assert.equal((await post({action:'authenticate-options'})).response.status,200);assert.equal((await post({action:'authenticate-options'})).response.status,429);db.failNext(new Error('offline'));assert.equal((await post({action:'register-options'})).response.status,503)})
 test('wrong host/origin, Basic credentials and pre-cutover sessions cannot authenticate at admin or after cutover',async()=>{const basic='Basic '+Buffer.from('fixture-staff:fixture-old-password').toString('base64');assert.equal((await requireOperator(request('/inbox',undefined,{}, {authorization:basic}))).status,401);assert.equal((await post({action:'authenticate-options'}, {},{origin:'https://www.fluffytailshihtzu.com'})).response.status,403);process.env.STAFF_PASSKEY_MODE='cutover';const old=new Request('https://www.fluffytailshihtzu.com/inbox',{headers:{authorization:basic}});assert.equal((await requireOperator(old)).status,401);assert.equal((await legacy.POST(old)).status,410);assert.equal((await ownerLinks.POST(old)).status,410);assert.equal((await bootstrap.POST(old)).status,403);const redirect=await proxy(new NextRequest(old));assert.equal(redirect.status,307);assert.match(redirect.headers.get('location'),/^https:\/\/admin.fluffytailshihtzu.com\/inbox\/unlock/);for(const path of ['/inbox/api/sms-send','/inbox/workspace/api/files','/inbox/workspace/api/email'])assert.equal((await proxy(new NextRequest('https://old.vercel.app'+path,{method:'POST',headers:{authorization:basic}}))).status,401)})
 test('preview credentials cannot run against production storage or the production origin',async()=>{process.env.VERCEL_ENV='preview';assert.equal((await post({action:'authenticate-options'})).response.status,503);process.env.NEXT_PUBLIC_SANITY_PROJECT_ID='gu1xkpsg';process.env.NEXT_PUBLIC_SANITY_DATASET='synthetic';process.env.STAFF_PASSKEY_ORIGIN=origin;assert.equal((await post({action:'authenticate-options'})).response.status,503);process.env.STAFF_PASSKEY_ORIGIN='https://staff-preview.example';assert.equal((await post({action:'authenticate-options'})).response.status,403)})
+
+test('final cutover preserves both passkey sessions and recovery while closing every initial-enrollment entry',async()=>{
+ const jeanne=await enroll('jeanne'),jason=await enroll('jason')
+ const before=JSON.stringify([...db.documents.values()].filter(d=>['staffOwner','staffCredential','staffSession'].includes(d._type)))
+ const {makeStaffSession,staffCookie}=await import('../lib/staff-session.ts')
+ const legacyCookie=makeStaffSession('https://www.fluffytailshihtzu.com')
+ process.env.STAFF_PASSKEY_MODE='cutover';delete process.env.INBOX_BASIC_AUTH_USER;delete process.env.INBOX_BASIC_AUTH_PASS
+ for(const person of [jeanne,jason])assert.equal(await requireOperator(request('/inbox/workspace',undefined,person.jar)),null)
+ assert.equal(JSON.stringify([...db.documents.values()].filter(d=>['staffOwner','staffCredential','staffSession'].includes(d._type))),before)
+ for(const path of ['/inbox/enroll?owner=jeanne','/inbox/unlock?enroll=jeanne']){const r=await proxy(new NextRequest(origin+path));assert.equal(r.status,307);assert.equal(r.headers.get('location'),origin+'/inbox/unlock?owner=jeanne')}
+ assert.equal((await post({action:'enrollment-context',owner:'jeanne'})).response.status,403)
+ assert.equal((await post({action:'invite-owner',owner:'jeanne'},jason.jar)).response.status,403)
+ for(const host of ['https://www.fluffytailshihtzu.com',origin,'https://historical.vercel.app']){
+  const old=new Request(host+'/inbox/workspace/api/state',{headers:{cookie:staffCookie+'='+legacyCookie,authorization:'Basic '+Buffer.from('fixture-staff:fixture-old-password').toString('base64')}})
+  assert.equal((await requireOperator(old)).status,401)
+ }
+ const {d}=jeanne;assert.equal((await login(d)).response.status,200)
+ const recovered=await post({action:'recover',owner:'jason',code:jason.codes[1]});assert.equal(recovered.response.status,200)
+ assert.equal(await auth.getStaffIdentity(request('/inbox/security',undefined,recovered.jar)),null)
+ assert(await auth.getStaffIdentity(request('/inbox/security',undefined,recovered.jar),{recovery:true}))
+ assert.equal((await post({action:'register-options'},recovered.jar)).response.status,200)
+ assert.equal(await requireOperator(request('/inbox',undefined,jeanne.jar)),null)
+})
 test('all original and workspace staff APIs deny signed-out calls before provider or customer-record effects',async()=>{
  for(const path of ['api/create-deposit-session','api/create-invoice','api/create-payment-link','api/delete-conversation','api/sms-send','api/upload-image','workspace/api/state','workspace/api/email','workspace/api/sms','workspace/api/files','workspace/api/payment-receipt']){
   const route=await import('../app/inbox/'+path+'/route.ts')
