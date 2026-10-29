@@ -77,19 +77,6 @@ export default async function TheBreedPage() {
             </div>
           </div>
         </div>
-        <aside className="card content-aside">
-          <div className="pad">
-            <h2 className="panelTitle">Further reading</h2>
-            <a
-              className="text-link"
-              href="https://www.akc.org/dog-breeds/shih-tzu/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Shih Tzu breed guide — American Kennel Club
-            </a>
-          </div>
-        </aside>
       </div>
       <section className="card section">
         <div className="pad">
