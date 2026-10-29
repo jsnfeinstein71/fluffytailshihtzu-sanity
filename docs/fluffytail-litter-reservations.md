@@ -134,3 +134,22 @@ Owner handoff: run `C:/Users/jlcfe/AppData/Local/FluffyTail/LitterReservations/C
 
 
 A blocked checkout now still selects the existing final request in the email composer, with its matching subject and a clear Link not ready label; it cannot leave the old deposit attached or silently treat the missing link as ready. Known obsolete payment URLs are removed while the link is incomplete, preserving personal prose and other URLs; later successful preparation adds the same request's working link. Email review/dispatch requires the ready link in both real and isolated payment workspaces. The request panel itself shows the provider explanation so mobile users need not leave Details to find it. Hosted diagnosis left all ten Rowan/litter/puppy/payment/draft baseline documents exactly unchanged before this owner-authorized composer correction.
+
+
+### Owner claim completed; final-request recovery verified
+
+The owner completed the official Stripe claim while signed into the existing FluffyTail Stripe account. The same sandbox account (`acct_1UUq83RbnssrQ3Z0`) retains its payments and Checkout history. Its old claimable key still had the reduced quota; the existing regular test key was privately verified against that same account and the original paid $450 session, then saved only to `FLUFFYTAIL_STRIPE_TEST_SECRET_KEY` for Preview / `codex/four-place-litter-reservations`. No sandbox replacement, webhook-secret rotation, Production configuration or live-key access occurred. The hosted application continues to run independently of this laptop. **This resolves the claim/rate-limit blocker described above.**
+
+Ready deployment: `dpl_DMuKV1FPh4xQeuab6MWH9YobaPMN`, application commit `15ee790aae91d9cc18ddc281efa83aa2ebfe0675`, Preview only, assigned to `https://fluffytail-litter-reservations-test.vercel.app`. Later documentation-only commits record this evidence.
+
+Hosted verification through the owner's branded staff session:
+
+- Prepare existing payment link completed Rowan's original $1,500 request. The same request ID, public capability, creation date, amount and quote remain; there is exactly one final-payment request and one corresponding Stripe Checkout session. It is test-mode, open and unpaid.
+- Add to message shows Practice Juniper / Final payment request / $1,500 and the matching saved subject. Re-insertion reused the existing checkout. The old Autumn deposit attachment is replaced. Personal text preservation and old-URL replacement have focused regression coverage; Rowan's original body was the generated deposit introduction and now uses the final-payment introduction.
+- Open payment request reaches the account-free customer page showing total $1,950, paid $450, remaining $1,500, after-payment balance $0, and Reserved. Continue reaches the actual Stripe sandbox $1,500 checkout. No payment form was submitted and no customer message was sent.
+- Copy link was verified by pasting into the workspace's temporary unsaved search field and comparing with the exact existing request link; the search was then cleared. The original draft was not used as a paste target.
+- Desktop 1280px and mobile 390px: no document/details horizontal overflow, all visible details buttons fit their column, independently scrolling details keep the outer page at scroll position zero. Screenshots are in the private task evidence folder as `owner-fixes-desktop.jpg` and `owner-fixes-mobile.jpg`.
+- All eight non-draft/non-final-link baseline documents remain exactly unchanged, including the verified deposit, transfer/selection history, original puppy/family and litter records. Only the authorized saved composer correction and checkout fields on the original final request changed. Spring still exposes four anonymous positions: Reserved, Available, Available, Available.
+- 363 regression tests passed, type checking passed, lint zero errors (16 existing image warnings), hosted build READY. Signed-out staff API remains denied without a Basic popup; Production reservation offers remain disabled.
+
+Owner entry: open the stable Preview workspace, choose Fictional Rowan Family — TEST, then Details → Payment history → Payment requests → Final payment $1,500 → Open payment request (or Copy link). The owner may continue their existing unpaid test. This phase made no additional payment, message, reservation transfer or puppy-status change. Production release and the historical migration remain paused.
