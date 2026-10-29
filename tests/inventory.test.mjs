@@ -181,7 +181,7 @@ test('upcoming missing content remains honest and inquiry links use the existing
   const html = await render(Upcoming)
   for (const text of ['Date to be confirmed', 'Announcement coming soon']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /class="expected-parents"|The parents|Parent details to come/)
-  assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
+  assert.match(html, /href="\/puppy-inquiry\?interest=waitlist&amp;litterId=pending"/)
   assert.doesNotMatch(html, /\$0|\$400|Ready |Default puppy price|<iframe|tally.so|class="upcoming-current"/)
   dataset = []
   const empty = await render(Upcoming)
@@ -200,7 +200,7 @@ test('upcoming pricing and partial parent details come from Sanity without inven
     litter('quoted', 'planned', {price: 1800.5, deposit: 500.25, dam: {_ref: 'mother'}, expectedAvailability: 'Expected homecoming in February'}),
   ]
   const html = await render(Upcoming)
-  for (const text of ['$1,800.50', '$500.25', 'The deposit counts toward that total.', 'Synthetic Mother', 'Expected homecoming in February']) assert.ok(html.includes(text), text)
+  for (const text of ['$1,800.50', '$500.25', 'Deposit toward the total', 'Synthetic Mother', 'Expected homecoming in February']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /\$400|Parent details to come|Name to be confirmed|<dt>Father<\/dt>/)
   dataset[1].expectedAvailability = null
   assert.doesNotMatch(await render(Upcoming), /Expected homecoming in February/)
@@ -235,7 +235,7 @@ test('puppy detail presents original photo, labeled facts, exact override pricin
     puppy('detail-puppy', 'detail-litter', 'available', {name: 'Synthetic puppy', color: 'Cream and White', summary: 'A Sanity note.', overridePrice: 2000.5, mainImage: {asset: {_ref: 'portrait'}}}),
   ]
   const html = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
-  for (const text of ['Synthetic puppy', 'From Synthetic litter', '/original-puppy.jpg', 'A Sanity note.', '$2,000.50', '$400.00', '$1,600.50', 'The deposit is non-refundable and counts toward the total price.']) assert.ok(html.includes(text), text)
+  for (const text of ['Synthetic puppy', 'From Synthetic litter', '/original-puppy.jpg', 'A Sanity note.', '$2,000.50', '$400.00', '$1,600.50', 'The deposit counts toward the total price.']) assert.ok(html.includes(text), text)
   assert.match(html, /<dt>Sex<\/dt><dd>Female<\/dd>/)
   assert.match(html, /<dt>Color<\/dt><dd>Cream and White<\/dd>/)
   assert.match(html, /<dt>Estimated ready date<\/dt><dd>Dec 12<\/dd>/)
@@ -359,7 +359,7 @@ test('pricing overview retains Sanity ranges, puppy overrides and invalid-price 
   assert.match(html, /\$1,600\.00 to \$2,100\.25/)
   assert.doesNotMatch(html, /\$9,000/)
   assert.match(html, /\$400\.00 to \$500\.00/)
-  assert.match(html, /Your deposit is non-refundable and counts toward your puppy’s total price/)
+  assert.match(html, /Your deposit counts toward your puppy’s total price/)
   assert.doesNotMatch(html, /\$300/)
   assert.match(html, /<ol class="pricing-steps">/)
   dataset = [litter('invalid', 'current', {price: 0, deposit: 400})]

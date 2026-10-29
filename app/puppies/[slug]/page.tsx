@@ -12,7 +12,6 @@ import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyS
 import {puppyBreadcrumbs, puppyMetadata} from '@/lib/seo'
 import StructuredData from '../../components/StructuredData'
 import PublicImage from '../../components/PublicImage'
-import {PublishedPuppyAnalytics} from '../../components/PublicAnalytics'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -38,7 +37,6 @@ export default async function PuppyDetailPage({params}: Props) {
   const profilePortrait = getPuppyProfilePortrait(puppy)
 
   return <main className="wrap puppy-detail-page">
-    <PublishedPuppyAnalytics slug={slug} />
     <StructuredData data={puppyBreadcrumbs(puppy, slug)} />
     <Link className="text-link" href="/available-puppies"><span aria-hidden="true">&larr;</span> Back to our puppies</Link>
     <div className="puppy-detail-layout">
@@ -68,7 +66,7 @@ export default async function PuppyDetailPage({params}: Props) {
             <div><dt>Balance after deposit</dt><dd>{formatCurrency(finalPayment!, true)}</dd></div>
           </> : null}
         </dl> : null}
-        <p className="puppy-detail-payment-note">{pricing ? 'The deposit is non-refundable and counts toward the total price. The remaining balance is due before or at pickup.' : 'Ask Jeanne to confirm this puppy’s price and deposit before paying.'}</p>
+        <p className="puppy-detail-payment-note">{pricing ? 'The deposit counts toward the total price. The remaining balance is due before or at pickup.' : 'Ask Jeanne to confirm this puppy’s price and deposit before paying.'}</p>
         <div className="puppy-detail-action">{canInquire ? <Link className="brand-button" href={puppyInquiryUrl}>Ask Jeanne about {puppy.name || 'this puppy'} <span aria-hidden="true">&rarr;</span></Link> : <>
           <p>{unavailablePuppyNotice(puppy.name || 'This puppy',puppy.status)}</p>
           <Link className="brand-button" href="/available-puppies">See available puppies</Link><Link className="text-link" href="/puppy-inquiry?interest=waitlist">Ask about future puppies</Link>

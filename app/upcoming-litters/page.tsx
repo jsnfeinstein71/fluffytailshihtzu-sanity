@@ -23,7 +23,8 @@ export default async function UpcomingLittersPage() {
     <header className="upcoming-intro">
       <p className="eyebrow">Planning ahead</p>
       <h1 className="h1">Upcoming Litters</h1>
-      <p className="lead">Not choosing a puppy today? Here’s what we’re looking forward to. Tell Jeanne when you hope to bring your little one home.</p>
+      <p className="lead">Hoping for a puppy from an upcoming litter?</p>
+      <p>You don’t have to wait until the puppies arrive to talk with Jeanne. Tell her what you’re hoping for, and she’ll help you decide whether an upcoming litter could be a good fit.</p>
     </header>
 
     {litterReservationMode()==='test'?<p className="expected-status" role="status">TEST — fictional litters only. No real charges or inventory changes. Use a fictional @example.test email for inquiries; messages are disabled.</p>:null}
@@ -37,7 +38,6 @@ export default async function UpcomingLittersPage() {
           <div><span className="expected-status">Upcoming</span><h2>{litter.title || 'Expected litter'}</h2></div>
           <dl className="expected-litter-date"><div><dt>Expected around</dt><dd>{date || 'Date to be confirmed'}</dd></div></dl>
         </header>
-        <p>Expected dates are estimates. Jeanne will confirm timing as the litter develops.</p>
         <div className="expected-litter-layout">
           <figure className="expected-announcement">
             {litter.groupPhotoUrl ? <img
@@ -63,12 +63,11 @@ export default async function UpcomingLittersPage() {
                 <div><dt>Litter price</dt><dd>{formatCurrency(pricing.totalCents / 100, pricing.totalCents % 100 !== 0)}</dd></div>
                 <div><dt>Deposit toward the total</dt><dd>{formatCurrency(pricing.depositCents / 100, pricing.depositCents % 100 !== 0)}</dd></div>
               </dl>
-              <p>See each puppy’s profile for the exact price. The deposit counts toward that total.</p>
             </div> : null}
-            {litterReservationsEnabled()?<LitterPlaces litterId={litter._id} title={litter.title||'Upcoming litter'}/>:<>            <div className="expected-inquiry">
+            {litterReservationsEnabled()?<LitterPlaces litterId={litter._id} title={litter.title||'Upcoming litter'} depositCents={pricing?.depositCents??null} showGuidance={index===0}/>:<>            <div className="expected-inquiry">
               <h3>Interested in this litter?</h3>
               <p>Tell Jeanne which litter you’re following and a little about the home you have in mind. Asking now starts a conversation; it doesn’t reserve a puppy.</p>
-              <Link className="brand-button" href="/puppy-inquiry?interest=waitlist">Ask Jeanne about this litter <span aria-hidden="true">&rarr;</span></Link>
+              <Link className="brand-button" href={'/puppy-inquiry?interest=waitlist&litterId='+encodeURIComponent(litter._id)}>Ask Jeanne about this litter <span aria-hidden="true">&rarr;</span></Link>
             </div></>}
           </div>
         </div>
