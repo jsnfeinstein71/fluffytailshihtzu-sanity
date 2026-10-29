@@ -1,10 +1,10 @@
 {
   "name": "Staff access only through current application hosts",
-  "description": "Publish only during verified passkey cutover. Covers old immutable staff routes regardless of application credentials or deployment sharing bypasses.",
+  "description": "Final verified passkey cutover. Covers normalized staff routes and legacy Next data paths regardless of old credentials or sharing bypasses.",
   "active": true,
   "conditionGroup": [
     {"conditions": [
-      {"type": "path", "op": "pre", "value": "/inbox"},
+      {"type": "path", "op": "re", "value": "^/([iI][nN][bB][oO][xX]|_next/data/[^/]+/[iI][nN][bB][oO][xX]|.*%)"},
       {"type": "host", "op": "neq", "value": "admin.fluffytailshihtzu.com"},
       {"type": "host", "op": "neq", "value": "www.fluffytailshihtzu.com"}
     ]}
