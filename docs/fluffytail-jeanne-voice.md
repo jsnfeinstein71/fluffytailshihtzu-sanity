@@ -9,3 +9,9 @@ Only `homepageHeadline` and `homepageIntro` on published site settings `2cbf546c
 No layout, CSS, photograph, price-dialog, reservation explanation, payment disclosure, legal identity, staff account, financial record, message or reservation changes. Branded navigation such as “Our puppies” refers to the business’s listings rather than a second personal narrator. Formal business/legal and system-status language remains unchanged.
 
 Verification: public rendered-copy regression checks; complete application test suite, typecheck and lint; exact-head CI/build; published Sanity readback; live desktop/mobile homepage, About, Puppy Resources, Contact, Available Puppies and Pricing checks; upcoming positions and voluntary price detail spot checks. No form submissions, customer messages, payments or reservation actions.
+
+## Authorized mobile Upcoming Litters follow-up
+
+Replace the duplicate “Already here” eyebrow/title with one heading, “Puppies already here”, retaining the Meet our puppies link. At phone widths up to 600px, stack the existing current-litter photograph above its text, use a 4:3 image area with a slightly raised focal position, and give the full-width text 20px padding. The desktop card keeps its existing 150px image/text columns. No shared litter-card component, CMS image, pricing, dialog, inquiry, reservation or payment behavior changes.
+
+Verify the actual Elsie photograph and text at narrow phone widths, the existing price-details dialog, and the unchanged desktop arrangement before publishing. This is a continuation of the owner-authorized production correction.

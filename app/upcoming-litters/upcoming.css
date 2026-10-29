@@ -35,7 +35,6 @@
 .upcoming-page .upcoming-empty p { margin: 14px 0 22px; color: var(--brand-muted); }
 .upcoming-page .upcoming-current { border-top: 1px solid var(--brand-line); padding-top: 30px; }
 .upcoming-page .upcoming-current-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
-.upcoming-page .upcoming-current-heading .eyebrow { margin-bottom: 10px; }
 .upcoming-page .upcoming-current-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .upcoming-page .upcoming-current-grid .tile { display: grid; grid-template-columns: 150px minmax(0, 1fr); border: 1px solid var(--brand-line); border-radius: 6px; box-shadow: none; }
 .upcoming-page .upcoming-current-grid .tileImg { height: 100%; min-height: 150px; aspect-ratio: auto; border: 0; }
@@ -62,9 +61,11 @@
   .upcoming-page .expected-litter-date dd { font-size: 16px; }
   .upcoming-page .expected-inquiry .brand-button { width: 100%; }
   .upcoming-page .upcoming-current-heading { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .upcoming-page .upcoming-current-grid .tile { grid-template-columns: 110px minmax(0, 1fr); }
+  .upcoming-page .upcoming-current-grid .tile { grid-template-columns: minmax(0, 1fr); }
+  .upcoming-page .upcoming-current-grid .tileImg { height: auto; min-height: 0; aspect-ratio: 4 / 3; }
+  .upcoming-page .upcoming-current-grid .tileImg img { object-position: center 35%; }
   .upcoming-page .upcoming-current-grid .tileName { font-size: 24px; }
-  .upcoming-page .upcoming-current-grid .tileMeta { padding: 16px; }
+  .upcoming-page .upcoming-current-grid .tileMeta { min-width: 0; padding: 20px; }
 }
 
 .litter-places {border-top:1px solid #D8BD9D;padding-top:22px;margin-top:22px}.litter-places ol {list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}.litter-places li {border:1px solid #D8BD9D;background:#F8F4ED;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:4px;color:#58493D}.litter-places li span{font-size:.875rem}.litter-places p{font-size:.95rem;line-height:1.6}

@@ -77,7 +77,7 @@ export default async function UpcomingLittersPage() {
     </section> : null}
 
     {activeLitters.length ? <section className="upcoming-current" aria-labelledby="current-litters-title">
-      <div className="upcoming-current-heading"><div><p className="eyebrow">Already here</p><h2 id="current-litters-title">Already here</h2></div><Link className="text-link" href="/available-puppies">Meet our puppies <span aria-hidden="true">&rarr;</span></Link></div>
+      <div className="upcoming-current-heading"><h2 id="current-litters-title">Puppies already here</h2><Link className="text-link" href="/available-puppies">Meet our puppies <span aria-hidden="true">&rarr;</span></Link></div>
       <div className="upcoming-current-grid">{activeLitters.map(litter => <LitterTile key={litter._id} litter={litter} />)}</div>
     </section> : null}
   </main>

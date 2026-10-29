@@ -191,7 +191,8 @@ test('upcoming missing content remains honest and inquiry links use the existing
   dataset = [litter('current-only')]
   const currentOnly = await render(Upcoming)
   assert.match(currentOnly, /Nothing announced just yet/)
-  assert.match(currentOnly, /Already here/)
+  assert.match(currentOnly, /<h2 id="current-litters-title">Puppies already here<\/h2>/)
+  assert.doesNotMatch(currentOnly, /<p class="eyebrow">Already here/)
   assert.match(currentOnly, /href="\/available-puppies"/)
 })
 
