@@ -7,9 +7,10 @@ import Link from 'next/link'
 import LitterPlaces from './LitterPlaces'
 import {litterReservationMode,litterReservationsEnabled} from '@/lib/litter-reservations'
 import {getInventory} from '@/sanity/lib/inventory'
-import {formatCurrency, formatDate, getLitterDate, getLittersByStatus} from '@/lib/inventory'
+import {formatDate, getLitterDate, getLittersByStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
 import LitterTile from '../components/LitterTile'
+import PriceDetails from '../components/PriceDetails'
 
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({title: 'Upcoming Litters', description:pageDescriptions.upcoming, path: '/upcoming-litters'})
@@ -58,12 +59,7 @@ export default async function UpcomingLittersPage() {
               </div>)}</dl>
             </div> : null}
             {litter.expectedAvailability ? <div className="expected-availability"><h3>Looking ahead</h3><p>{litter.expectedAvailability}</p></div> : null}
-            {pricing ? <div className="expected-pricing">
-              <dl>
-                <div><dt>Litter price</dt><dd>{formatCurrency(pricing.totalCents / 100, pricing.totalCents % 100 !== 0)}</dd></div>
-                <div><dt>Deposit toward the total</dt><dd>{formatCurrency(pricing.depositCents / 100, pricing.depositCents % 100 !== 0)}</dd></div>
-              </dl>
-            </div> : null}
+            <div className="expected-pricing"><PriceDetails name={litter.title || 'Upcoming litter'} pricing={{litterPrice:litter.price,litterDeposit:litter.deposit}} pricingStatus={litter.pricingStatus} context="litter" upcoming /></div>
             {litterReservationsEnabled()?<LitterPlaces litterId={litter._id} title={litter.title||'Upcoming litter'} depositCents={pricing?.depositCents??null} showGuidance={index===0}/>:<>            <div className="expected-inquiry">
               <h3>Interested in this litter?</h3>
               <p>Tell Jeanne which litter you’re following and a little about the home you have in mind. Asking now starts a conversation; it doesn’t reserve a puppy.</p>

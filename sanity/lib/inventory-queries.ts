@@ -4,7 +4,7 @@ const puppyFilter = `_type == "puppy" && ${published} && litter->_type == "litte
 
 const litterFields = `
   _id, title, status, birthDate, expectedBirthDate, expectedAvailability,
-  girlsCount, boysCount, price, deposit, sortOrder,
+  girlsCount, boysCount, price, deposit, pricingStatus, sortOrder,
   "summary": coalesce(summary, description),
   "groupPhotoUrl": coalesce(groupPhoto.asset->url, heroImage.asset->url, dam->mainImage.asset->url, sire->mainImage.asset->url),
   "sire": sire->{name, "photoUrl": mainImage.asset->url},
@@ -21,6 +21,7 @@ const puppyFields = `
   "birthDate": select(litter->status in ["current", "active", "past"] => litter->birthDate),
   "litterPrice": litter->price,
   "litterDeposit": litter->deposit,
+  "litterPricingStatus": litter->pricingStatus,
   "photoUrl": mainImage.asset->url
 `
 

@@ -29,6 +29,7 @@ export type Litter = {
   summary?: string | null
   price?: number | null
   deposit?: number | null
+  pricingStatus?: 'established' | 'estimated' | 'unset' | null
   groupPhotoUrl?: string | null
   sortOrder?: number | null
   sire?: Parent | null
@@ -52,6 +53,7 @@ export type Puppy = {
   overridePrice?: number | null
   litterPrice?: number | null
   litterDeposit?: number | null
+  litterPricingStatus?: 'established' | 'estimated' | 'unset' | null
 }
 
 export function normalizeLitterStatus(status?: string | null) {
