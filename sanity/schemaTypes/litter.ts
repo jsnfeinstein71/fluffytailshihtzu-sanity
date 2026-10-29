@@ -108,6 +108,13 @@ export const litterType = defineType({
       validation: (Rule) => Rule.positive().precision(2),
     }),
     defineField({
+      name: 'pricingStatus',
+      title: 'Public price description',
+      type: 'string',
+      options: {list: [{title: 'Established', value: 'established'}, {title: 'Estimated', value: 'estimated'}, {title: 'Not yet established', value: 'unset'}]},
+      description: 'Optional display label. Existing configured prices remain established when blank. This does not change recorded quotes or payment calculations.',
+    }),
+    defineField({
       name: 'deposit',
       title: 'Deposit',
       type: 'number',

@@ -67,7 +67,8 @@ test('browsing keeps three current litters separate, with all statuses and serve
     assert.equal(id, 'litter-' + index)
     for (const status of ['available', 'hold', 'reserved']) assert.equal((section.match(new RegExp(`data-puppy-id="${index}-${status}"`, 'g')) || []).length, 1)
     assert.equal((section.match(/View puppy/g) || []).length, 3)
-    assert.match(section, /The deposit counts toward that total/)
+    assert.match(section, /deposit toward the total/)
+    assert.match(section, /View price &amp; what’s included/)
     assert.match(section, /Estimated ready date: Nov 26/)
     assert.ok(section.includes(index === 1 ? '$500' : '$400'))
     assert.ok(section.includes(['$2,000', '$2,100', '$2,200'][index]))
@@ -96,7 +97,7 @@ test('browsing handles empty litters and invalid pricing without invented dates 
   assert.match(html, /Birth date to be confirmed/)
   assert.match(html, /Ask Jeanne about pricing/)
   assert.match(html, /href="\/puppies\/invalid-price"/)
-  assert.doesNotMatch(html, /\$0|\$400|Estimated ready date|Total puppy price/)
+  assert.doesNotMatch(html, /\$0|Estimated ready date|Total puppy price/)
   dataset = [litter('exact-cents', 'current', {price: 1600.5, deposit: 400.25}), puppy('exact-cents-puppy', 'exact-cents')]
   const cents = await render(Available)
   assert.match(cents, /\$1,600\.50/)
@@ -182,7 +183,7 @@ test('upcoming missing content remains honest and inquiry links use the existing
   for (const text of ['Date to be confirmed', 'Announcement coming soon']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /class="expected-parents"|The parents|Parent details to come/)
   assert.match(html, /href="\/puppy-inquiry\?interest=waitlist&amp;litterId=pending"/)
-  assert.doesNotMatch(html, /\$0|\$400|Ready |Default puppy price|<iframe|tally.so|class="upcoming-current"/)
+  assert.doesNotMatch(html, /\$0|Ready |Default puppy price|<iframe|tally.so|class="upcoming-current"/)
   dataset = []
   const empty = await render(Upcoming)
   assert.match(empty, /Nothing announced just yet/)
@@ -200,7 +201,7 @@ test('upcoming pricing and partial parent details come from Sanity without inven
     litter('quoted', 'planned', {price: 1800.5, deposit: 500.25, dam: {_ref: 'mother'}, expectedAvailability: 'Expected homecoming in February'}),
   ]
   const html = await render(Upcoming)
-  for (const text of ['$1,800.50', '$500.25', 'Deposit toward the total', 'Synthetic Mother', 'Expected homecoming in February']) assert.ok(html.includes(text), text)
+  for (const text of ['$1,800.50', '$500.25', 'deposit toward the total', 'Synthetic Mother', 'Expected homecoming in February']) assert.ok(html.includes(text), text)
   assert.doesNotMatch(html, /\$400|Parent details to come|Name to be confirmed|<dt>Father<\/dt>/)
   dataset[1].expectedAvailability = null
   assert.doesNotMatch(await render(Upcoming), /Expected homecoming in February/)
@@ -235,7 +236,7 @@ test('puppy detail presents original photo, labeled facts, exact override pricin
     puppy('detail-puppy', 'detail-litter', 'available', {name: 'Synthetic puppy', color: 'Cream and White', summary: 'A Sanity note.', overridePrice: 2000.5, mainImage: {asset: {_ref: 'portrait'}}}),
   ]
   const html = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
-  for (const text of ['Synthetic puppy', 'From Synthetic litter', '/original-puppy.jpg', 'A Sanity note.', '$2,000.50', '$400.00', '$1,600.50', 'The deposit counts toward the total price.']) assert.ok(html.includes(text), text)
+  for (const text of ['Synthetic puppy', 'From Synthetic litter', '/original-puppy.jpg', 'A Sanity note.', '$2,000.50', '$400 deposit toward the total', 'View price &amp; what’s included']) assert.ok(html.includes(text), text)
   assert.match(html, /<dt>Sex<\/dt><dd>Female<\/dd>/)
   assert.match(html, /<dt>Color<\/dt><dd>Cream and White<\/dd>/)
   assert.match(html, /<dt>Estimated ready date<\/dt><dd>Dec 12<\/dd>/)
@@ -251,9 +252,9 @@ test('puppy detail presents original photo, labeled facts, exact override pricin
 test('puppy detail retains the reservation gate and does not invent missing facts or prices', async () => {
   dataset = [litter('detail-litter', 'current', {birthDate: null, price: 0, deposit: 400}), puppy('detail-puppy', 'detail-litter', 'reserved', {sex: null, name: null})]
   const html = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
-  for (const text of ['Reserved', 'Puppy details', 'Photo coming soon', 'To be confirmed', 'Ask Jeanne to confirm this puppy’s price and deposit before paying.', 'is reserved']) assert.ok(html.includes(text), text)
+  for (const text of ['Reserved', 'Puppy details', 'Photo coming soon', 'To be confirmed', 'Price to be confirmed', 'is reserved']) assert.ok(html.includes(text), text)
   assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
-  assert.doesNotMatch(html, /Ask Jeanne about|Total puppy price|Final payment|\$0|\$400|<dt>Age<\/dt>|<dt>Estimated ready date<\/dt>|<dt>Color<\/dt>/)
+  assert.doesNotMatch(html, /Ask Jeanne about|Total puppy price|Final payment|\$0|<dt>Age<\/dt>|<dt>Estimated ready date<\/dt>|<dt>Color<\/dt>/)
   dataset[1].status = 'available'
   const available = await render(Detail, {params: Promise.resolve({slug: 'detail-puppy'})})
   assert.match(available, /Ask Jeanne about/)

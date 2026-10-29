@@ -5,10 +5,10 @@ import './available.css'
 import {pageDescriptions} from '@/lib/public-copy'
 import Link from 'next/link'
 import {getInventory} from '@/sanity/lib/inventory'
-import {formatCurrency, formatDate, getLittersByStatus, getPuppiesForLitter, getReadyDate} from '@/lib/inventory'
-import {tryPricing} from '@/lib/pricing'
+import {formatDate, getLittersByStatus, getPuppiesForLitter, getReadyDate} from '@/lib/inventory'
 import LitterTile from '../components/LitterTile'
 import PuppyCard from '../components/PuppyCard'
+import PriceDetails from '../components/PriceDetails'
 
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({title: 'Available Puppies', description:pageDescriptions.available, path: '/available-puppies'})
@@ -36,7 +36,6 @@ export default async function AvailablePuppiesPage() {
       <p className="sublead">Jeanne will confirm pickup timing with you.</p>
       {activeLitters.map(litter => {
         const members = getPuppiesForLitter(puppies, litter._id)
-        const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
         const born = formatDate(litter.birthDate)
         const ready = getReadyDate(litter.birthDate)
         return <section className="available-litter" key={litter._id} data-litter-id={litter._id}>
@@ -50,13 +49,7 @@ export default async function AvailablePuppiesPage() {
               </ul>
               {litter.summary ? <p className="available-litter-summary">{litter.summary}</p> : null}
             </div>
-            {pricing ? <div className="available-litter-pricing">
-              <dl>
-                <div><dt>Litter price</dt><dd>{formatCurrency(pricing.totalCents / 100, pricing.totalCents % 100 !== 0)}</dd></div>
-                <div><dt>Deposit toward the total</dt><dd>{formatCurrency(pricing.depositCents / 100, pricing.depositCents % 100 !== 0)}</dd></div>
-              </dl>
-              <p>See each puppy’s profile for the exact price. The deposit counts toward that total.</p>
-            </div> : null}
+            <div className="available-litter-pricing"><PriceDetails name={litter.title || 'Current litter'} pricing={{litterPrice:litter.price,litterDeposit:litter.deposit}} pricingStatus={litter.pricingStatus} context="litter" /></div>
           </header>
           <div className="puppyGrid">
             {members.length ? members.map(puppy => <PuppyCard key={puppy._id} puppy={puppy} browsing />) : <p className="available-empty-litter">Individual puppy details will appear here when they’re added. You can ask Jeanne about this litter in the meantime.</p>}

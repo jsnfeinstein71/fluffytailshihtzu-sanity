@@ -4,14 +4,14 @@ import '../../home.css'
 import './puppy-detail.css'
 import {unavailablePuppyNotice} from '@/lib/public-copy'
 import Link from 'next/link'
-import {tryPricing} from '@/lib/pricing'
 import {notFound} from 'next/navigation'
 import {getPuppy} from '@/sanity/lib/inventory'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
-import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyStatusClass} from '@/lib/inventory'
+import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyStatusClass} from '@/lib/inventory'
 import {puppyBreadcrumbs, puppyMetadata} from '@/lib/seo'
 import StructuredData from '../../components/StructuredData'
 import PublicImage from '../../components/PublicImage'
+import PriceDetails from '../../components/PriceDetails'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -30,10 +30,6 @@ export default async function PuppyDetailPage({params}: Props) {
   const puppyInquiryUrl = buildPuppyInquiryUrl(puppy)
   const age = getAgeInWeeks(puppy.birthDate)
   const ready = canInquire ? getReadyDate(puppy.birthDate) : ''
-  const pricing = tryPricing(puppy)
-  const totalPrice = pricing ? pricing.totalCents / 100 : undefined
-  const deposit = pricing ? pricing.depositCents / 100 : undefined
-  const finalPayment = pricing ? pricing.remainingCents / 100 : undefined
   const profilePortrait = getPuppyProfilePortrait(puppy)
 
   return <main className="wrap puppy-detail-page">
@@ -59,14 +55,7 @@ export default async function PuppyDetailPage({params}: Props) {
         </dl>
         {puppy.notes?.trim() && puppy.notes.trim().toLowerCase() !== puppy.color?.trim().toLowerCase() ? <p className="puppy-detail-notes">{puppy.notes}</p> : null}
 
-        {typeof totalPrice === 'number' ? <dl className="puppy-price">
-          <div className="price-total"><dt>Total puppy price</dt><dd>{formatCurrency(totalPrice, true)}</dd></div>
-          {typeof deposit === 'number' ? <>
-            <div><dt>Deposit toward the total</dt><dd>{formatCurrency(deposit, true)}</dd></div>
-            <div><dt>Balance after deposit</dt><dd>{formatCurrency(finalPayment!, true)}</dd></div>
-          </> : null}
-        </dl> : null}
-        <p className="puppy-detail-payment-note">{pricing ? 'The deposit counts toward the total price. The remaining balance is due before or at pickup.' : 'Ask Jeanne to confirm this puppy’s price and deposit before paying.'}</p>
+        <PriceDetails name={puppy.name || 'This puppy'} pricing={{overridePrice:puppy.overridePrice,litterPrice:puppy.litterPrice,litterDeposit:puppy.litterDeposit}} pricingStatus={puppy.litterPricingStatus} />
         <div className="puppy-detail-action">{canInquire ? <Link className="brand-button" href={puppyInquiryUrl}>Ask Jeanne about {puppy.name || 'this puppy'} <span aria-hidden="true">&rarr;</span></Link> : <>
           <p>{unavailablePuppyNotice(puppy.name || 'This puppy',puppy.status)}</p>
           <Link className="brand-button" href="/available-puppies">See available puppies</Link><Link className="text-link" href="/puppy-inquiry?interest=waitlist">Ask about future puppies</Link>

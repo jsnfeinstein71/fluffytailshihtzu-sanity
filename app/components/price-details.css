@@ -1,0 +1,24 @@
+.price-summary { min-width: 0; margin-block: 18px; color: #58493d; }
+.price-summary .price-summary-amount { margin: 0 0 6px; font-size: 1.12rem; line-height: 1.5; overflow-wrap: anywhere; }
+.price-details-trigger { min-height: 44px; padding: 4px 0; border: 0; background: transparent; color: #58493d; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.price-details-dialog { width: min(660px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #d8bd9d; border-radius: 12px; background: #fbf8f3; color: #58493d; font-family: 'acumin-pro', Arial, sans-serif; line-height: 1.6; overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 16px 60px #58493d33; }
+.price-details-dialog::backdrop { background: #58493d88; }
+.price-details-dialog, .price-details-dialog *, .price-details-dialog *::before, .price-details-dialog *::after { box-sizing: border-box; }
+.price-details-dialog h2, .price-details-dialog h3 { font-family: 'cormorant-garamond', Georgia, serif; font-weight: 600; line-height: 1.15; color: #58493d; }
+.price-details-header { position: sticky; top: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 22px 24px 16px; border-bottom: 1px solid #d8bd9d; background: #fbf8f3; z-index: 1; }
+.price-details-header h2 { margin: 0; font-size: 32px; }
+.price-details-close { flex-shrink: 0; min-height: 44px; padding: 8px 16px; border: 1px solid #58493d; border-radius: 5px; background: #58493d; color: #fff; font: inherit; cursor: pointer; }
+.price-details-content { padding: 4px 24px 24px; overflow-wrap: anywhere; }
+.price-details-content p { margin: 12px 0; }
+.price-details-name { font-weight: 600; }
+.price-details-breakdown { margin: 16px 0; }
+.price-details-breakdown > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px; padding: 12px 0; border-top: 1px solid #d8bd9d; }
+.price-details-breakdown dt { font-weight: 600; }
+.price-details-breakdown dd { margin: 0; text-align: right; }
+.price-details-breakdown .price-details-explanation { grid-column: 1 / -1; margin: 4px 0 0; font-size: .9rem; text-align: left; }
+.price-details-content h3 { margin: 20px 0 10px; font-size: 24px; }
+.price-details-content ul { padding-left: 22px; margin: 10px 0; list-style: disc; }
+.price-details-content li { margin: 6px 0; }
+.price-details-policy { padding-bottom: 8px; border-bottom: 1px solid #d8bd9d; }
+.price-details-trigger:focus-visible, .price-details-dialog button:focus-visible { outline: 2px solid #58493d; outline-offset: 3px; }
+@media (max-width: 480px) { .price-details-header { padding: 16px; }.price-details-header h2 { font-size: 27px; }.price-details-content { padding-inline: 16px; }.price-details-breakdown > div { column-gap: 10px; } }

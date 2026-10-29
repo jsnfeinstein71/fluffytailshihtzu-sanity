@@ -2,6 +2,7 @@ import {formatCurrency, formatDate, formatLitterStatus, getLitterDate, normalize
 
 import {tryPricing} from '@/lib/pricing'
 import PublicImage from './PublicImage'
+import PriceDetails from './PriceDetails'
 
 export default function LitterTile({litter, photoSizes}: {litter: Litter; photoSizes?: string}) {
   const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
@@ -22,7 +23,7 @@ export default function LitterTile({litter, photoSizes}: {litter: Litter; photoS
         </div> : null)}
         {litter.summary ? <p className="tileSub">{litter.summary}</p> : null}
         {expected && litter.expectedAvailability ? <p className="tileSub">{litter.expectedAvailability}</p> : null}
-        {pricing ? <p className="tileSub" style={{marginTop: '4px'}}>Litter price: {formatCurrency(pricing.totalCents / 100)}{'. A ' + formatCurrency(pricing.depositCents / 100) + ' deposit counts toward the total. See each puppy for its exact price.'}</p> : null}
+        {normalizeLitterStatus(litter.status)!=='past'?<PriceDetails name={litter.title || 'Litter'} pricing={{litterPrice:litter.price,litterDeposit:litter.deposit}} pricingStatus={litter.pricingStatus} context="litter" upcoming={expected} />:pricing?<p className="tileSub" style={{marginTop:'4px'}}>Litter price: {formatCurrency(pricing.totalCents/100)}{'. A '+formatCurrency(pricing.depositCents/100)+' deposit counts toward the total. See each puppy for its exact price.'}</p>:null}
       </div>
     </div>
   )
