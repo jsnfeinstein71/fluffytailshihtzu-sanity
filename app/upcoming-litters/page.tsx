@@ -26,6 +26,7 @@ export default async function UpcomingLittersPage() {
       <p className="lead">Not choosing a puppy today? Here’s what we’re looking forward to. Tell Jeanne when you hope to bring your little one home.</p>
     </header>
 
+    {litterReservationsEnabled()?<p className="expected-status" role="status">TEST — fictional litters only. No real charges or inventory changes. Use a fictional @example.test email for inquiries; messages are disabled.</p>:null}
     {expectedLitters.map((litter, index) => {
       const date = formatDate(getLitterDate(litter))
       const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
