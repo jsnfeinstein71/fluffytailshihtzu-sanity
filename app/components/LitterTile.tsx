@@ -1,15 +1,18 @@
 import {formatCurrency, formatDate, formatLitterStatus, getLitterDate, normalizeLitterStatus, type Litter, type Parent} from '@/lib/inventory'
 
 import {tryPricing} from '@/lib/pricing'
+import PublicImage from './PublicImage'
 
-export default function LitterTile({litter}: {litter: Litter}) {
+export default function LitterTile({litter, photoSizes}: {litter: Litter; photoSizes?: string}) {
   const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
   const expected = normalizeLitterStatus(litter.status) === 'planned'
   const date = formatDate(getLitterDate(litter), true)
   const parents: [string, Parent | null | undefined][] = [['Father', litter.sire], ['Mother', litter.dam]]
   return (
     <div className="tile" data-litter-id={litter._id}>
-      <div className="tileImg">{litter.groupPhotoUrl ? <img src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} /> : null}</div>
+      <div className="tileImg">{litter.groupPhotoUrl ? photoSizes
+        ? <PublicImage src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} sizes={photoSizes} />
+        : <img src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} /> : null}</div>
       <div className="tileMeta">
         <p className="tileName">{litter.title || 'Untitled litter'}</p>
         <p className="tileSub">{formatLitterStatus(litter.status)}{date ? ` • ${expected ? 'Expected around ' : 'Born '}${date}` : ''}</p>
