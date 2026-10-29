@@ -104,6 +104,7 @@ test('an interrupted final-link preparation can finish the original request; reo
  const {listWorkspaceFamilies}=await import('../sanity/lib/workspace.ts');const family=(await listWorkspaceFamilies()).find(f=>f.familyKey===familyId(1));assert.equal(family.profile.stage,'Litter place reserved');assert.match(family.profile.next,/Await puppy selection/)
  await action({type:'transfer',confirmed:true,id:p.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:''})
  const transferred=db.documents.get(p.litterReservationId).history.find(h=>h.action==='transferred');assert.equal(transferred.fromLitterTitle,'fictional-autumn — TEST');assert.equal(transferred.toLitterTitle,'fictional-spring — TEST');assert.equal(transferred.depositCreditCents,35000)
+ const storedHistory=db.documents.get(p.litterReservationId).history,legacy=storedHistory.find(h=>h.action==='transferred');delete legacy.fromLitterTitle;delete legacy.toLitterTitle;db.documents.get('fictional-autumn').status='archived';const historical=(await core.loadLitterReservations()).reservations.find(r=>r._id===p.litterReservationId).history.find(h=>h.action==='transferred');assert.equal(historical.fromLitterTitle,'fictional-autumn — TEST');assert.equal(historical.toLitterTitle,'fictional-spring — TEST');assert.equal(legacy.fromLitterTitle,undefined)
  db.documents.get('fictional-spring').status='current'
  await action({type:'assign',confirmed:true,id:p.litterReservationId,puppyId:'fictional-puppy',requestId:randomUUID()})
  const post=body=>email.POST(new Request(origin+'/inbox/workspace/api/email',{method:'POST',headers:{authorization,origin,'content-type':'application/json'},body:JSON.stringify(body)}))
@@ -111,6 +112,7 @@ test('an interrupted final-link preparation can finish the original request; reo
  const body={type:'checkout',familyId:familyId(1),paymentRequestId:id},create=globalThis.fixtureStripe.checkout.sessions.create
  globalThis.fixtureStripe.checkout.sessions.create=async()=>{throw Error('Temporary provider interruption')}
  assert.equal((await post(body)).status,503);assert(!db.documents.get(id).checkoutUrl)
+ globalThis.fixtureStripe.checkout.sessions.create=async()=>{throw Object.assign(new Error('Claimable sandbox request rate limit exceeded. Private provider details omitted.'),{type:'StripeRateLimitError',code:'rate_limit'})};const limited=await post(body);assert.equal(limited.status,429);assert.match((await limited.json()).error,/owner must claim the existing sandbox/);assert(!db.documents.get(id).checkoutUrl)
  globalThis.fixtureStripe.checkout.sessions.create=create
  const recovered=await post(body);assert.equal(recovered.status,200,await recovered.clone().text());const final=(await recovered.json()).paymentRequests.find(p=>p._id===id);assert(final.checkoutUrl);assert.equal([...db.documents.values()].filter(d=>d._type==='staffPaymentRequest'&&d.kind==='balance').length,1)
  const count=sessions.size;globalThis.fixtureStripe.checkout.sessions.create=async()=>{throw Error('Must reuse the saved checkout')}
