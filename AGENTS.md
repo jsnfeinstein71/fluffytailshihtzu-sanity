@@ -24,6 +24,8 @@ FluffyTail Shih Tzu is a production Next.js and Sanity site for a small breeder.
 
 ## Current Priority
 
+- October 29 paid-draft follow-up: Rowan is now fully paid ($450 + $1,500 = $1,950), transferred to Spring and assigned Juniper, which stays Reserved. Preserve all completed owner records. Mark paid composer attachments, block stale requests at send time, and allow explicit verified confirmation/removal without automatic sends. Finish genuine delayed sandbox verification using separate fictional records now that the owner claimed the existing sandbox. Only this isolated Preview may be configured/deployed; no Production offers, customer messages, Rowan payment replay or historical migration. See docs/fluffytail-litter-reservations.md.
+
 - October 29 PR #21 continuation: owner authorized a production-ready litter integration behind an unset, separate live-release switch; do not activate/deploy Production reservations or send customer messages/charge live payments. Preserve Rowan, namespaces, existing communications/payment flows and passkeys. Fresh-device Preview access uses the existing branded sign-in after the owner privately sets branch-scoped Preview credentials in Vercel; do not recreate rejected credential tools or expose access secrets. Incorporate latest main image changes. Identify the exact existing-sandbox claim action, but do not claim it for the owner or wait on it for independent work. Historical migration stays paused.
 
 

@@ -53,3 +53,15 @@ test('fresh branded sign-in covers workspace and existing Inbox on the same host
  assert.equal(requireOperator(new Request('https://different.example.test/inbox/workspace',{headers:{cookie}})).status,401)
  assert.equal(requireOperator(new Request(origin+'/inbox')).headers.has('www-authenticate'),false)
 })
+
+test('paid final requests cannot be reviewed as due; explicit confirmation shows the full verified total',async()=>{
+ process.env.FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED='1';store.documents.get(workspaceId(familyId)).profile.paymentTestScenario='litter-reservations-20261028'
+ const deposit=await create('deposit',firstId);await json(await deliver(paidEvent(deposit.checkoutSessionId)))
+ const final=await create('balance',lastId);await json(await deliver(paidEvent(final.checkoutSessionId,'evt_final_confirmed')))
+ const initial=await json(await email.GET(request('/inbox/workspace/api/email'))),entry=initial.drafts.find(d=>d.familyId===familyId),value={subject:'Personal pickup note',body:'The attached photo is for you. Keep this text exactly.',replyToId:null,paymentRequestId:final._id}
+ let saved=await json(await action({type:'save',familyId,revision:entry.revision,value})),draft=saved.drafts.find(d=>d.familyId===familyId)
+ const refused=await action({type:'review',familyId,revision:draft.revision,requestId:crypto.randomUUID()});assert.equal(refused.status,409);assert.match((await refused.json()).error,/Paid/)
+ saved=await json(await action({type:'save',familyId,revision:draft.revision,value:{...value,paymentLinkPurpose:'confirmation'}}));draft=saved.drafts.find(d=>d.familyId===familyId)
+ const reviewed=await json(await action({type:'review',familyId,revision:draft.revision,requestId:crypto.randomUUID()})),copy=reviewed.reviews.find(r=>r._id===reviewed.reviewId)
+ assert.equal(copy.paymentEmail.kind,'paid-confirmation');assert.equal(copy.paymentEmail.paidCents,160000);assert.equal(copy.paymentEmail.reserved,true);assert.match(copy.html,/View payment confirmation/);assert(copy.body.includes(value.body));assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,2)
+})

@@ -10,7 +10,7 @@ export function paymentEmailPatch(value:EmailValue,request:PaymentRequest,reques
  for(const prior of requests)if(prior._id!==request._id&&prior.checkoutUrl)body=body.replaceAll(prior.checkoutUrl,request.checkoutUrl||'')
  const defaults=['Here is the deposit request for your approved litter selection position.','I’m happy to share your puppy’s deposit request.','Here is the final payment request for your puppy.'].map(s=>s+' Please reply if you have any questions.')
  if(!body.trim()||defaults.includes(body))body=`${request.kind==='deposit'?request.litterReservationId?'Here is the deposit request for your approved litter selection position.':'I’m happy to share your puppy’s deposit request.':'Here is the final payment request for your puppy.'} Please reply if you have any questions.`
- return {subject:`FluffyTail ${request.kind==='deposit'?'deposit':'final payment'} request — ${request.puppyName}`,body,paymentRequestId:request._id}
+ return {subject:`FluffyTail ${request.kind==='deposit'?'deposit':'final payment'} request — ${request.puppyName}`,body,paymentRequestId:request._id,paymentLinkPurpose:'request'}
 }
 export function paymentTextBody(current:string,request:PaymentRequest,requests:PaymentRequest[]){
  const snippet=paymentSnippet(request)
@@ -19,4 +19,11 @@ export function paymentTextBody(current:string,request:PaymentRequest,requests:P
   body=body.replaceAll(paymentSnippet(prior),snippet).replaceAll(prior.checkoutUrl,request.checkoutUrl!)
  }
  return body.includes(request.checkoutUrl!)?body:body.trim()?body+'\n\n'+snippet:`Hi! Jeanne at FluffyTail here. ${snippet} Reply with any questions.`
+}
+
+export const paymentRequestPaid=(request:PaymentRequest)=>request.verifiedPaid===true||!!request.webhookVerifiedAt
+export function paymentConfirmationPatch(value:EmailValue,request:PaymentRequest):Partial<EmailValue>{
+ const automatic=/^FluffyTail (deposit|final payment) request — /.test(value.subject)
+ const defaults=['Here is the deposit request for your approved litter selection position.','I’m happy to share your puppy’s deposit request.','Here is the final payment request for your puppy.'].map(s=>s+' Please reply if you have any questions.')
+ return {paymentLinkPurpose:'confirmation',...(automatic?{subject:`FluffyTail payment confirmation — ${request.puppyName}`}:{ }),...(defaults.includes(value.body)?{body:'Thank you. Your payment has been confirmed. Please reply if you have any questions.'}:{})}
 }

@@ -22,7 +22,7 @@ export async function sendEmailDraft(familyId:string,draft:EmailDraft,requestId:
   if(outgoing.state==='accepted'){
     // CAS protects a draft edited in another tab. The client separately preserves
     // text typed while this snapshot was being submitted.
-    const cleared=await request({type:'save',familyId,revision:version.revision,value:{...version.value,body:'',paymentRequestId:null,attachmentIds:[]}},version.value)
+    const cleared=await request({type:'save',familyId,revision:version.revision,value:{...version.value,body:'',paymentRequestId:null,paymentLinkPurpose:'request',attachmentIds:[]}},version.value)
     return {state:outgoing.state,cleared:!!cleared}
   }
   return {state:outgoing.state,cleared:false}

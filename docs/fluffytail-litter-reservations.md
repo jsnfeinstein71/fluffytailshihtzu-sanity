@@ -153,3 +153,16 @@ Hosted verification through the owner's branded staff session:
 - 363 regression tests passed, type checking passed, lint zero errors (16 existing image warnings), hosted build READY. Signed-out staff API remains denied without a Basic popup; Production reservation offers remain disabled.
 
 Owner entry: open the stable Preview workspace, choose Fictional Rowan Family — TEST, then Details → Payment history → Payment requests → Final payment $1,500 → Open payment request (or Copy link). The owner may continue their existing unpaid test. This phase made no additional payment, message, reservation transfer or puppy-status change. Production release and the historical migration remain paused.
+
+
+## October 29 paid-draft follow-up and genuine delayed verification
+
+Owner completed Rowan's full journey: $450 deposit, transfer to Spring, Juniper assignment and $1,500 final payment. Preserve the $1,950 verified total, zero remaining and Reserved puppy; do not reset or repeat that payment.
+
+Paid requests now remain in the saved composer marked Paid. An outstanding request cannot be reviewed or dispatched after payment; authoritative provider/verified-ledger status is checked during review and again at the provider submission boundary, including a payment racing with guard acquisition. A rejected stale request retains the personal draft and files and records a known pre-provider failure, rather than an uncertain delivery. No message is sent automatically.
+
+Jeanne can remove the attached paid request or explicitly select Use payment-confirmation link. The confirmation uses the existing customer URL and approved branded receipt template, accurate verified totals and current reservation state. It preserves personal text, reply context and other files; only a recognized generated request introduction/subject changes to confirmation wording. Unverified provider acceptance or a client flag cannot create a confirmation. Existing historical message snapshots are retained.
+
+Focused regressions cover paid-after-review, payment-at-dispatch, a final receipt showing the full total, rejecting unverified confirmations, and preserving personal text/files. Full regression (367 tests before the final added receipt test) and the additional final-receipt test pass; type checking passes; lint has zero errors and the 16 existing image warnings.
+
+The claimed sandbox's regular key now permits enabling its US bank account test method; it was enabled only in that sandbox for separate genuine delayed tests. The Preview inquiry signing secret was found invalid/missing at runtime and replaced privately for this exact Preview branch, with Production untouched. Separate fictional delayed-success/failure/processing records are used; Rowan is excluded. Actual delayed-event results and hosted paid-draft evidence follow below once verified.

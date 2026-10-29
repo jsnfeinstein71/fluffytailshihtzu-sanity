@@ -25,3 +25,14 @@ test('payment history renders Open and Copy for the existing request, and a reco
  const unfinished=renderToStaticMarkup(React.createElement(Payments,{family,email:{data:{paymentRequests:[{...final,checkoutUrl:undefined}]},busy:false}}))
  assert(unfinished.includes('Prepare existing payment link'));assert(unfinished.includes('link preparation incomplete'));assert(!unfinished.includes('Create another'))
 })
+
+test('paid payment attachments render as Paid and confirmation/removal keep personal text and files',async()=>{
+ const {paymentConfirmationPatch}=await import('../app/inbox/workspace/payment-compose.ts'),{paymentDraftEmail}=await import('../lib/mail/payment-email.ts'),{default:Composer}=await import('../app/inbox/workspace/EmailComposer.tsx')
+ const paid={...final,publicToken:'b'.repeat(48),checkoutUrl:'https://preview.example.test/pay/'+'b'.repeat(48),webhookVerifiedAt:'2026-10-29T18:00:00Z',verifiedPaid:true,verifiedPaidCents:195000,verifiedReserved:true}
+ const value={subject:'A personal subject',body:'Your photo is attached. See you soon!',paymentRequestId:paid._id,replyToId:'incoming',attachmentIds:['photo']},patch=paymentConfirmationPatch(value,paid),confirmed={...value,...patch}
+ assert.equal(confirmed.body,value.body);assert.equal(confirmed.subject,value.subject);assert.deepEqual(confirmed.attachmentIds,['photo']);assert.equal(confirmed.replyToId,'incoming');assert.equal(confirmed.paymentLinkPurpose,'confirmation')
+ assert.equal(paymentDraftEmail(paid,'Rowan',value.body),null)
+ const receipt=paymentDraftEmail(paid,'Rowan',value.body,'confirmation');assert.equal(receipt.kind,'paid-confirmation');assert.equal(receipt.paidCents,195000);assert.equal(receipt.reserved,true)
+ const family={id:'rowan',name:'Fictional Rowan',email:'rowan@example.test'},email={entries:{rowan:{value,base:value,revision:'one'}},data:{paymentRequests:[paid],messages:[],outgoing:[],capabilities:{canDispatch:true}},busy:false}
+ const html=renderToStaticMarkup(React.createElement(Composer,{family,email,detailsTarget:null}));assert(html.includes('Paid ·'));assert(html.includes('Use payment-confirmation link'));assert(html.includes('Remove paid request'));assert(html.includes('Paid. Remove this request'));assert(!html.includes('Preview formatted email'));assert(html.includes(value.body))
+})

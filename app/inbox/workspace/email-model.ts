@@ -3,10 +3,10 @@ import type {PaymentEmail} from '@/lib/mail/payment-email'
 import {families,puppies} from './model'
 
 export const jeanneEmail='jeanne@fluffytailshihtzu.com'
-export type EmailValue={attachmentIds?:string[];subject:string;body:string;replyToId:string|null;paymentRequestId:string|null}
+export type EmailValue={paymentLinkPurpose?:'request'|'confirmation';attachmentIds?:string[];subject:string;body:string;replyToId:string|null;paymentRequestId:string|null}
 export type EmailDraft={familyId:string;revision:string|null;value:EmailValue;updatedAt?:string}
 export type MailMessage={id:string;familyId:string;from:string;to:string;subject:string;body:string;messageId:string;references:string[];direction:'in'|'out';time:string}
-export type PaymentRequest={litterReservationId?:string;litterId?:string;selectionPosition?:number;_id:string;_type:'staffPaymentRequest';workspace:'review-v1'|'live-v1';checkoutOutcome?:'expired'|'failed';publicToken?:string;stripeCheckoutUrl?:string;checkoutSessionId?:string;checkoutUrl?:string;paymentVerification?:'unverified'|'test-paid'|'test-unpaid'|'paid'|'unpaid';paymentVerifiedAt?:string;requestId:string;familyId:string;puppyId:string;puppyName:string;kind:'deposit'|'balance';amountCents:number;totalCents:number;depositCents:number;paidCents:number;expiresAt:string;createdAt:string;testOnly:boolean;webhookVerifiedAt?:string;stripeEventId?:string}
+export type PaymentRequest={verifiedPaidCents?:number;verifiedReserved?:boolean;verifiedPaid?:boolean;litterReservationId?:string;litterId?:string;selectionPosition?:number;_id:string;_type:'staffPaymentRequest';workspace:'review-v1'|'live-v1';checkoutOutcome?:'expired'|'failed';publicToken?:string;stripeCheckoutUrl?:string;checkoutSessionId?:string;checkoutUrl?:string;paymentVerification?:'unverified'|'test-paid'|'test-unpaid'|'paid'|'unpaid';paymentVerifiedAt?:string;requestId:string;familyId:string;puppyId:string;puppyName:string;kind:'deposit'|'balance';amountCents:number;totalCents:number;depositCents:number;paidCents:number;expiresAt:string;createdAt:string;testOnly:boolean;webhookVerifiedAt?:string;stripeEventId?:string}
 export type EmailReview={attachments?:EmailAttachment[];_id:string;_type:'staffEmailReview';workspace:'review-v1'|'live-v1';requestId:string;familyId:string;draftRevision:string;from:string;replyTo:string;to:string;subject:string;body:string;html?:string;paymentEmail?:PaymentEmail;inReplyTo:string|null;references:string[];paymentRequestId:string|null;createdAt:string;status:'held';testOnly:boolean}
 export type OutgoingState='prepared'|'sending'|'accepted'|'failed'|'uncertain'
 export type MailAttempt={_key:string;number:number;startedAt:string;finishedAt?:string;state:OutgoingState;code?:string}
@@ -24,7 +24,7 @@ export type MailAction=
   |{type:'payment';familyId:string;puppyId:string;kind:'deposit'|'balance';requestId:string}
 export type MailResult=MailData & {error?:string;conflict?:EmailDraft;preparedPaymentId?:string;reviewId?:string}
 export type TransportAction={type:'refresh';familyId:string}|{type:'dispatch';reviewId:string;confirmed?:boolean;scenario?:'accepted'|'rejected'|'uncertain'}|{type:'sync';familyId?:string}|{type:'reconcile'}|{type:'resolve';outgoingId:string;attemptKey:string;decision:'accepted'|'not-accepted';evidence:string;acknowledged:true}
-export const sameEmail=(a:EmailValue,b:EmailValue)=>a.subject===b.subject&&a.body===b.body&&a.replyToId===b.replyToId&&a.paymentRequestId===b.paymentRequestId&&JSON.stringify(a.attachmentIds||[])===JSON.stringify(b.attachmentIds||[])
+export const sameEmail=(a:EmailValue,b:EmailValue)=>a.subject===b.subject&&a.body===b.body&&a.replyToId===b.replyToId&&a.paymentRequestId===b.paymentRequestId&&(a.paymentLinkPurpose||'request')===(b.paymentLinkPurpose||'request')&&JSON.stringify(a.attachmentIds||[])===JSON.stringify(b.attachmentIds||[])
 export const emptyEmail=(body=''):EmailValue=>({subject:'FluffyTail Shih Tzu inquiry',body,replyToId:null,paymentRequestId:null})
 export const mailMessages:MailMessage[]=families.flatMap(f=>f.messages.filter(m=>m.channel==='Email').map(m=>({
   id:m.id,familyId:f.id,from:m.direction==='in'?f.email:jeanneEmail,to:m.direction==='in'?jeanneEmail:f.email,

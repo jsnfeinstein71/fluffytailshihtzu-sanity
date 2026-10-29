@@ -21,6 +21,14 @@ export function paymentRequestEmail(request:{litterReservationId?:string;litterI
   if(!/^\/pay\/(?:[a-f0-9]{48}|cs_live_[A-Za-z0-9]+)$/.test(url.pathname))return null
   return {...(request.litterReservationId?{litterTitle:request.puppyName,selectionPosition:request.selectionPosition}:{}),version:request.litterReservationId?(request.testOnly?4:5):3,kind:request.kind==='deposit'?'deposit-request':'balance-request',name,message,puppyName:request.puppyName,amountCents:request.amountCents,totalCents:request.totalCents,paidCents:request.paidCents,depositCents:request.depositCents,url:request.checkoutUrl,testOnly:request.testOnly}
 }
+export function paymentDraftEmail(request:Parameters<typeof paymentRequestEmail>[0]&{webhookVerifiedAt?:string;verifiedPaid?:boolean;verifiedPaidCents?:number;verifiedReserved?:boolean},name:string,message:string,purpose:'request'|'confirmation'='request'):PaymentEmail|null{
+ const paid=request.verifiedPaid===true||!!request.webhookVerifiedAt
+ if(purpose==='request')return paid?null:paymentRequestEmail(request,name,message)
+ if(!paid)return null
+ const base=paymentRequestEmail(request,name,message);if(!base)return null
+ const paidCents=request.verifiedPaidCents??request.paidCents+request.amountCents
+ return {...base,version:request.litterReservationId?5:3,kind:!request.litterReservationId&&paidCents>=request.totalCents?'paid-confirmation':'deposit-confirmation',paidCents,reserved:request.verifiedReserved===true}
+}
 const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const money=(cents:number)=>'$'+(cents/100).toFixed(2)
 function renderPaymentEmailV1(email:PaymentEmail){

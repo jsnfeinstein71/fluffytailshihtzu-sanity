@@ -67,3 +67,33 @@ test('litter credit assignment respects an individual-puppy claim and blocks sta
  db.documents.get(claimId).active=false;await action(assign);assert.equal(db.documents.get(claimId).token,'historical-token');assert.equal(db.documents.get(claimId).stripeCheckoutUrl,'https://checkout.stripe.com/prior');const count=sessions.size
  await assert.rejects(()=>createDepositCheckout(earlier,{customerName:'Other fixture family',customerEmail:'other@example.test',customerPhone:''},origin,{staffTestOnly:'0'}),/applied litter deposit/);assert.equal(sessions.size,count)
 })
+
+test('a request paid after review is blocked at dispatch and the personal draft stays intact',async()=>{
+ const p=await offer(),data=await email.GET(new Request(origin+'/inbox/workspace/api/email',{headers:{authorization}})).then(ok),draft=data.drafts.find(d=>d.familyId===p.familyId)
+ const value={subject:'Personal note for this family',body:'Your puppy photos will follow tomorrow. Keep this personal sentence.',replyToId:null,paymentRequestId:p._id}
+ const saved=await emailAction({type:'save',familyId:p.familyId,revision:draft.revision,value}),current=saved.drafts.find(d=>d.familyId===p.familyId),review=await emailAction({type:'review',familyId:p.familyId,revision:current.revision,requestId:randomUUID()})
+ await deliver(p);const count=sent.length,before=structuredClone(db.documents.get((await import('../sanity/lib/workspace-email.ts')).emailDraftId(p.familyId)))
+ const result=await email.POST(req({type:'dispatch',reviewId:review.reviewId,confirmed:true}));assert.equal(result.status,409);assert.match((await result.json()).error,/Paid/);assert.equal(sent.length,count);assert.deepEqual(db.documents.get(before._id),before)
+ const refreshed=await email.GET(new Request(origin+'/inbox/workspace/api/email',{headers:{authorization}})).then(ok);assert.equal(refreshed.paymentRequests.find(r=>r._id===p._id).verifiedPaid,true)
+})
+
+test('payment arriving during guard acquisition fails the claimed attempt before the mail provider is called',async()=>{
+ const p=await offer(),data=await email.GET(new Request(origin+'/inbox/workspace/api/email',{headers:{authorization}})).then(ok),draft=data.drafts.find(d=>d.familyId===p.familyId)
+ const saved=await emailAction({type:'save',familyId:p.familyId,revision:draft.revision,value:{subject:'Payment details',body:'Keep my written note.',replyToId:null,paymentRequestId:p._id}}),current=saved.drafts.find(d=>d.familyId===p.familyId),review=await emailAction({type:'review',familyId:p.familyId,revision:current.revision,requestId:randomUUID()})
+ let afterPayment
+ const duringGuard=async(docs,id)=>{if(!id.startsWith('private.staffMailGuard.')){db.beforeNextPatch(duringGuard);return}await deliver(p);afterPayment=sent.length};db.beforeNextPatch(duringGuard)
+ const result=await email.POST(req({type:'dispatch',reviewId:review.reviewId,confirmed:true}));assert.equal(result.status,409);assert.match((await result.json()).error,/Paid/);assert.equal(sent.length,afterPayment)
+ const outgoing=[...db.documents.values()].find(r=>r._type==='staffOutgoingEmail'&&r.reviewId===review.reviewId);assert.equal(outgoing.state,'failed');assert.equal(outgoing.attempts.at(-1).code,'DRAFT_OR_PAYMENT_CHANGED_BEFORE_SEND')
+})
+
+test('explicit confirmation requires verified ledger state, uses the branded receipt and retains personal text',async()=>{
+ const p=await offer(),data=await email.GET(new Request(origin+'/inbox/workspace/api/email',{headers:{authorization}})).then(ok),draft=data.drafts.find(d=>d.familyId===p.familyId)
+ const value={subject:'A personal thank you',body:'Jeanne’s personal text is kept exactly.',replyToId:null,paymentRequestId:p._id,paymentLinkPurpose:'confirmation'}
+ const saved=await emailAction({type:'save',familyId:p.familyId,revision:draft.revision,value}),current=saved.drafts.find(d=>d.familyId===p.familyId),before=sent.length
+ let result=await email.POST(req({type:'review',familyId:p.familyId,revision:current.revision,requestId:randomUUID()}));assert.equal(result.status,409);assert.match((await result.json()).error,/verified payment/);assert.equal(sent.length,before)
+ sessions.get(p.checkoutSessionId).payment_status='paid';sessions.get(p.checkoutSessionId).status='complete'
+ result=await email.POST(req({type:'review',familyId:p.familyId,revision:current.revision,requestId:randomUUID()}));assert.equal(result.status,409)
+ await deliver(p);const count=sent.length,review=await emailAction({type:'review',familyId:p.familyId,revision:current.revision,requestId:randomUUID()}),snapshot=review.reviews.find(r=>r._id===review.reviewId)
+ assert.equal(snapshot.paymentEmail.kind,'deposit-confirmation');assert.match(snapshot.html,/View payment confirmation/);assert.match(snapshot.body,/Jeanne’s personal text is kept exactly/);assert.equal(sent.length,count)
+ await emailAction({type:'dispatch',reviewId:review.reviewId,confirmed:true});assert.equal(sent.length,count+1);assert.equal(sent.at(-1).paymentEmail.kind,'deposit-confirmation')
+})
