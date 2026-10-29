@@ -111,3 +111,14 @@ Prepared live integration commit `d164e94` built successfully as isolated Previe
 
 
 October 29 corrected password handoff: the owner confirmed replacing and saving the Preview password. Non-decrypted Vercel metadata now confirms `INBOX_BASIC_AUTH_PASS` advanced on the exact test branch; the agent did not read its value. A fresh build of `09db93d`, deployment `dpl_ANJbJLpHVzcVPe3KdcGfUQhjP4Hr`, reached READY and was assigned to `fluffytail-litter-reservations-test.vercel.app`. Signed-out checks confirm the branded sign-in page is 200, private API is 401, and neither returns a browser Basic Auth challenge. The four Practice Autumn positions remain Available. This supersedes the pending password-save step above. Actual phone/tablet sign-in and refresh confirmation still belongs to the owner; no real-device success is inferred from metadata or fixtures. Production, credentials, reservation activation and records are unchanged.
+
+
+## October 29 owner feedback: request access and reservation details
+
+Preserved Rowan's existing verified $450 deposit, Autumn-to-Spring transfer (first pick), Juniper assignment, and sole unpaid $1,500 final request. Read-only synthetic baseline recorded before editing; no reset, messages, payments or Production changes are authorized in this follow-up.
+
+- Payment history exposes Open payment request and Copy link. An incomplete checkout has a Prepare existing payment link action that finishes the same saved request, with no replacement request. Add to message also resumes that original request and reuses an already-created checkout.
+- Selecting a request replaces the payment attachment and generated subject with the selected request's details. Personal message text, files and reply threading are kept; known obsolete payment URLs/snippets are replaced rather than appended.
+- A successful transfer clears the destination and its availability hint, and reports destination litter, position and retained credit. History displays source/destination litter names and positions plus retained credit. New entries snapshot names/credit; legacy entries resolve names at read time without rewriting saved history.
+- Details buttons wrap within their column; payment actions stack. Disabled Preview messaging explains draft/link testing instead of instructing owners to send. A verified unassigned litter deposit presents Litter place reserved / Await puppy selection, without claiming an individual puppy is reserved.
+- Offline regression: 363 tests passed; type checking passed; lint has zero errors and the existing 16 image warnings. Hosted build and owner-record UI evidence are recorded below after deployment.

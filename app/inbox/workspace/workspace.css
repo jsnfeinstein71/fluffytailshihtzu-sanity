@@ -100,3 +100,11 @@
 @media(max-width:999px){.ops-compact-viewport.ops-payment-testing .ops-review-banner{display:flex;padding:2px 10px;line-height:1.2}.ops-compact-viewport.ops-payment-testing .ops-review-banner>span{font-size:0;line-height:1}.ops-compact-viewport.ops-payment-testing .ops-review-banner strong{display:block;font-size:10px;line-height:1.2}.ops-compact-viewport.ops-payment-testing .ops-review-banner b{display:none}.ops-compact-viewport .ops-channel-picker small{display:none}.ops-compact-viewport .ops-thread-person h2{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ops-compact-viewport .ops-thread-person{min-width:0}.ops-compact-viewport .ops-thread-person>div{min-width:0}.ops-compact-viewport .ops-compose-files{flex-wrap:nowrap;max-height:45px;overflow-x:auto;overflow-y:hidden}.ops-compact-viewport .ops-compose-files li{flex:0 0 calc(50% - 3px);max-width:calc(50% - 3px)}.ops-compact-viewport .ops-compose-files li a{flex:1;min-width:0}.ops-compact-viewport .ops-composer{max-height:calc(var(--ops-viewport-height,100dvh) - 136px);overflow-y:auto;overscroll-behavior:contain}}
 
 .ops-litter-reservations{border-bottom:1px solid #D8BD9D;padding-bottom:20px;margin-bottom:20px}.ops-litter-places{list-style:none;padding:0;display:grid;gap:6px}.ops-litter-places li{display:flex;flex-direction:column;border:1px solid #D8BD9D;border-radius:7px;padding:9px}.ops-litter-reservations textarea,.ops-litter-reservations select{width:100%;box-sizing:border-box}.ops-litter-reservations details{margin:14px 0}.ops-litter-reservations label{display:block;margin:12px 0}
+
+/* Details keep their own width at desktop and mobile breakpoints. */
+.is-conversations .ops-context{min-width:0;overflow-wrap:anywhere}
+.ops-context>*,.ops-litter-reservations details,.ops-payment-history article{min-width:0;max-width:100%}
+.ops-context .ops-button{max-width:100%;min-width:0;height:auto;white-space:normal;overflow-wrap:anywhere;text-align:center}
+.ops-context .ops-compose-actions,.ops-payment-link-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0}
+.ops-context select,.ops-context textarea,.ops-context input:not([type=checkbox]){min-width:0;max-width:100%}
+.ops-litter-reservations ol{padding-left:20px}.ops-litter-reservations ol.ops-litter-places{padding-left:0}

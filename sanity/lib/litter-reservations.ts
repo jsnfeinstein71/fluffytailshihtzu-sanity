@@ -49,7 +49,12 @@ export async function loadLitterReservations(){
  client().fetch<LitterReservation[]>('*[_type=="litterReservation" && workspace==$workspace][0...500]',{workspace:workspaceNamespace()},{cache:'no-store'}),
  client().fetch<LitterBoard[]>('*[_type=="litterPlaces" && workspace==$workspace][0...100]',{workspace:workspaceNamespace()},{cache:'no-store'})])
  const puppies=await client().fetch<{id:string;name:string;litterId:string;status:string}[]>('*[_type=="puppy" && ($test && defined(paymentTestScenario) || !$test && !defined(paymentTestScenario)) && !(_id in path("drafts.**")) && !(_id in path("versions.**"))][0...200]{"id":_id,name,"litterId":litter._ref,status}',{test:testing()},{cache:'no-store'})
- return {puppies,litters:litters.map(l=>({id:l._id,title:l.title,status:l.status,price:l.price,deposit:l.deposit})),reservations,boards}
+ const historyIds=[...new Set(reservations.flatMap(r=>r.history.flatMap(h=>[h.fromLitter,h.toLitter])).filter((id):id is string=>!!id))]
+ const historyLitters=historyIds.length?await client().fetch<{_id:string;title:string}[]>('*[_type=="litter" && _id in $ids && !(_id in path("drafts.**")) && !(_id in path("versions.**"))]{_id,title}',{ids:historyIds},{cache:'no-store'}):[]
+ const titles=new Map(historyLitters.map(l=>[l._id,l.title]))
+ // Resolve legacy history titles for display only; never rewrite saved history.
+ const presented=reservations.map(r=>({...r,history:r.history.map(h=>({...h,...(h.fromLitter?{fromLitterTitle:h.fromLitterTitle||titles.get(h.fromLitter)}:{}),...(h.toLitter?{toLitterTitle:h.toLitterTitle||titles.get(h.toLitter)}:{})}))}))
+ return {puppies,litters:litters.map(l=>({id:l._id,title:l.title,status:l.status,price:l.price,deposit:l.deposit})),reservations:presented,boards}
 }
 export async function offerLitterPlace(input:{familyId:string;litterId:string;position:number;preferences:string;requestId:string}){
  enabled();uuid(input.requestId);const l=await litter(input.litterId),f=await family(input.familyId),quote=getPricing({litterPrice:l.price,litterDeposit:l.deposit})
@@ -141,7 +146,7 @@ export async function moveLitterReservation(input:{id:string;litterId:string;pos
  // displace that active hold. Close it first, then atomically restore this credit.
  if(anchor.reservationId!==r._id){const newer=await reservation(anchor.reservationId);if(r.state!=='reconciliation'||newer.state!=='released'||newer.ledgerId)throw new LitterError('This family has another active offer or paid deposit. Close its unpaid offer before placing this late payment; paid deposits require review.')}
  const f=await family(r.familyId)
- const tx=client().transaction().patch(f._id,p=>p.ifRevisionId(f._rev).set({'profile.litterId':l._id,'profile.litterTitle':l.title,'profile.litterReservationId':r._id})).patch(destination._id,p=>p.ifRevisionId(destination._rev).set({places:[...destination.places,{_key:String(input.position),position:input.position,reservationId:r._id,state:'reserved'}]})).patch(r._id,p=>p.ifRevisionId(r._rev).set({state:'reserved',litterId:l._id,litterTitle:l.title,position:input.position,history:[...r.history,{...entry(r.state==='reconciliation'?'late-payment-placed':'transferred',{fromLitter:r.litterId,fromPosition:r.position,toLitter:l._id,toPosition:input.position,note:preferences(input.note)}),_key:input.requestId}]}))
+ const tx=client().transaction().patch(f._id,p=>p.ifRevisionId(f._rev).set({'profile.litterId':l._id,'profile.litterTitle':l.title,'profile.litterReservationId':r._id})).patch(destination._id,p=>p.ifRevisionId(destination._rev).set({places:[...destination.places,{_key:String(input.position),position:input.position,reservationId:r._id,state:'reserved'}]})).patch(r._id,p=>p.ifRevisionId(r._rev).set({state:'reserved',litterId:l._id,litterTitle:l.title,position:input.position,history:[...r.history,{...entry(r.state==='reconciliation'?'late-payment-placed':'transferred',{fromLitter:r.litterId,fromLitterTitle:r.litterTitle,fromPosition:r.position,toLitter:l._id,toLitterTitle:l.title,toPosition:input.position,depositCreditCents:r.depositCents,note:preferences(input.note)}),_key:input.requestId}]}))
  tx.patch(anchorId,p=>p.ifRevisionId(anchor._rev).set({reservationId:r._id}))
  if(source&&source._id!==destination._id)tx.patch(source._id,p=>p.ifRevisionId(source._rev).set({places:source.places.filter(p=>p.reservationId!==r._id)}))
  await tx.commit({visibility:'sync'});return await reservation(r._id)

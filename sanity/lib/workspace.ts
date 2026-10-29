@@ -1,5 +1,5 @@
 import {loadTestSmsProfile,saveTestSmsConsent} from './workspace-sms'
-import {litterReservationMode} from '@/lib/litter-reservations'
+import {litterReservationMode,pickLabels,type LitterReservation} from '@/lib/litter-reservations'
 import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
 import {normalizePhone} from '@/lib/inquiry'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
@@ -35,7 +35,13 @@ export async function listWorkspaceFamilies():Promise<SavedFamily[]> {
   requireWorkspace()
   const records=await getOperatorClient().fetch<SavedFamily[]>(query,{workspace:workspaceNamespace()},{cache:'no-store'})
   if(records.length>500)throw new WorkspaceError('More than 500 families need paginated review. No records were discarded.',409)
-  const checked=records.map(checkedRecord)
+  const checked=await Promise.all(records.map(checkedRecord).map(async record=>{
+    if(!litterReservationMode()||!record.profile.litterReservationId||record.profile.puppyId)return record
+    const reservation=await getOperatorClient().getDocument<LitterReservation>(record.profile.litterReservationId)
+    if(!reservation||reservation._type!=='litterReservation'||reservation.workspace!==workspaceNamespace()||reservation.familyId!==record.familyKey)return record
+    const stage=reservation.state==='reserved'&&reservation.ledgerId?'Litter place reserved':reservation.state==='pending'?'Litter deposit pending':reservation.state==='reconciliation'?'Paid deposit needs placement review':null
+    return stage?{...record,profile:{...record.profile,stage,next:reservation.state==='reserved'?`Await puppy selection · ${reservation.litterTitle} · ${pickLabels[reservation.position-1]}`:reservation.state==='pending'?'Selection position held while deposit is pending':'Review paid deposit placement'}}:record
+  }))
   if(paymentTestWorkspaceEnabled())return await Promise.all(checked.filter(record=>record.profile.paymentTestScenario).map(async record=>{
     const payments=await getOperatorClient().fetch<{paymentStatus:string;amountPaid:number;paymentType:string;createdAt:string;webhookVerifiedAt:string;quotedTotalCents:number}[]>('*[_type == "paymentRecord" && workspace == "review-v1" && testOnly == true && staffFamilyId == $familyId && puppyId == $puppyId && paymentStatus == "paid"] | order(createdAt asc){paymentStatus,amountPaid,paymentType,createdAt,webhookVerifiedAt,quotedTotalCents}',{familyId:record.familyKey,puppyId:record.profile.puppyId||null},{cache:'no-store'})
     return {...record,profile:{...await loadTestSmsProfile(record),records:payments,agreedTotalCents:payments[0]?.quotedTotalCents}}

@@ -276,6 +276,14 @@ async function paymentTransport(action:{type:'checkout'|'verify';familyId:string
  if(request.litterReservationId){await reconcileLitterHold(request.litterReservationId);return {}}
   const client=getOperatorClient()
   if(action.type==='checkout'){
+    if(request.checkoutSessionId){
+      const session=await getStripe().checkout.sessions.retrieve(request.checkoutSessionId)
+      verifySession(session,request,family)
+      if(session.status==='expired')throw new EmailWorkflowError('This checkout has expired. Its payment history is kept; review it before preparing a new request.',409)
+      if(!request.checkoutUrl&&request.publicToken)await client.patch(request._id).set({checkoutUrl:`${origin}/pay/${request.publicToken}`}).commit({visibility:'sync'})
+      // Inserting or reopening a prepared request must not create Checkout again.
+      return {}
+    }
     const matches=await client.fetch<{slug:string}[]>('*[_type == "puppy" && _id == $id][0...2]{"slug":slug.current}',{id:request.puppyId},{cache:'no-store'})
     if(matches.length!==1)throw new EmailWorkflowError('Puppy context needs review.',409)
     const context=await getPaymentContext(matches[0].slug),customer={customerName:family.profile.name,customerEmail:family.profile.email,customerPhone:family.profile.phone},scope={staffFamilyId:family.familyKey,staffPaymentRequestId:request._id,staffTestOnly:liveWorkspaceEnabled()?'0':'1',...(request.publicToken?{customerPaymentToken:request.publicToken}:{})}

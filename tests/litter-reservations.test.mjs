@@ -97,3 +97,22 @@ test('unknown checkout-creation outcome keeps its hold and recovers the original
 test('synthetic litter capability cannot be used through the live customer payment endpoint',async()=>{
  const p=await offer(),before=JSON.stringify([...db.documents]);const live=await import('../app/api/payment/[token]/route.ts');const response=await live.GET(new Request(origin+'/api/payment/'+p.publicToken),{params:Promise.resolve({token:p.publicToken})});assert.equal(response.status,404);assert.equal(JSON.stringify([...db.documents]),before)
 })
+
+test('an interrupted final-link preparation can finish the original request; reopening it does not create another checkout',async()=>{
+ const p=await offer();await deliver(event(p.checkoutSessionId))
+ const reserved=await core.loadLitterReservations();assert.equal(reserved.reservations[0].state,'reserved')
+ const {listWorkspaceFamilies}=await import('../sanity/lib/workspace.ts');const family=(await listWorkspaceFamilies()).find(f=>f.familyKey===familyId(1));assert.equal(family.profile.stage,'Litter place reserved');assert.match(family.profile.next,/Await puppy selection/)
+ await action({type:'transfer',confirmed:true,id:p.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:''})
+ const transferred=db.documents.get(p.litterReservationId).history.find(h=>h.action==='transferred');assert.equal(transferred.fromLitterTitle,'fictional-autumn — TEST');assert.equal(transferred.toLitterTitle,'fictional-spring — TEST');assert.equal(transferred.depositCreditCents,35000)
+ db.documents.get('fictional-spring').status='current'
+ await action({type:'assign',confirmed:true,id:p.litterReservationId,puppyId:'fictional-puppy',requestId:randomUUID()})
+ const post=body=>email.POST(new Request(origin+'/inbox/workspace/api/email',{method:'POST',headers:{authorization,origin,'content-type':'application/json'},body:JSON.stringify(body)}))
+ const prepared=await post({type:'payment',familyId:familyId(1),puppyId:'fictional-puppy',kind:'balance',requestId:randomUUID()}),data=await prepared.json(),id=data.preparedPaymentId
+ const body={type:'checkout',familyId:familyId(1),paymentRequestId:id},create=globalThis.fixtureStripe.checkout.sessions.create
+ globalThis.fixtureStripe.checkout.sessions.create=async()=>{throw Error('Temporary provider interruption')}
+ assert.equal((await post(body)).status,503);assert(!db.documents.get(id).checkoutUrl)
+ globalThis.fixtureStripe.checkout.sessions.create=create
+ const recovered=await post(body);assert.equal(recovered.status,200,await recovered.clone().text());const final=(await recovered.json()).paymentRequests.find(p=>p._id===id);assert(final.checkoutUrl);assert.equal([...db.documents.values()].filter(d=>d._type==='staffPaymentRequest'&&d.kind==='balance').length,1)
+ const count=sessions.size;globalThis.fixtureStripe.checkout.sessions.create=async()=>{throw Error('Must reuse the saved checkout')}
+ assert.equal((await post(body)).status,200);assert.equal(sessions.size,count);assert.equal([...db.documents.values()].filter(d=>d._type==='paymentRecord').length,1)
+})
