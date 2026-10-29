@@ -1,5 +1,5 @@
 import {editorialPuppy,editorialLitter} from './editorial-review'
-import {litterReservationsEnabled} from '@/lib/litter-reservations'
+import {litterReservationMode} from '@/lib/litter-reservations'
 import {cache} from 'react'
 import {client} from './client'
 import type {Litter, Puppy} from '@/lib/inventory'
@@ -12,7 +12,7 @@ export const getInventory = cache(async () => {
     client.fetch<Litter[]>(littersQuery, {}, publicOptions),
     client.fetch<Puppy[]>(puppiesQuery, {}, publicOptions),
   ])
-  if(litterReservationsEnabled()){
+  if(litterReservationMode()==='test'){
     const testIds=await client.fetch<string[]>('*[_type=="litter" && litterReservationTest==true && !(_id in path("drafts.**"))]._id',{},{cache:'no-store'})
     return {litters:litters.filter(l=>testIds.includes(l._id)).map(editorialLitter),puppies:puppies.filter(p=>testIds.includes(p.litterId||'')).map(editorialPuppy)}
   }

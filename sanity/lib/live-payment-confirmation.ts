@@ -1,3 +1,4 @@
+import {litterConfirmationSnapshot} from './litter-payment-confirmation'
 import 'server-only'
 import {confirmationMessage,renderPaymentEmail,type PaymentEmail} from '@/lib/mail/payment-email'
 import {jeanneEmail,type OutgoingEmail} from '@/app/inbox/workspace/email-model'
@@ -6,7 +7,9 @@ import {findLiveLedger,ledgerMatches,livePaymentContext,livePaymentUrl,liveConfi
 import {privateRecordId} from './private-records'
 
 export async function liveConfirmationSnapshot(sessionId:string){
- const context=await livePaymentContext(await getStripe().checkout.sessions.retrieve(sessionId)),{client,request,family,session}=context
+ const sessionValue=await getStripe().checkout.sessions.retrieve(sessionId)
+ if(sessionValue.metadata?.litterReservationId)return await litterConfirmationSnapshot(sessionId)
+ const context=await livePaymentContext(sessionValue),{client,request,family,session}=context
  const ledger=await findLiveLedger(sessionId)
  // Only newly verified live records opt into automatic email. No historical
  // backfill, GET request, browser return or test event can create a receipt.

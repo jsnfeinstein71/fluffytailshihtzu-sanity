@@ -10,7 +10,7 @@ import {paymentTestWorkspaceEnabled,requirePaymentTestConfiguration} from '@/lib
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
 import 'server-only'
 import {litterReservationsEnabled} from '@/lib/litter-reservations'
-import {customerLitterPayment} from './litter-reservations'
+import {customerLitterPayment,reconcileLitterHold} from './litter-reservations'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {privateRecordId} from './private-records'
 import {families,puppies} from '@/app/inbox/workspace/model'
@@ -223,7 +223,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const testUrl=payment?(payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href):null
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${testUrl}`:value.body
   const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)
-  const presentation=payment&&liveWorkspaceEnabled()?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
+  const presentation=payment&&liveWorkspaceEnabled()&&!payment.litterReservationId?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
   const paymentEmail=(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled())&&presentation?paymentRequestEmail(presentation,family.profile.name,value.body):null
   if(liveWorkspaceEnabled()&&payment&&!paymentEmail)throw new EmailWorkflowError('This payment link needs review before sending.',409)
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
@@ -257,7 +257,7 @@ export async function validateSavedEmailReview(id:string,origin:string){
   const body=payment&&!payment.publicToken?`${value.body}\n\n${liveWorkspaceEnabled()?'PAYMENT REQUEST — a link is not confirmation of payment.':'TEST PAYMENT REQUEST — no payment can be made using this link.'}\n${payment.puppyName} ${payment.kind}: $${(payment.amountCents/100).toFixed(2)}\n${payment.checkoutUrl||new URL(paymentPreviewPath(payment.requestId),origin).href}`:value.body
   const attachments=await checkedAttachments(value.attachmentIds,family.familyKey)
   if(!sameAttachments(review.attachments,attachments))throw new EmailWorkflowError('The attachment snapshot changed. Prepare the current message again.',409)
-  const presentation=review.paymentEmail&&payment&&liveWorkspaceEnabled()?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
+  const presentation=review.paymentEmail&&payment&&liveWorkspaceEnabled()&&!payment.litterReservationId?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
   const currentTemplate=review.paymentEmail&&presentation?paymentRequestEmail(presentation,family.profile.name,value.body):null
   const paymentEmail=currentTemplate?{...currentTemplate,version:review.paymentEmail!.version}:null
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
@@ -273,6 +273,7 @@ async function paymentTransport(action:{type:'checkout'|'verify';familyId:string
   if(!paymentTestWorkspaceEnabled()&&(liveWorkspaceEnabled()?!/^(?:sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY||''):(process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED!=='1'||! /^(?:sk|rk|rkcs)_test_/.test(process.env.STRIPE_SECRET_KEY||''))))throw new EmailWorkflowError('Stripe test checkout is not configured. No live payment can be created.',503)
   if(family.profile.source!=='inquiry')throw new EmailWorkflowError('Connect a saved inquiry family before using Stripe test checkout.',409)
   const request=await checkedPayment(action.paymentRequestId,family,action.type==='checkout')
+ if(request.litterReservationId){await reconcileLitterHold(request.litterReservationId);return {}}
   const client=getOperatorClient()
   if(action.type==='checkout'){
     const matches=await client.fetch<{slug:string}[]>('*[_type == "puppy" && _id == $id][0...2]{"slug":slug.current}',{id:request.puppyId},{cache:'no-store'})

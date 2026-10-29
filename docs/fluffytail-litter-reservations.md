@@ -1,10 +1,44 @@
-# Four-place litter reservations — isolated implementation
+# Four-place litter reservations — release preparation
 
 Owner authorization: build and verify the four-place litter reservation journey on latest main, without Production offers, messages, live charges or real puppy changes. Baseline `d1f04b7` includes the completed passkey cutover. Preserve that work and the existing Inbox, messaging, payment history, copy and branding. Historical migration remains paused.
 
-This first release requires `FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED=1`, Preview, exact `gu1xkpsg/synthetic`, the existing test-payment configuration and marked fictional litter/puppy/family records. It fails closed against Production. No live configuration is copied into its operation. Production activation is a separate reviewed release.
+Historical first Preview checkpoint: this release required `FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED=1`, Preview, exact `gu1xkpsg/synthetic`, the existing test-payment configuration and marked fictional litter/puppy/family records. It fails closed against Production. No live configuration is copied into its operation. Production activation is a separate reviewed release.
 
-## Record and payment behavior
+## October 29 continuation — current release state
+
+PR #21 incorporates current main `9805029` (published responsive litter images) without resetting prior work. Both real and synthetic reservation adapters now use the same revision-guarded four-place workflow. Production is **still disabled**: the separate `FLUFFYTAIL_LITTER_RESERVATIONS_LIVE_ENABLED` switch has not been configured or activated. The earlier `FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED=1` remains synthetic-only; it cannot activate a real litter. Existing Production deployment, passkeys, inquiries, financial records, messages and migration remain unchanged.
+
+### Fresh-device owner access
+
+The owner personally saved `INBOX_BASIC_AUTH_USER` and `INBOX_BASIC_AUTH_PASS` in Vercel for Preview / `codex/four-place-litter-reservations`. No value was read back or put into chat/source/logs, and no rejected credential-display method was retried. A fresh Preview deployment from `92414bb` (`dpl_81NDUoKP2GgadXttMzhjQpsdUWFd`) was assigned to the stable alias using those current branch-scoped settings. Entry: https://fluffytail-litter-reservations-test.vercel.app/inbox/access . Enter the values chosen in Vercel; the existing branded application flow opens the workspace and uses its scoped session. Anonymous page/API probes show no Basic Auth challenge, and a genuinely signed-out browser shows the form. Actual phone/tablet sign-in and refresh confirmation was requested from the owner; report it as pending until their reply. Later branch builds keep the same owner-controlled values. Production passkeys remain independent.
+
+### Completed live integration, awaiting release approval
+
+- Real upcoming/current litters, families, private boards/reservations/ledger and credit application records use `live-v1`; synthetic ones retain their existing `review-v1` identities and records. Live mode rejects marked fictional inventory/families and mixed keys/configuration. Public TEST banners and fictional inventory filtering are test-mode-only.
+- Prices/deposits come from published litter configuration. A read-only check of Production's upcoming Penny October 31 litter confirms $1,600 / $400. No record was edited. The unusual Practice/Verification prices remain isolated testing data.
+- The existing live signature-verified Stripe endpoint routes litter metadata to the shared reservation handler before normal puppy payment handling. It re-reads provider state and validates live/test mode, session/family/request/token/original quote. Paid deposits confirm a position only; open/retryable or processing payments retain their hold. Definitive closure and conditional revision updates release it. Conflicts retry or return retryable failure instead of acknowledging a stale position update.
+- New live litter request/confirmation emails use version 5 of the existing branded multipart renderer, Pair outbox, frozen personalized note, threading and duplicate/uncertain-attempt controls. Earlier v1–v4 snapshots stay unchanged. Confirmations require the newly verified litter ledger's opt-in marker; no historical email import/backfill. SMS stays plain text, preserves the personal draft and existing consent/duplicate checks, and labels live links without TEST text.
+- The existing account-free `/pay/` and `/api/payment/` pages resolve the litter capability with server/provider validation and expose no family IDs or contacts. New live pages have no TEST label. Generic puppy payment pages and already-issued links remain intact.
+- Transfer preserves the receiving litter's occupied positions, moves the original credit and records history without a new payment. Assignment uses the chosen puppy's approved litter/override price and applies the original paid credit once. The receiving litter's normal new-deposit amount does not demand a second deposit or corrupt this credit. The lower-than-credit manual-review block remains. Ordinary Associate a puppy cannot bypass deposit application. Final balance and paid-in-full confirmation reuse the existing payment flow; reservation remains until pickup.
+- The fictional birth helper is denied in live mode. Production birth/status changes continue through existing inventory management.
+
+Offline production-shaped handler tests use memory storage, fake live-shaped provider identifiers and fictional Pair transport only. They cover branded request→verified signed deposit→threaded confirmation→transfer→assignment→existing final checkout→paid in full; concurrent offers; processing, terminal failure and late-money review; invalid signature/mode rejection; switch-off/mixed-mode denial; private public projection; and the manual-review credit floor. They do not claim any real live payment or customer delivery was tested. Existing historical/Girl-2-shaped link and payment tests remain passing.
+
+### Exact remaining Stripe owner step
+
+The existing sandbox is `acct_1UUq83RbnssrQ3Z0`. The official Stripe CLI was queried read-only with its existing config and confirmed this account and test-only credentials. The default unrelated CLI profile is signed out; use the existing config explicitly. Owner launcher: `C:/Users/jlcfe/AppData/Local/FluffyTail/LitterReservations/Claim-existing-Stripe-sandbox.cmd`. It runs only the official command:
+
+`npx --yes @stripe/cli --config "%LOCALAPPDATA%\FluffyTail\StripePreview\config.toml" sandbox claim`
+
+The owner opens Stripe's native claim flow, signs into the existing FluffyTail Stripe account and completes the claim for this sandbox. No local password display, secret export, replacement sandbox or automatic account claim is performed. After claim, Stripe's CLI help directs login for permanent keys; any needed sandbox-only credential refresh must remain private and must not change the live account/Production settings. The remaining genuine delayed bank-payment test needs the claimed sandbox's payment-method configuration permissions. Current processing/late-event evidence is from isolated fixtures, not an actual delayed bank payment. Complete the real sandbox test after that owner step.
+
+### Remaining release gates
+
+Owner confirms independent phone/tablet access and reviews the preserved Rowan scenario. Complete actual delayed provider verification after claim. Then seek explicit approval to deploy the prepared live code and enable its one separate switch; do not create real offers, messages or charges before approval. The lower-than-credit case is deliberately blocked for Jeanne's manual decision, not a newly invented refund/forfeiture policy. Rowan's record and all existing test progress are left untouched by this development phase.
+
+---
+
+## Historical Preview record and payment behavior
 
 Each litter has a private four-place aggregate guarded by Sanity revision transactions. A private family anchor prevents competing active deposit offers to the same family. A durable pending position and immutable request quote are committed before creating Stripe Checkout. Unknown creation outcomes retain the place and retry the original Stripe idempotency key. Public responses contain exactly position numbers and status labels; names, contacts, operational identifiers and history remain private. No public request can approve a reservation.
 

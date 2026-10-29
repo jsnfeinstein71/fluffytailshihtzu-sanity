@@ -1,5 +1,5 @@
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
-import {litterReservationsEnabled} from '@/lib/litter-reservations'
+import {litterReservationMode} from '@/lib/litter-reservations'
 import {randomUUID} from 'node:crypto'
 import {InquiryError, normalizePhone, type InquiryInput} from '@/lib/inquiry'
 import {inquiryHash} from '@/lib/inquiry-security'
@@ -39,7 +39,7 @@ function alertNumbers() {
 }
 
 export async function acceptInquiry(input: InquiryInput, ip: string) {
-  if(litterReservationsEnabled()&&!input.email.endsWith('@example.test'))throw new InquiryError('This isolated test accepts fictional @example.test email addresses only. Nothing was submitted.',400)
+  if(litterReservationMode()==='test'&&!input.email.endsWith('@example.test'))throw new InquiryError('This isolated test accepts fictional @example.test email addresses only. Nothing was submitted.',400)
   const sanity = getOperatorClient()
   const puppy = input.puppySlug
     ? await client.fetch<Puppy | null>(puppyQuery, {slug: input.puppySlug}, {perspective: 'published', cache: 'no-store'})

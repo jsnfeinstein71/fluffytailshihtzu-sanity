@@ -5,7 +5,7 @@ import './upcoming.css'
 import {pageDescriptions} from '@/lib/public-copy'
 import Link from 'next/link'
 import LitterPlaces from './LitterPlaces'
-import {litterReservationsEnabled} from '@/lib/litter-reservations'
+import {litterReservationMode,litterReservationsEnabled} from '@/lib/litter-reservations'
 import {getInventory} from '@/sanity/lib/inventory'
 import {formatCurrency, formatDate, getLitterDate, getLittersByStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
@@ -26,7 +26,7 @@ export default async function UpcomingLittersPage() {
       <p className="lead">Not choosing a puppy today? Here’s what we’re looking forward to. Tell Jeanne when you hope to bring your little one home.</p>
     </header>
 
-    {litterReservationsEnabled()?<p className="expected-status" role="status">TEST — fictional litters only. No real charges or inventory changes. Use a fictional @example.test email for inquiries; messages are disabled.</p>:null}
+    {litterReservationMode()==='test'?<p className="expected-status" role="status">TEST — fictional litters only. No real charges or inventory changes. Use a fictional @example.test email for inquiries; messages are disabled.</p>:null}
     {expectedLitters.map((litter, index) => {
       const date = formatDate(getLitterDate(litter))
       const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
