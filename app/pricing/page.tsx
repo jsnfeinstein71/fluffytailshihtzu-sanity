@@ -79,7 +79,7 @@ export default async function PricingPage() {
           </p>
           <p className="">
             {
-              'Each puppy’s profile shows the exact price. Under our current direct-sale pricing, no additional taxes or fees are added to the advertised puppy price.'
+              'Each puppy’s profile shows the exact price. Under current direct-sale pricing, no additional taxes or fees are added to the advertised puppy price.'
             }
           </p>
         </div>

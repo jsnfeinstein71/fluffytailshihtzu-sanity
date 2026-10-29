@@ -24,9 +24,13 @@ test('review mirror affects only the authorized draft fields, never prices, stat
  }finally{for(const key of Object.keys(process.env))if(!(key in saved))delete process.env[key];Object.assign(process.env,saved)}
 })
 
-test('supplied personal introduction and portrait are integrated without a new biography or replacement artwork',async()=>{
+test('Jeanne is the sole personal voice while established facts and her approved portrait remain',async()=>{
  const About=(await import('../app/about/page.tsx')).default,html=renderToStaticMarkup(About())
- for(const text of ['Before one of our puppies becomes part of your family, I’d like you to know a little about ours.','My husband, Jason, and I share our home in the Mobile, Alabama area with our Shih Tzus.','Jeanne · FluffyTail Shih Tzu']){assert.ok(manuscript.includes(text));assert.ok(html.includes(text))}
+ for(const text of ['Hi, I am Jeanne.','Before a FluffyTail puppy becomes part of your family, I would like you to know a little about me.','I share my home in the Mobile, Alabama area with my Shih Tzus.','I begin socialization and potty-training work while the puppies are with me.','Jeanne · FluffyTail Shih Tzu'])assert.ok(html.includes(text))
+ for(const text of ['written vaccination and deworming records, CKC registration papers','food, treats, toys, and a blanket carrying the scent of mom and littermates']){assert.ok(manuscript.includes(text));assert.ok(html.includes(text))}
+ assert.doesNotMatch(html,/Jason|I[’']m|We begin|puppies we raise/)
+ const {homepageIntro}=await import('../lib/public-copy.ts')
+ assert.match(homepageIntro,/^I am Jeanne\b/);assert.doesNotMatch(homepageIntro,/Jason|\bWe’re\b/)
  assert.match(html,/jeanne-portrait.webp/);assert.match(html,/width="960" height="1200"/);assert.doesNotMatch(html,/Jeanne at home|years of experience|kennel|litter photograph/)
 })
 

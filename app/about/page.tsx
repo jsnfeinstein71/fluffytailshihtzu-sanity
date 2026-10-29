@@ -14,10 +14,10 @@ export default function AboutPage() {
     <main className="wrap content-page">
       <header className="content-intro">
         <p className="eyebrow">The person behind FluffyTail</p>
-        <h1 className="h1">Hi, I’m Jeanne.</h1>
+        <h1 className="h1">Hi, I am Jeanne.</h1>
         <p className="lead">
-          Before one of our puppies becomes part of your family, I’d like you to
-          know a little about ours.
+          Before a FluffyTail puppy becomes part of your family, I would like you to
+          know a little about me.
         </p>
       </header>
       <div className="grid content-has-photo">
@@ -36,21 +36,21 @@ export default function AboutPage() {
         <div className="card content-copy">
           <div className="pad">
             <div className="section">
-              <h2>{'Our home, our dogs'}</h2>
+              <h2>{'My home, my dogs'}</h2>
               <p className="lead">
                 {
-                  'My husband, Jason, and I share our home in the Mobile, Alabama area with our Shih Tzus. They’re our family pets, and the puppies we raise start their lives as part of that household.'
+                  'I share my home in the Mobile, Alabama area with my Shih Tzus. They are my family pets, and the puppies I raise start their lives as part of that household.'
                 }
               </p>
               <p className="lead">
                 {
-                  'If you’ve been looking through our litters, you may already have met names like Elsie and Penny. Behind those names are our own dogs, and behind every puppy listing is a conversation you can have directly with me.'
+                  'If you’ve been looking through the litters, you may already have met names like Elsie and Penny. Behind those names are my own dogs, and behind every puppy listing is a conversation you can have directly with me.'
                 }
               </p>
             </div>
             <div className="divider" />
             <div className="section">
-              <h2>{'You’ll be talking with me'}</h2>
+              <h2>{'You will be talking with me'}</h2>
               <p className="lead">
                 {
                   'Choosing a puppy is personal. I want you to feel comfortable asking about the little one you’re interested in, what to expect before pickup, and what you’ll need at home.'
@@ -67,7 +67,7 @@ export default function AboutPage() {
               <h2>{'A little piece of home goes with them'}</h2>
               <p className="lead">
                 {
-                  'We begin socialization and potty-training work while the puppies are with us. They’ll still need patience, practice, and a routine as they settle into your home.'
+                  'I begin socialization and potty-training work while the puppies are with me. They will still need patience, practice, and a routine as they settle into your home.'
                 }
               </p>
               <p className="lead">
@@ -83,7 +83,7 @@ export default function AboutPage() {
             <h2 className="panelTitle">At a glance</h2>
             <ul className="content-facts">
               <li>Mobile, Alabama area</li>
-              <li>Puppies raised in our home</li>
+              <li>Puppies raised in my home</li>
               <li>Direct conversations with Jeanne</li>
               <li>Pickup arranged together</li>
             </ul>
@@ -95,7 +95,7 @@ export default function AboutPage() {
           <h2>Let’s meet your next little companion</h2>
           <p className="lead">
             {
-              'Have a look at our puppies, or send me a note if you’re planning ahead. I’d love to hear what you’re looking for.'
+              'Have a look at the puppies, or send me a note if you’re planning ahead. I would love to hear what you’re looking for.'
             }
           </p>
           <div className="ctaRow">

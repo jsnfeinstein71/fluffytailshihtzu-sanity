@@ -1,7 +1,8 @@
-// Owner-supplied manuscript: docs/source/FluffyTail-Website-Copy.md.
+// Owner-supplied manuscript: docs/source/FluffyTail-Website-Copy.md;
+// personal voice updated by the owner's October 29 Jeanne-only correction.
 // Values in records remain authoritative; these helpers supply presentation only.
-export const homepageHeadline = 'From our home to yours.'
-export const homepageIntro = 'We’re Jeanne and Jason, and FluffyTail is part of our everyday life at home. Our Shih Tzus live with us as family pets, and raising their puppies means helping them get ready for a family of their own.\n\nTake a look at the little ones below. When a puppy catches your eye, send Jeanne a message. You can ask about that puppy, talk through timing, and get to know the person you’ll be working with.'
+export const homepageHeadline = 'From my home to yours.'
+export const homepageIntro = 'I am Jeanne, and FluffyTail is part of my everyday life at home. My Shih Tzus live with me as family pets, and raising their puppies means helping them get ready for a family of their own.\n\nTake a look at the little ones below. When a puppy catches your eye, send me a message. You can ask about that puppy, talk through timing, and get to know me before you decide.'
 export const pageDescriptions = {
   home: 'Meet FluffyTail’s home-raised Shih Tzu puppies in the Mobile, Alabama area. Browse current litters and talk directly with Jeanne.',
   about: 'Get to know Jeanne and the home behind FluffyTail Shih Tzu. Meet our puppies and learn what comes with them when they join your family.',
