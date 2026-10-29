@@ -1,4 +1,4 @@
-# Four-place litter reservations — release preparation
+# Four-place litter reservations — production release
 
 Owner authorization: build and verify the four-place litter reservation journey on latest main, without Production offers, messages, live charges or real puppy changes. Baseline `d1f04b7` includes the completed passkey cutover. Preserve that work and the existing Inbox, messaging, payment history, copy and branding. Historical migration remains paused.
 
@@ -32,7 +32,7 @@ The owner claimed the existing sandbox `acct_1UUq83RbnssrQ3Z0`; its account and 
 
 ### Remaining release gates
 
-The owner completed Rowan's full test and confirmed $1,950 paid, zero remaining and Juniper Reserved. The stale paid-request composer correction and genuine delayed-provider checks are complete. The owner subsequently approved Production merge/deploy and activation; that release is now published. The lower-than-credit case remains deliberately blocked for Jeanne's manual decision. No new exception policy was invented. Rowan's financial, transfer, family, litter and puppy records remain unchanged. An authenticated post-release staff browser check needs the owner to unlock the open admin tab with their existing passkey; no authentication bypass or credential change is used to replace that check.
+The owner completed Rowan's full test and confirmed $1,950 paid, zero remaining and Juniper Reserved. The stale paid-request composer correction and genuine delayed-provider checks are complete. The owner subsequently approved Production merge/deploy and activation; that release is now published. The lower-than-credit case remains deliberately blocked for Jeanne's manual decision. No new exception policy was invented. Rowan's financial, transfer, family, litter and puppy records remain unchanged. The owner unlocked the Production admin tab with their existing passkey and authenticated post-release verification is now complete; no bypass, simulated authenticator or credential change was used.
 
 ---
 
@@ -190,8 +190,14 @@ Live read-only verification at 19:41 UTC:
 - https://www.fluffytailshihtzu.com/upcoming-litters displays Penny October 31, 2026, its actual published $1,600 price and $400 deposit, and four positions: Available, Available, Available, Available. The public API returns only position/status pairs. No fictional litter or TEST labeling appears.
 - The reservation inquiry action names Penny and carries its litter into the simple inquiry form. No inquiry was submitted. Production inquiry-token readiness, pricing/contact pages and an already-issued real customer payment page return 200; no checkout/payment was initiated.
 - Desktop and mobile browser verification shows the approved design with the new section. At 390px the document width remains 390px and all four positions are readable. Screenshots: `production-litter-reservations-desktop.jpg` and `production-litter-reservations-mobile.jpg` in the private local evidence folder.
-- Signed-out admin workspace/reservation/email APIs return 401 with no Basic Auth challenge. The admin URL still shows the existing branded passkey Unlock screen. Authenticated visual verification is pending the owner's existing passkey sign-in in the open admin tab; no simulated authenticator or fabricated session counts as that check.
+- Signed-out admin workspace/reservation/email APIs return 401 with no Basic Auth challenge. The admin URL still uses the existing branded passkey Unlock screen. The owner subsequently signed in and authenticated verification completed as recorded below.
 - All 273 pre-release Production document IDs/revisions remain unchanged, and no document was added by release verification. In particular no price/status, family/payment, reservation, credential or session was rewritten. No customer email/SMS, live payment or real-position offer was made. The deployed runtime error/fatal scan is empty.
 - The completed Preview remains on deployment `dpl_7Cnm9MD96cUdLdseTQWgoWsEpE4i` / application `8f265b2` at https://fluffytail-litter-reservations-test.vercel.app/inbox/workspace. Its synthetic records, Rowan's completed journey and sandbox remain isolated and available.
 
 Production staff entry: https://admin.fluffytailshihtzu.com/inbox/workspace . Existing real families use their Litter reservations panel; Jeanne selects the configured real litter and approves any offer herself. No offer is created just by viewing the workspace or the public positions. Transfers, verified-credit assignment and the below-deposit-price manual-review block are retained. Historical migration remains paused.
+
+### Authenticated owner verification completed
+
+After the owner reported the workspace open, the authenticated browser displayed five existing real families, saved conversation history and the manual Pair email composer. The DjinX owner conversation's Details panel showed Penny October 31, four Available positions, and Offer 1st pick · $400.00 deposit. The offer was not clicked. There were no synthetic litters, fictional birth helpers or TEST controls in the production panel. The original `/inbox` opened under the same protection and displayed its existing conversations/actions. Refreshing the workspace retained authentication without another prompt; the conversation and live litter controls remained accessible.
+
+Read-only public/payment/API checks still pass after this owner session. No litter/puppy, payment ledger/request, reservation/position, email draft or outgoing message record changed or was created. Normal owner sign-in created its ceremony/rate/session records and updated owner/credential access metadata; the existing workspace synchronization updated its mail cursor and five family revisions. These ordinary access/projection updates are distinct from the earlier pre-sign-in 273-record exact-revision comparison. No migration, customer send, checkout or position offer was performed. Private screenshot `production-authenticated-reservations.jpg` records the authenticated panel. No post-release verification blocker remains.
