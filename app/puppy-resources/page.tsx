@@ -12,7 +12,7 @@ export const metadata = publicPageMetadata({
   path: '/puppy-resources',
 })
 export default async function PuppyResourcesPage() {
-  const {litters, puppies} = await getInventory()
+  const {litters, puppies} = await getInventory().catch(()=>({litters:[],puppies:[]}))
   const current = getLittersByStatus(litters, 'current')[0]
   const members = current ? getPuppiesForLitter(puppies, current._id) : []
   const featured =
@@ -74,15 +74,18 @@ export default async function PuppyResourcesPage() {
             <div className="divider" />
             <div className="section">
               <h2>{'In your puppy’s bag'}</h2>
+              <p className="sublead">Confirmed FluffyTail take-home items</p>
               <p className="lead">
                 {
                   'Your FluffyTail starter kit includes food, treats, toys, and a blanket with mom and littermates’ scent. You’ll also receive CKC registration papers and written vaccination and deworming records. Keep the health records ready for your veterinarian.'
                 }
               </p>
+              <p className="lead">Puppies also have a veterinary check and initial vaccinations and deworming. Bring the written records to your veterinarian so they can plan continuing care for your puppy.</p>
             </div>
             <div className="divider" />
             <div className="section">
               <h2>{'The first few days'}</h2>
+              <p className="sublead">General settling-in guidance</p>
               <div className="qa">
                 <div>
                   <div className="q">{'Give your puppy time.'}</div>
@@ -91,6 +94,7 @@ export default async function PuppyResourcesPage() {
                       'A new home is a lot to take in. Keep introductions calm and brief, with time to rest. If you use a crate, introduce it gently with positive experiences.'
                     }
                   </div>
+                  <p className="a">Begin with a small area you can supervise rather than the whole house. Keep the sleeping space quiet and comfortable, let your puppy move away from an interaction, and save busy visits for later. A settled first day is more useful than meeting everyone at once.</p>
                 </div>
                 <div>
                   <div className="q">
@@ -101,6 +105,7 @@ export default async function PuppyResourcesPage() {
                       'I start socialization and potty-training work before pickup. Continue with a predictable routine, patient practice, and rewards. Accidents are part of learning.'
                     }
                   </div>
+                  <p className="a">Offer regular opportunities to use the chosen toilet area, especially after sleep, meals and play. Reward successes and clean up accidents calmly. The work begun here does not mean a puppy arrives fully house-trained or ready to be left alone for long stretches.</p>
                 </div>
                 <div>
                   <div className="q">{'Arrange veterinary follow-up.'}</div>
@@ -112,6 +117,8 @@ export default async function PuppyResourcesPage() {
                 </div>
               </div>
             </div>
+            <div className="divider" />
+            <div className="section"><h2>Choosing a FluffyTail puppy</h2><p className="lead">Start by speaking with me about your household, timing and the puppy you hope to bring home. An inquiry begins that conversation; it does not reserve a puppy or a selection position.</p><p className="lead">For an upcoming litter, I approve a reservation before requesting its deposit. A verified deposit secures the agreed place in the picking order, with the puppy chosen later. Four selection positions are the limit, not a promise of four puppies or a particular sex or color.</p><p className="lead">Pickup is arranged with me, usually in Mobile or at the airport. Ask about the details before making travel plans; any other meeting arrangement needs to be agreed together.</p><div className="ctaRow"><Link className="text-link" href="/pricing">Price, what’s included &amp; pickup</Link><Link className="text-link" href="/upcoming-litters">Explore upcoming litters</Link><Link className="text-link" href="/contact">Talk with Jeanne</Link></div></div>
           </div>
         </div>
         <aside className="card content-aside">

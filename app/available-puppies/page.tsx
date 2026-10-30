@@ -4,7 +4,8 @@ import '../home.css'
 import './available.css'
 import {pageDescriptions} from '@/lib/public-copy'
 import Link from 'next/link'
-import {getInventory} from '@/sanity/lib/inventory'
+import {getBrowsingContext} from '@/sanity/lib/public-availability'
+import {AvailabilityScope,AvailabilityNotice} from '../components/Availability'
 import {formatDate, getLittersByStatus, getPuppiesForLitter, getReadyDate} from '@/lib/inventory'
 import LitterTile from '../components/LitterTile'
 import PuppyCard from '../components/PuppyCard'
@@ -14,13 +15,13 @@ import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({title: 'Available Puppies', description:pageDescriptions.available, path: '/available-puppies'})
 
 export default async function AvailablePuppiesPage() {
-  const {litters, puppies} = await getInventory()
+  const {litters, puppies,availability,inventoryFailed} = await getBrowsingContext()
   const activeLitters = getLittersByStatus(litters, 'current')
   const pastLitters = getLittersByStatus(litters, 'past')
   const availableCount = puppies.filter(puppy => puppy.status === 'available' && activeLitters.some(litter => litter._id === puppy.litterId)).length
 
   return (
-    <main className="wrap available-page">
+    <AvailabilityScope initial={availability}><main className="wrap available-page">
       <header className="available-intro">
         <div><p className="eyebrow">Meet our puppies</p>
           <h1 className="h1">Available Puppies</h1>
@@ -31,6 +32,8 @@ export default async function AvailablePuppiesPage() {
           <span>{availableCount} available {availableCount === 1 ? 'puppy' : 'puppies'}</span>
         </p> : null}
       </header>
+
+      <AvailabilityNotice/>
 
       <p className="lead">Reserved puppies stay with their litter on this page, so you can still see all the little ones together. Check each puppy’s status before asking about a reservation.</p>
       <p className="sublead">Jeanne will confirm pickup timing with you.</p>
@@ -56,7 +59,8 @@ export default async function AvailablePuppiesPage() {
           </div>
         </section>
       })}
-      {!activeLitters.length ? <section className="available-empty">
+      {inventoryFailed?<p role="status">The puppy details could not be loaded. Please ask Jeanne to confirm availability.</p>:null}
+      {!activeLitters.length&&!inventoryFailed ? <section className="available-empty">
         <h2>Looking for the next litter?</h2>
         <p>No current litter is listed here. See what’s coming up, or tell me when you hope to bring a puppy home.</p>
         <Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link>
@@ -73,6 +77,6 @@ export default async function AvailablePuppiesPage() {
           </details>
         })}
       </section> : null}
-    </main>
+    </main></AvailabilityScope>
   )
 }

@@ -4,8 +4,11 @@ import './globals.css'
 import './brand.css'
 import SiteChrome from './components/SiteChrome'
 import RetiredAnalyticsCleanup from './components/RetiredAnalyticsCleanup'
+import PublicReviewBar from './components/PublicReviewBar'
+import {publicReviewEnabled} from '@/lib/public-review'
 
 export const metadata: Metadata = {
+  robots:publicReviewEnabled()?{index:false,follow:false}:undefined,
   referrer: 'no-referrer',
   metadataBase: new URL('https://www.fluffytailshihtzu.com'),
   title: {
@@ -45,7 +48,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <RetiredAnalyticsCleanup />
-        <SiteChrome>{children}</SiteChrome>
+        <SiteChrome>{publicReviewEnabled()?<><PublicReviewBar/>{children}</>:children}</SiteChrome>
       </body>
     </html>
   )

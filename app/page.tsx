@@ -5,7 +5,8 @@ import {homepageHeadline,homepageIntro,pageDescriptions} from '@/lib/public-copy
 import {editorialSettings} from '@/sanity/lib/editorial-review'
 import Link from 'next/link'
 import {client} from '@/sanity/lib/client'
-import {getInventory} from '@/sanity/lib/inventory'
+import {getBrowsingContext} from '@/sanity/lib/public-availability'
+import {AvailabilityScope,AvailabilityActions,AvailabilityInvitation} from './components/Availability'
 import {canInquireAboutPuppy, getLittersByStatus} from '@/lib/inventory'
 import LitterSection from './components/LitterSection'
 import HomeHero from './components/HomeHero'
@@ -35,9 +36,9 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function HomePage() {
-  const [publishedSettings, {litters, puppies}] = await Promise.all([
-    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}),
-    getInventory(),
+  const [publishedSettings, {litters, puppies,availability,inventoryFailed}] = await Promise.all([
+    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}).catch(()=>null),
+    getBrowsingContext(),
   ])
   const siteSettings=editorialSettings(publishedSettings)
   const activeLitters = getLittersByStatus(litters, 'current')
@@ -46,9 +47,9 @@ export default async function HomePage() {
   const designPreview = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview'
   const introHeadline = siteSettings?.homepageHeadline || homepageHeadline
 
-  return <main>
+  return <AvailabilityScope initial={availability}><main>
     <StructuredData data={organizationJsonLd} />
-    <HomeHero imageUrl={heroImageUrl} preview={designPreview} />
+    <HomeHero imageUrl={heroImageUrl} preview={designPreview} actions={<AvailabilityActions hero/>} />
 
     <section className="brand-container home-intro">
       <div><p className="eyebrow">Shih Tzu puppies in Mobile, Alabama</p><h2>{introHeadline}</h2></div>
@@ -62,13 +63,13 @@ export default async function HomePage() {
     <section className="brand-container home-puppies" aria-labelledby="puppies-title">
       <div className="section-heading">
         <div><p className="eyebrow">Meet the little ones</p><h2 id="puppies-title">Current litters</h2><p>See who’s here, who’s available, and who already has a family waiting.</p></div>
-        <span className="pill"><span className="dot" />{availableCount ? `${availableCount} available ${availableCount === 1 ? 'puppy' : 'puppies'}` : 'Ask about future puppies'}</span>
+        <span className="pill"><span className="dot" />{inventoryFailed?'Availability to be confirmed':availableCount ? `${availableCount} available ${availableCount === 1 ? 'puppy' : 'puppies'}` : availability.allCurrentReserved?'Families waiting':'Ask about future puppies'}</span>
       </div>
-      {activeLitters.length ? activeLitters.map(litter => <LitterSection key={litter._id} litter={litter} puppies={puppies} />) : <div className="litter-section"><h3>Looking for the next litter?</h3><p>No current litter is listed here. See what’s coming up, or tell me when you hope to bring a puppy home.</p><Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>}
+      {activeLitters.length ? activeLitters.map(litter => <LitterSection key={litter._id} litter={litter} puppies={puppies} />) : inventoryFailed?<p role="status">The current puppy details could not be loaded. Please ask Jeanne to confirm availability.</p>:<div className="litter-section"><h3>Looking for the next litter?</h3><p>No current litter is listed here. Tell me when you hope to bring a puppy home.</p><Link className="text-link" href="/contact">Ask Jeanne <span aria-hidden="true">&rarr;</span></Link></div>}
     </section>
 
     <section className="home-next">
-      <div className="brand-container home-next-inner"><div><p className="eyebrow">Not quite ready yet?</p><h2>Let’s talk about your timing.</h2><p>You can start a conversation before you’re ready to choose. See the upcoming litters and tell me what you have in mind.</p></div><Link className="brand-button" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>
+      <div className="brand-container home-next-inner"><AvailabilityInvitation/></div>
     </section>
-  </main>
+  </main></AvailabilityScope>
 }
