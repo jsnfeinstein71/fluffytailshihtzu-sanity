@@ -61,7 +61,7 @@ export default async function UpcomingLittersPage() {
             </div> : null}
             {litter.expectedAvailability ? <div className="expected-availability"><h3>Looking ahead</h3><p>{litter.expectedAvailability}</p></div> : null}
             <div className="expected-pricing"><PriceDetails name={litter.title || 'Upcoming litter'} pricing={{litterPrice:litter.price,litterDeposit:litter.deposit}} pricingStatus={litter.pricingStatus} context="litter" upcoming /></div>
-            {litterReservationsEnabled()||publicReviewEnabled()?<LitterPlaces litterId={litter._id} title={litter.title||'Upcoming litter'} depositCents={pricing?.depositCents??null} showGuidance={index===0} initialPlaces={inventory.boards[litter._id]}/>:<>            <div className="expected-inquiry">
+            {litterReservationsEnabled()||publicReviewEnabled()?<LitterPlaces key={litter._id+':'+inventory.availability.reviewScenario+':'+JSON.stringify(inventory.boards[litter._id])} litterId={litter._id} title={litter.title||'Upcoming litter'} depositCents={pricing?.depositCents??null} showGuidance={index===0} initialPlaces={inventory.boards[litter._id]} scenario={inventory.availability.reviewScenario}/>:<>            <div className="expected-inquiry">
               <h3>Interested in this litter?</h3>
               <p>Tell Jeanne which litter you’re following and a little about the home you have in mind. Asking now starts a conversation; it doesn’t reserve a puppy.</p>
               <Link className="brand-button" href={'/puppy-inquiry?interest=waitlist&litterId='+encodeURIComponent(litter._id)}>Ask Jeanne about this litter <span aria-hidden="true">&rarr;</span></Link>

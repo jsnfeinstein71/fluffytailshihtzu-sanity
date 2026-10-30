@@ -1,7 +1,8 @@
 import {canInquireAboutPuppy,getLittersByStatus,type Litter,type Puppy} from './inventory'
+import type {ReviewScenario} from './public-review'
 
 export type Place={position:number;status:'Available'|'Pending deposit'|'Reserved'}
-export type Availability={kind:'available'|'upcoming'|'full'|'unannounced'|'unknown';availablePuppies:number;currentLitters:number;upcomingLitters:number;allCurrentReserved:boolean;availableLitterIds:string[];version?:string}
+export type Availability={kind:'available'|'upcoming'|'full'|'unannounced'|'unknown';availablePuppies:number;currentLitters:number;upcomingLitters:number;allCurrentReserved:boolean;availableLitterIds:string[];version?:string;reviewScenario?:ReviewScenario}
 export const unknownAvailability:Availability={kind:'unknown',availablePuppies:0,currentLitters:0,upcomingLitters:0,allCurrentReserved:false,availableLitterIds:[]}
 export function validAvailability(value:unknown):value is Availability{if(!value||typeof value!=='object')return false;const a=value as Availability;return ['available','upcoming','full','unannounced','unknown'].includes(a.kind)&&[a.availablePuppies,a.currentLitters,a.upcomingLitters].every(n=>Number.isSafeInteger(n)&&n>=0)&&typeof a.allCurrentReserved==='boolean'&&Array.isArray(a.availableLitterIds)&&a.availableLitterIds.every(id=>typeof id==='string')}
 export function validPlaces(value:unknown):value is Place[]{return Array.isArray(value)&&value.length===4&&[1,2,3,4].every(n=>value.filter(p=>p?.position===n&&['Available','Pending deposit','Reserved'].includes(p.status)).length===1)}

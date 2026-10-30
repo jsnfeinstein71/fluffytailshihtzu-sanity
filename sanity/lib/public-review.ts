@@ -1,9 +1,9 @@
 import 'server-only'
 import {cookies} from 'next/headers'
-import {publicReviewEnabled,reviewCookie,reviewScenarios,type ReviewScenario} from '@/lib/public-review'
+import {publicReviewEnabled,reviewCookie,isReviewScenario,type ReviewScenario} from '@/lib/public-review'
 import type {Litter,Puppy} from '@/lib/inventory'
 import type {Place} from '@/lib/public-availability'
-export async function reviewScenario():Promise<ReviewScenario>{if(!publicReviewEnabled())return 'live';const value=(await cookies()).get(reviewCookie)?.value;return reviewScenarios.find(s=>s===value)||'live'}
+export async function reviewScenario(requested?:ReviewScenario):Promise<ReviewScenario>{if(!publicReviewEnabled())return 'live';if(isReviewScenario(requested))return requested;const value=(await cookies()).get(reviewCookie)?.value;return isReviewScenario(value)?value:'live'}
 export function reviewInventory(s:ReviewScenario):{litters:Litter[];puppies:Puppy[]}|null{
  if(s==='live')return null
  if(s==='unknown')throw Error('Isolated availability failure fixture')

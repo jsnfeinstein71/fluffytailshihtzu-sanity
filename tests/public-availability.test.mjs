@@ -8,7 +8,8 @@ const {deriveAvailability,availabilityCopy,validPlaces,validAvailability}=await 
 const {reviewInventory,reviewPlaces}=await import('../sanity/lib/public-review.ts')
 const {getBrowsingContext}=await import('../sanity/lib/public-availability.ts')
 const {GET}=await import('../app/api/availability/route.ts')
-const {GET:reviewGET}=await import('../app/review/availability/route.ts')
+const {GET:reviewGET,POST:reviewPOST}=await import('../app/review/availability/route.ts')
+const {GET:placesGET}=await import('../app/api/litter-places/route.ts')
 const Places=(await import('../app/upcoming-litters/LitterPlaces.tsx')).default
 
 test('all isolated availability scenarios use predefined truthful copy, including singular/plural and holds',()=>{
@@ -42,4 +43,26 @@ test('review inquiries preserve litter context without inviting unavailable posi
  const Form=(await import('../app/components/InquiryForm.tsx')).default
  const html=renderToStaticMarkup(React.createElement(Form,{reviewOnly:true,litterId:'review-upcoming',litterTitle:'Review litter',interest:'waitlist'}))
  assert.match(html,/Submissions disabled in review/);assert.match(html,/No message will be sent or saved/);assert.match(html,/talk about Review litter and future plans/);assert.doesNotMatch(html,/ask about reserving a selection/);assert.match(html,/disabled=""/)
+})
+test('immediate scenario application is Preview-only, same-origin and returns confirmation without redirect',async()=>{
+ const saved={...process.env};try{
+  process.env.FLUFFYTAIL_PUBLIC_REVIEW='1';process.env.VERCEL_ENV='production'
+  const request=(scenario,origin='https://preview.example')=>new Request('https://preview.example/review/availability',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({scenario})})
+  assert.equal((await reviewPOST(request('full'))).status,404);process.env.VERCEL_ENV='preview'
+  assert.equal((await reviewPOST(request('full','https://other.example'))).status,403)
+  assert.equal((await reviewPOST(request('invalid'))).status,400)
+  for(const scenario of ['available','upcoming','full','unannounced','unknown','live']){const r=await reviewPOST(request(scenario));assert.equal(r.status,200);assert.equal(r.headers.get('location'),null);assert.equal((await r.json()).scenario,scenario);assert.match(r.headers.get('set-cookie'),new RegExp('fluffytail-public-review='+scenario));assert.equal(r.headers.get('cache-control'),'no-store')}
+ }finally{for(const k of Object.keys(process.env))if(!(k in saved))delete process.env[k];Object.assign(process.env,saved)}
+})
+test('automatic reads stay pinned to the selected fictional scenario even when the cookie changes',async()=>{
+ const saved={...process.env};try{
+  Object.assign(process.env,{VERCEL_ENV:'preview',FLUFFYTAIL_PUBLIC_REVIEW:'1'});globalThis.fixtureReviewCookie='live'
+  const full=(await (await GET(new Request('https://preview.example/api/availability?reviewScenario=full'))).json()).availability
+  assert.equal(full.kind,'full');assert.equal(full.reviewScenario,'full')
+  const positions=await (await placesGET(new Request('https://preview.example/api/litter-places?litter=review-upcoming&reviewScenario=full'))).json();assert.deepEqual(positions.places.map(p=>p.status),['Reserved','Reserved','Reserved','Pending deposit'])
+  globalThis.fixtureReviewCookie='available';assert.equal((await (await GET(new Request('https://preview.example/api/availability?reviewScenario=full'))).json()).availability.kind,'full')
+  const unknown=(await (await GET(new Request('https://preview.example/api/availability?reviewScenario=unknown'))).json()).availability;assert.equal(unknown.kind,'unknown');assert.equal(unknown.reviewScenario,'unknown')
+  assert.equal((await GET(new Request('https://preview.example/api/availability?reviewScenario=invalid'))).status,400)
+  process.env.VERCEL_ENV='production';const r=(await (await GET(new Request('https://preview.example/api/availability?reviewScenario=full'))).json()).availability;assert.equal(r.reviewScenario,undefined)
+ }finally{delete globalThis.fixtureReviewCookie;for(const k of Object.keys(process.env))if(!(k in saved))delete process.env[k];Object.assign(process.env,saved)}
 })

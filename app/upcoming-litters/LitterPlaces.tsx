@@ -4,9 +4,10 @@ import Link from 'next/link'
 import {pickLabels} from '@/lib/litter-reservations'
 import {formatCurrency} from '@/lib/inventory'
 import {validPlaces,type Place} from '@/lib/public-availability'
-export default function LitterPlaces({litterId,title,depositCents,showGuidance=false,initialPlaces}:{litterId:string;title:string;depositCents:number|null;showGuidance?:boolean;initialPlaces?:Place[]|null}){
+import type {ReviewScenario} from '@/lib/public-review'
+export default function LitterPlaces({litterId,title,depositCents,showGuidance=false,initialPlaces,scenario}:{litterId:string;title:string;depositCents:number|null;showGuidance?:boolean;initialPlaces?:Place[]|null;scenario?:ReviewScenario}){
  const [places,setPlaces]=useState<Place[]|null>(validPlaces(initialPlaces)?initialPlaces:null),[error,setError]=useState('')
- useEffect(()=>{let stopped=false,loading=false;const controller=new AbortController();async function update(){if(loading)return;loading=true;try{const r=await fetch('/api/litter-places?litter='+encodeURIComponent(litterId),{cache:'no-store',signal:controller.signal});const data=await r.json();if(!r.ok||!validPlaces(data.places))throw Error();if(!stopped){setPlaces(data.places);setError('')}}catch{if(!stopped){setPlaces(null);setError('Please ask Jeanne to confirm current positions.')}}finally{loading=false}}void update();const timer=setInterval(update,15000);return()=>{stopped=true;controller.abort();clearInterval(timer)}},[litterId])
+ useEffect(()=>{let stopped=false,loading=false;const controller=new AbortController();async function update(){if(loading)return;loading=true;try{const r=await fetch('/api/litter-places?litter='+encodeURIComponent(litterId)+(scenario?'&reviewScenario='+scenario:''),{cache:'no-store',signal:controller.signal});const data=await r.json();if(!r.ok||!validPlaces(data.places))throw Error();if(!stopped){setPlaces(data.places);setError('')}}catch{if(!stopped){setPlaces(null);setError('Please ask Jeanne to confirm current positions.')}}finally{loading=false}}void update();const timer=setInterval(update,15000);return()=>{stopped=true;controller.abort();clearInterval(timer)}},[litterId,scenario])
  const available=!!places?.some(p=>p.status==='Available'),full=!!places&&!available
  return <section className="litter-places" aria-label={`Reservation positions for ${title}`}>
   <h3>{available?'Reserve your place in this litter':full?'Looking ahead to a future litter':'Ask about this litter'}</h3>

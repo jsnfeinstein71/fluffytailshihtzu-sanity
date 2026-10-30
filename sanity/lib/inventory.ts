@@ -5,12 +5,12 @@ import {client} from './client'
 import type {Litter, Puppy} from '@/lib/inventory'
 import {littersQuery, puppiesQuery, puppyQuery} from './inventory-queries'
 import {reviewInventory,reviewScenario} from './public-review'
-import {publicReviewEnabled} from '@/lib/public-review'
+import {publicReviewEnabled,type ReviewScenario} from '@/lib/public-review'
 
 const publicOptions = () => publicReviewEnabled()?{perspective:'published' as const,cache:'no-store' as const}:{perspective: 'published' as const, next: {revalidate: 60}}
 
-export const getInventory = cache(async () => {
-  const fixture=reviewInventory(await reviewScenario())
+export const getInventory = cache(async (requested?:ReviewScenario) => {
+  const fixture=reviewInventory(await reviewScenario(requested))
   if(fixture)return fixture
   const [litters, puppies] = await Promise.all([
     client.fetch<Litter[]>(littersQuery, {}, publicOptions()),
