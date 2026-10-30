@@ -10,7 +10,7 @@ The live review reads published public Sanity inventory and the existing four-po
 
 Homepage identity and “I am Jeanne” are unchanged. The hero action and lower invitation follow actual availability. Available Puppies keeps all current portraits/statuses; Upcoming Litters keeps its positions, corrected phone card and pricing dialogs. Reserved puppy pages point toward the current offering. Occupied positions include Pending deposit; they are never presented as available. Missing/incomplete data gives a confirmation invitation instead of invented unavailability.
 
-Production-style inventory continues its existing 60-second revalidation. The read-only review bypasses inventory caching to show current records during review. Invitations recheck every 30 seconds; position indicators keep their existing 15-second refresh. A failed refresh switches to uncertainty rather than keeping an old positive offer. Tests change isolated status/board fixtures through the actual availability handler without any CMS writes.
+Production-style inventory continues its existing 60-second revalidation. The read-only review bypasses inventory caching to show current records during review. Invitations recheck every 30 seconds; a changed public-inventory fingerprint also refreshes the server-rendered cards without discarding browser scroll position. Position indicators keep their existing 15-second refresh. A failed refresh switches to uncertainty rather than keeping an old positive offer. Tests change isolated status/board fixtures through the actual availability handler without any CMS writes, including swapping which puppy is available while the available count stays the same.
 
 ## Educational drafts
 

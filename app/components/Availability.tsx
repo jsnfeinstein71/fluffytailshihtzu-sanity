@@ -1,12 +1,14 @@
 'use client'
-import {createContext,useContext,useEffect,useState,type ReactNode} from 'react'
+import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react'
+import {useRouter} from 'next/navigation'
 import Link from 'next/link'
 import {availabilityCopy,unknownAvailability,validAvailability,type Availability} from '@/lib/public-availability'
 const Context=createContext<Availability>(unknownAvailability)
 export function AvailabilityScope({initial,children}:{initial:Availability;children:ReactNode}){
  const [value,setValue]=useState(initial)
- useEffect(()=>{setValue(initial)},[initial])
- useEffect(()=>{let stopped=false,busy=false;const controller=new AbortController();async function update(){if(busy)return;busy=true;try{const r=await fetch('/api/availability',{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error();const data=await r.json();if(!validAvailability(data.availability))throw Error();if(!stopped)setValue(data.availability)}catch{if(!stopped)setValue(unknownAvailability)}finally{busy=false}}const timer=setInterval(update,30000);return()=>{stopped=true;controller.abort();clearInterval(timer)}},[])
+ const previous=useRef(initial),router=useRouter()
+ useEffect(()=>{previous.current=initial;setValue(initial)},[initial])
+ useEffect(()=>{let stopped=false,busy=false;const controller=new AbortController();async function update(){if(busy)return;busy=true;try{const r=await fetch('/api/availability',{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error();const data=await r.json();if(!validAvailability(data.availability))throw Error();if(!stopped){if(JSON.stringify(previous.current)!==JSON.stringify(data.availability)){previous.current=data.availability;setValue(data.availability);router.refresh()}}}catch{if(!stopped)setValue(unknownAvailability)}finally{busy=false}}const timer=setInterval(update,30000);return()=>{stopped=true;controller.abort();clearInterval(timer)}},[router])
  return <Context.Provider value={value}>{children}</Context.Provider>
 }
 export function AvailabilityActions({hero=false}:{hero?:boolean}){const a=availabilityCopy(useContext(Context));return <><Link className="brand-button" href={a.href}>{a.label} <span aria-hidden="true">→</span></Link>{a.href!=='/contact'?<Link className={hero?'hero-secondary':'text-link'} href="/contact">Ask Jeanne</Link>:null}</>}

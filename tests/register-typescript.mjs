@@ -14,6 +14,7 @@ const nextModules = new Map(['next/link', 'next/navigation', 'next/server', 'nex
 // Test-only loader: execute actual TSX pages with a read-only in-memory Sanity client.
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if(specifier==='next/navigation')return {url:'fixture:next-navigation',shortCircuit:true}
     if(specifier==='./public-places'||specifier==='@/sanity/lib/public-places')return {url:'fixture:public-places',shortCircuit:true}
     if(specifier==='next/headers')return {url:'fixture:next-headers',shortCircuit:true}
     if(specifier==='next/image')return {url:'fixture:next-image-interop',shortCircuit:true}
@@ -38,6 +39,7 @@ registerHooks({
     return nextResolve(specifier, context)
   },
   load(url, context, nextLoad) {
+    if(url==='fixture:next-navigation')return {format:'module',source:`import value from ${JSON.stringify(nextModules.get('next/navigation'))};const real=value.default||value;export const notFound=real.notFound;export const redirect=real.redirect;export const usePathname=real.usePathname;export const useSearchParams=real.useSearchParams;export const useRouter=()=>({refresh:()=>{globalThis.fixtureRefreshCalls=(globalThis.fixtureRefreshCalls||0)+1}});`,shortCircuit:true}
     if(url==='fixture:public-places')return {format:'module',source:'export const publishedPlaces=async id=>globalThis.fixturePublicPlaces?globalThis.fixturePublicPlaces(id):[1,2,3,4].map(position=>({position,status:"Available"}));',shortCircuit:true}
     if(url==='fixture:next-headers')return {format:'module',source:'export const cookies=async()=>({get:name=>globalThis.fixtureReviewCookie?{value:globalThis.fixtureReviewCookie}:undefined});',shortCircuit:true}
     if(url==='fixture:next-image-interop')return {format:'module',source:`import value from ${JSON.stringify(nextModules.get('next/image'))};export default value.default||value;`,shortCircuit:true}

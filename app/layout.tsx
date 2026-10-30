@@ -8,6 +8,7 @@ import PublicReviewBar from './components/PublicReviewBar'
 import {publicReviewEnabled} from '@/lib/public-review'
 
 export const metadata: Metadata = {
+  robots:publicReviewEnabled()?{index:false,follow:false}:undefined,
   referrer: 'no-referrer',
   metadataBase: new URL('https://www.fluffytailshihtzu.com'),
   title: {

@@ -10,7 +10,7 @@ const fields={siteSettings:['homepageHeadline','homepageIntro','serviceArea'],pu
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 function idCheck(id){if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,150}$/.test(id))throw Error('Use an explicit published content ID.')}
 function docCheck(doc){if(!doc||!fields[doc._type])throw Error('Only existing public content documents are supported.');idCheck(doc._id)}
-function changeCheck(type,set,unset){if(!set||typeof set!=='object'||Array.isArray(set)||!Array.isArray(unset)||Object.keys(set).length+unset.length===0)throw Error('Specify exact fields.');for(const k of [...Object.keys(set),...unset])if(!fields[type]?.includes(k))throw Error('Field outside the public-copy allowlist.');for(const v of Object.values(set))if(typeof v!=='string')throw Error('Copy fields must be strings.')}
+function changeCheck(type,set,unset){if(!set||typeof set!=='object'||Array.isArray(set)||!Array.isArray(unset)||Object.keys(set).length+unset.length===0)throw Error('Specify exact fields.');if(new Set(unset).size!==unset.length||unset.some(k=>Object.hasOwn(set,k)))throw Error('Fields cannot be both set and unset.');for(const k of [...Object.keys(set),...unset])if(!fields[type]?.includes(k))throw Error('Field outside the public-copy allowlist.');for(const v of Object.values(set))if(typeof v!=='string')throw Error('Copy fields must be strings.')}
 export async function contentClient({cliLogin=false}={}){
  let token=process.env.SANITY_CONTENT_TOKEN||process.env.SANITY_API_WRITE_TOKEN||process.env.SANITY_AUTH_TOKEN
  if(!token&&cliLogin){const config=JSON.parse(await readFile(join(homedir(),'.config','sanity','config.json'),'utf8'));token=config.authToken||config.token}

@@ -25,7 +25,8 @@ test('actual availability handler refreshes from changed isolated status and boa
  let inventory=reviewInventory('available'),places=reviewPlaces('available')
  globalThis.fixtureSanityFetch=async(q,params)=>{const dataset=[...inventory.litters.map(l=>({...l,_type:'litter'})),...inventory.puppies.map(p=>({...p,_type:'puppy',litter:{_ref:p.litterId}}))];return (await evaluate(parse(q),{dataset,params})).get()}
  globalThis.fixturePublicPlaces=async()=>places
- assert.equal((await (await GET()).json()).availability.kind,'available')
+ const first=(await (await GET()).json()).availability;assert.equal(first.kind,'available')
+ inventory.puppies[0].status='available';inventory.puppies[1].status='reserved';const swapped=(await (await GET()).json()).availability;assert.equal(swapped.availablePuppies,1);assert.notEqual(swapped.version,first.version)
  inventory.puppies.forEach(p=>p.status='reserved');assert.equal((await (await GET()).json()).availability.kind,'upcoming')
  places=reviewPlaces('full');assert.equal((await (await GET()).json()).availability.kind,'full')
  globalThis.fixturePublicPlaces=async()=>{throw Error('Disconnected')};assert.equal((await (await GET()).json()).availability.kind,'unknown')

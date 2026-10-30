@@ -1,5 +1,6 @@
 import 'server-only'
 import {cache} from 'react'
+import {createHash} from 'node:crypto'
 import {getInventory} from './inventory'
 import {reviewPlaces,reviewScenario} from './public-review'
 import {deriveAvailability,type Place} from '@/lib/public-availability'
@@ -12,5 +13,6 @@ export const getBrowsingContext=cache(async()=>{
  try{inventory=await getInventory()}catch{}
  const boards:Record<string,Place[]|null>={};const scenario=await reviewScenario()
  if(inventory)await Promise.all(inventory.litters.filter(l=>['planned','upcoming'].includes(l.status||'')).map(async l=>{try{boards[l._id]=scenario==='live'?await publishedPlaces(l._id):reviewPlaces(scenario)}catch{boards[l._id]=null}}))
- return {litters:inventory?.litters||[],puppies:inventory?.puppies||[],boards,inventoryFailed:inventory===null,availability:deriveAvailability(inventory,boards)}
+ const version=createHash('sha256').update(JSON.stringify({inventory,boards})).digest('hex')
+ return {litters:inventory?.litters||[],puppies:inventory?.puppies||[],boards,inventoryFailed:inventory===null,availability:{...deriveAvailability(inventory,boards),version}}
 })
