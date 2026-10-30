@@ -10,6 +10,8 @@ The original selector only changed a native form field and required the separate
 
 Scenarios affect the homepage, puppy list and Upcoming Litters availability. The bar explains that educational copy stays the same while its inventory illustration/pricing can vary. Switching on an individual puppy or inquiry returns to the puppy list rather than applying a fictional identity to a real record. Shortcuts in the bar reach the three main review pages. All of this is Preview-only; no record is edited by selection.
 
+The committed page also reports its scenario to the review bar. This keeps the Active label correct when Next.js reuses the root layout during puppy-profile-to-list navigation; otherwise the cards could update while the bar kept its old server prop and timed out.
+
 The live review reads published public Sanity inventory and the existing four-position public API. It has no operational credentials. New branch-scoped Preview variables are only the public project/dataset and the review/write-freeze flags. Forms explain that submissions are disabled; the existing server write freeze remains active. No test email, text, charge, inquiry or reservation is needed.
 
 Homepage identity and “I am Jeanne” are unchanged. The hero action and lower invitation follow actual availability. Available Puppies keeps all current portraits/statuses; Upcoming Litters keeps its positions, corrected phone card and pricing dialogs. Reserved puppy pages point toward the current offering. Occupied positions include Pending deposit; they are never presented as available. Missing/incomplete data gives a confirmation invitation instead of invented unavailability.

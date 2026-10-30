@@ -8,6 +8,7 @@ export function AvailabilityScope({initial,children}:{initial:Availability;child
  const [failed,setFailed]=useState(false)
  const previous=useRef(initial),router=useRouter()
  useEffect(()=>{previous.current=initial;setFailed(false)},[initial])
+ useEffect(()=>{if(initial.reviewScenario)window.dispatchEvent(new CustomEvent('fluffytail-review-rendered',{detail:initial.reviewScenario}))},[initial.reviewScenario])
  useEffect(()=>{
   let stopped=false,busy=false,paused=false,controller:AbortController|undefined
   function pause(){paused=true;controller?.abort();setFailed(false)}
