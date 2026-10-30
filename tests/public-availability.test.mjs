@@ -15,6 +15,7 @@ test('all isolated availability scenarios use predefined truthful copy, includin
  for(const s of ['available','upcoming','full','unannounced']){const inventory=reviewInventory(s),a=deriveAvailability(inventory,{'review-upcoming':reviewPlaces(s)});assert.equal(a.kind,s);const copy=availabilityCopy(a);assert(copy.title&&copy.label);if(s==='upcoming'){assert.match(copy.body,/Every puppy in my current litter has a family waiting/);assert.match(copy.body,/my upcoming litter,/)}if(s==='full')assert.doesNotMatch(copy.body,/available position|reserve your place/i)}
  const inventory=reviewInventory('upcoming');inventory.litters.push({...inventory.litters[0],_id:'another-current'},{...inventory.litters[1],_id:'another-upcoming'});inventory.puppies.push({...inventory.puppies[0],_id:'another-puppy',litterId:'another-current'});assert.match(availabilityCopy(deriveAvailability(inventory,{'review-upcoming':reviewPlaces('upcoming'),'another-upcoming':reviewPlaces('upcoming')})).body,/my current litters/)
  inventory.puppies[0].status='hold';assert.equal(deriveAvailability(inventory,{}).allCurrentReserved,false)
+ assert.match(availabilityCopy(deriveAvailability(reviewInventory('full'),{'review-upcoming':reviewPlaces('full')})).body,/my upcoming litter are/)
 })
 test('failed and incomplete data never becomes all reserved or occupied positions',()=>{
  const inventory=reviewInventory('upcoming');for(const boards of [{},{'review-upcoming':[]},{'review-upcoming':[{position:1,status:'Reserved'}]}]){assert.equal(deriveAvailability(inventory,boards).kind,'unknown')}
