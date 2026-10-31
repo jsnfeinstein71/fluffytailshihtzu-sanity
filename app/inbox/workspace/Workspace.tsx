@@ -1,4 +1,5 @@
 'use client'
+import {startPreviewPolling} from '@/lib/preview-polling'
 import {testSmsConsentText} from '@/lib/test-customer-copy'
 import type {PaymentRequest} from './email-model'
 
@@ -32,7 +33,7 @@ const descriptions: Record<View,string> = {
 function Badge({children, tone = ''}: {children:React.ReactNode; tone?:string}) {return <span className={`ops-badge ${tone}`}>{children}</span>}
 function Avatar({family}: {family:Family}) {return <span className={`ops-avatar ops-avatar-${family.id}`}>{family.initials}</span>}
 
-export default function Workspace({live=false,paymentTesting=false}:{live?:boolean;paymentTesting?:boolean}) {
+export default function Workspace({live=false,paymentTesting=false,previewPolling=false}:{live?:boolean;paymentTesting?:boolean;previewPolling?:boolean}) {
   const [view, setView] = useState<View>(paymentTesting?'Conversations':'Today')
   const [familyId, setFamilyId] = useState(live?'':fixtureFamilies[0].id)
   const [search, setSearch] = useState('')
@@ -78,10 +79,11 @@ export default function Workspace({live=false,paymentTesting=false}:{live?:boole
     if(view!=='Conversations'||!family.id||textSending)return
     let stopped=false
     const update=()=>{if(!stopped&&document.visibilityState==='visible'&&!textLock.current)void refresh(family.id)}
+    if(previewPolling)return startPreviewPolling(async()=>{update()},{intervalMs:60000})
     update();const timer=window.setInterval(update,20000)
     document.addEventListener('visibilitychange',update)
     return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',update)}
-  },[view,family.id,refresh,textSending])
+  },[view,family.id,refresh,textSending,previewPolling])
   const eventSignature=events.map(e=>`${e.id}:${e.status}`).join('|')
   const reading=useConversationLayout(view==='Conversations',family.id,JSON.stringify(events.map(e=>e.id)),eventSignature,`${mobilePanel}:${threadTab}`)
   useEffect(()=>{
