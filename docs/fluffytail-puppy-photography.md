@@ -1,5 +1,39 @@
 # Puppy profile photography pilot — October 27, 2026
 
+## Penny litter recovery — October 31, 2026
+
+The owner requested recovery of the interrupted Puppy Photo Workflow and
+completion of its authorized export/publication. Seven finished Adobe PNGs were
+recovered: Audrey, Connie, Diane, Hugo, Janet, Klaus and Luis. Connie uses the
+corrected `transparent-v2.png`; the other six use `transparent-v1.png`.
+All are 1254 × 1254 RGBA exports. Their approved masks, retained hands and wrist
+fades are preserved; editable masters remain in Adobe.
+
+The original PNG bytes were staged as Sanity image assets, without adding
+duplicate binaries to this repository. The scoped publication sets each
+matching puppy's `mainImage` to its own asset using document revision guards.
+The seven fields were published atomically in transaction
+`AQEGaVBj9U2U0n0Irc54QL`; readback confirmed every expected asset reference and
+all unrelated fields unchanged. Puppy status, pricing, reservations and other
+records are preserved. Public release verification follows the code deployment.
+
+`lib/puppy-portraits.ts` associates each exact puppy/asset pair with the existing
+transparent portrait presentation. Cards, detail pages, inquiry thumbnails
+and social images reuse those CDN originals. The existing width-only Sanity
+variants provide responsive delivery without cropping or adding a background.
+The separate website shadow and approved layouts remain unchanged. A later
+CMS photo automatically supersedes this treatment through the source guard.
+
+| Puppy | Puppy document | Approved export | Sanity asset SHA-1 |
+| --- | --- | --- | --- |
+| Audrey | `98cce32b-4bbc-4d7a-a934-f8a74128b167` | `penny-2026-10-31-audrey-transparent-v1.png` | `c27a1020b482919d99c0041e1003d346f8262868` |
+| Connie | `b6f038ba-f581-4373-9451-0e3b7f41d46e` | `penny-2026-10-31-connie-transparent-v2.png` | `573e48baf9d144e2b39fb43ccec95396d9cab604` |
+| Diane | `293b3662-1b69-4f9c-bf0c-26131fe942ad` | `penny-2026-10-31-diane-transparent-v1.png` | `ea309af20e7d513689e95e6e7ea4bf511f8c60f6` |
+| Hugo | `d77aee5f-0007-459a-b265-14a7de70a0e4` | `penny-2026-10-31-hugo-transparent-v1.png` | `7b91b77629b3355b3d2faf0073e0f4cb31b8bdb2` |
+| Janet | `34407f50-212d-476c-b667-8ab11b4c3b5d` | `penny-2026-10-31-janet-transparent-v1.png` | `0997327a9071e688f59c2b526302e61c38afd008` |
+| Klaus | `21e0b642-9e85-4197-937c-5cd9ef373dde` | `penny-2026-10-31-klaus-transparent-v1.png` | `6616ac669198d2c4947e2591532f9552214d1910` |
+| Luis | `e7397ed4-e064-480e-926c-6d159e40acbd` | `penny-2026-10-31-luis-transparent-v1.png` | `ee911f5d9151ec8fadcb1dffde1545b8c2dc0cf1` |
+
 ## Completed Elsie portraits: Girls 1, 2 and 3
 
 After approving Girl 2 on the live site, the owner completed and supplied the
