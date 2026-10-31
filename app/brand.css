@@ -98,6 +98,8 @@
 .brand-site .tileName { font-family: 'cormorant-garamond', Georgia, serif; font-size: 27px; font-weight: 600; color: var(--brand-brown); }
 .brand-site .tileSub { font-size: 14px; line-height: 1.65; }
 .brand-site .parentPhoto { max-width: 180px; margin-top: 12px; border-radius: 4px; }
+.brand-site .tileImg-parent-portrait { background: transparent; }
+.brand-site .tileImg-parent-portrait img { object-fit: contain; object-position: center; padding: 10px; }
 .home-hero { position: relative; isolation: isolate; min-height: 470px; height: min(610px, calc(100svh - 180px)); color: white; background: var(--brand-brown); display: flex; align-items: flex-end; }
 .home-hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; z-index: -2; }
 .home-hero::before { content: ''; position: absolute; inset: 0; background: rgb(20 25 18 / 18%); z-index: -1; }

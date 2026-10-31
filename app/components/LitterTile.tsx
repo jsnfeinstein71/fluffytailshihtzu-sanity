@@ -3,15 +3,19 @@ import {formatCurrency, formatDate, formatLitterStatus, getLitterDate, normalize
 import {tryPricing} from '@/lib/pricing'
 import PublicImage from './PublicImage'
 import PriceDetails from './PriceDetails'
+import {getParentPortrait} from '@/lib/parent-portraits'
 
 export default function LitterTile({litter, photoSizes}: {litter: Litter; photoSizes?: string}) {
   const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
   const expected = normalizeLitterStatus(litter.status) === 'planned'
   const date = formatDate(getLitterDate(litter), true)
   const parents: [string, Parent | null | undefined][] = [['Father', litter.sire], ['Mother', litter.dam]]
+  const parentPortrait = getParentPortrait(litter.groupPhotoUrl)
   return (
     <div className="tile" data-litter-id={litter._id}>
-      <div className="tileImg">{litter.groupPhotoUrl ? photoSizes
+      <div className={`tileImg${parentPortrait ? ' tileImg-parent-portrait' : ''}`}>{litter.groupPhotoUrl ? parentPortrait
+        ? <PublicImage src={litter.groupPhotoUrl} alt={`${parentPortrait.name}, one of Jeanne's Shih Tzus`} sizes={photoSizes || '(max-width: 600px) calc(100vw - 42px), 150px'} />
+        : photoSizes
         ? <PublicImage src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} sizes={photoSizes} />
         : <img src={litter.groupPhotoUrl} alt={litter.title || 'Litter photo'} /> : null}</div>
       <div className="tileMeta">
