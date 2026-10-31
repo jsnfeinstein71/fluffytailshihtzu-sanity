@@ -2,6 +2,8 @@ import '../home.css'
 import '../content.css'
 import Link from 'next/link'
 import {pageDescriptions} from '@/lib/public-copy'
+import {parentPortraits} from '@/lib/parent-portraits'
+import PublicImage from '../components/PublicImage'
 export const revalidate = 60
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({
@@ -47,6 +49,17 @@ export default function AboutPage() {
                   'If you’ve been looking through the litters, you may already have met names like Elsie and Penny. Behind those names are my own dogs, and behind every puppy listing is a conversation you can have directly with me.'
                 }
               </p>
+              <div className="family-dog-portraits" aria-label="Jeanne's Shih Tzus">
+                {parentPortraits.map(portrait => <figure key={portrait.name}>
+                  <PublicImage
+                    className="family-dog-portrait-photo"
+                    src={portrait.src}
+                    alt={`${portrait.name}, one of Jeanne's Shih Tzus`}
+                    sizes="(max-width: 820px) calc((100vw - 72px) / 3), (max-width: 1160px) 18vw, 200px"
+                  />
+                  <figcaption>{portrait.name}</figcaption>
+                </figure>)}
+              </div>
             </div>
             <div className="divider" />
             <div className="section">

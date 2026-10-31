@@ -12,6 +12,10 @@
 .content-page .content-photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: #fbf8f3; border-radius: 6px; }
 .content-page .content-photo figcaption { font-size: 12px; color: var(--brand-muted); margin-top: 10px; }
 .content-page .content-photo.jeanne-portrait img { aspect-ratio: 4 / 5; height: auto; object-fit: contain; }
+.content-page .family-dog-portraits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.content-page .family-dog-portraits figure { min-width: 0; margin: 0; text-align: center; }
+.content-page .family-dog-portrait-photo { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
+.content-page .family-dog-portraits figcaption { margin-top: 8px; color: var(--brand-brown); font-family: 'cormorant-garamond', Georgia, serif; font-size: 22px; }
 .brand-site .content-page .section h2, .content-page .panelTitle { font-size: 32px; margin: 0 0 16px; }
 .content-page .q { font-family: 'cormorant-garamond', Georgia, serif; font-weight: 600; font-size: 23px; line-height: 1.25; color: var(--brand-brown); margin-bottom: 7px; }
 .content-page .a { font-size: 16px; line-height: 1.75; color: var(--brand-muted); }
