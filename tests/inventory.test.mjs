@@ -299,6 +299,49 @@ test('dates are timezone-stable and unknown/future dates do not fabricate puppy 
   assert.equal(rules.getReadyDate('2026-10-17'), 'Dec 12')
 })
 
+test('puppy ages use whole days below a week and whole weeks thereafter', () => {
+  const now = new Date('2026-11-01T12:00:00Z')
+  for (const [birthDate, expected] of [
+    ['2026-11-01', '0 days old'],
+    ['2026-10-31', '1 day old'],
+    ['2026-10-26', '6 days old'],
+    ['2026-10-25', '1 week old'],
+    ['2026-10-19', '1 week old'],
+    ['2026-10-18', '2 weeks old'],
+  ]) assert.equal(rules.formatPuppyAge(birthDate, now), expected)
+  assert.equal(rules.formatPuppyAge('2026-10-25', new Date('2026-10-31T23:59:59.999Z')), '6 days old')
+  assert.equal(rules.formatPuppyAge('2026-10-25', new Date('2026-11-01T00:00:00Z')), '1 week old')
+  for (const birthDate of [undefined, null, '', 'invalid', '2026-13-01', '2026-11-02']) {
+    assert.equal(rules.formatPuppyAge(birthDate, now), null)
+  }
+})
+
+test('home, browsing and detail pages share day/week age labels and hide unknown ages', async t => {
+  t.mock.timers.enable({apis: ['Date'], now: new Date('2026-11-01T12:00:00Z')})
+  for (const [birthDate, expected] of [
+    ['2026-11-01', '0 days old'],
+    ['2026-10-31', '1 day old'],
+    ['2026-10-26', '6 days old'],
+    ['2026-10-25', '1 week old'],
+    ['2026-10-18', '2 weeks old'],
+    [null, null],
+    ['invalid', null],
+    ['2026-11-02', null],
+  ]) {
+    dataset = [litter('age-litter', 'current', {birthDate}), puppy('age-puppy', 'age-litter')]
+    for (const Component of [Home, Available, Detail]) {
+      const html = await render(Component, {params: Promise.resolve({slug: 'age-puppy'})})
+      assert.doesNotMatch(html, /0 weeks old/)
+      if (expected) {
+        assert.ok(html.includes(expected), `${Component.name}: ${expected}`)
+        if (Component === Detail) assert.ok(html.includes(`<dt>Age</dt><dd>${expected}</dd>`))
+      } else {
+        assert.doesNotMatch(html, /\d+ (?:days?|weeks?) old|<dt>Age<\/dt>/)
+      }
+    }
+  }
+})
+
 test('public routes render and only Contact offers waitlist and GoodDog actions', async () => {
   dataset = [litter('current'), puppy('available', 'current'), {
     _id: 'settings', _type: 'siteSettings',

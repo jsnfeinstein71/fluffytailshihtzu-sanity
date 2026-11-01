@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import {formatCurrency, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
+import {formatCurrency, formatPuppyAge, formatPuppyStatus, getReadyDate, puppyPath, puppyStatusClass, type Puppy} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
 import {puppyCardSizes, puppyCutoutSizes} from '@/lib/responsive-images'
 import PublicImage from './PublicImage'
 
 export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; browsing?: boolean}) {
-  const age = getAgeInWeeks(puppy.birthDate)
+  const age = formatPuppyAge(puppy.birthDate)
   const ready = getReadyDate(puppy.birthDate)
   const pricing = tryPricing(puppy)
   const profilePortrait = getPuppyProfilePortrait(puppy)
@@ -23,7 +23,7 @@ export default function PuppyCard({puppy, browsing = false}: {puppy: Puppy; brow
         <span className={`statusBadge ${puppyStatusClass(puppy.status)}`}>{formatPuppyStatus(puppy.status)}</span>
       </div>
       <p className="puppyMetaLine">
-        {age !== null ? `${age} week${age === 1 ? '' : 's'} old • ` : ''}
+        {age !== null ? `${age} • ` : ''}
         {puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'Puppy'}
       </p>
       {puppy.color ? <p className="puppyNotes">{puppy.color}</p> : null}
