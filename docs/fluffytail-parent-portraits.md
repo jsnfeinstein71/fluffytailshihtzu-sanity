@@ -29,3 +29,12 @@ No parentage, pricing, status or other litter data changes are included.
 
 The professional master, transparent export, reference details and prompts are
 retained in the project workspace's `output/penny-professional-portrait` folder.
+
+## Restore the preferred Penny photograph
+
+After viewing the professional portrait, the owner preferred the previous
+photo and rejected the generated likeness as looking fake. Restore Penny's
+approved transparent export `25a77f4d304f91c689942b2beaf8860c280a52eb` in the
+shared manifest and matching litter hero image. Elsie, Rocco, layout, ordering
+and all other records remain unchanged; the generated files remain available
+as historical work and are no longer the selected website portrait.
