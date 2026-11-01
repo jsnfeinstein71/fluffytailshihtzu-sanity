@@ -94,10 +94,23 @@ export function formatDate(value?: string | null, short = false) {
   return date ? date.toLocaleDateString('en-US', {month: short ? 'short' : 'long', day: 'numeric', ...(short ? {} : {year: 'numeric'}), timeZone: 'UTC'}) : ''
 }
 
-export function getAgeInWeeks(birthDate?: string | null, now = new Date()) {
+function getAgeInDays(birthDate?: string | null, now = new Date()) {
   const born = validDate(birthDate)
   if (!born || born > now) return null
-  return Math.floor((now.getTime() - born.getTime()) / (86400000 * 7))
+  return Math.floor((now.getTime() - born.getTime()) / 86400000)
+}
+
+export function getAgeInWeeks(birthDate?: string | null, now = new Date()) {
+  const days = getAgeInDays(birthDate, now)
+  return days === null ? null : Math.floor(days / 7)
+}
+
+export function formatPuppyAge(birthDate?: string | null, now = new Date()) {
+  const days = getAgeInDays(birthDate, now)
+  if (days === null) return null
+  const count = days < 7 ? days : Math.floor(days / 7)
+  const unit = days < 7 ? 'day' : 'week'
+  return `${count} ${unit}${count === 1 ? '' : 's'} old`
 }
 
 export function getReadyDate(birthDate?: string | null) {

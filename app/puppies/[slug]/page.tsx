@@ -7,7 +7,7 @@ import Link from 'next/link'
 import {notFound} from 'next/navigation'
 import {getPuppy} from '@/sanity/lib/inventory'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
-import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatPuppyStatus, getAgeInWeeks, getReadyDate, puppyStatusClass} from '@/lib/inventory'
+import {buildPuppyInquiryUrl, canInquireAboutPuppy, formatPuppyAge, formatPuppyStatus, getReadyDate, puppyStatusClass} from '@/lib/inventory'
 import {puppyBreadcrumbs, puppyMetadata} from '@/lib/seo'
 import StructuredData from '../../components/StructuredData'
 import PublicImage from '../../components/PublicImage'
@@ -28,7 +28,7 @@ export default async function PuppyDetailPage({params}: Props) {
   if (!puppy) notFound()
   const canInquire = canInquireAboutPuppy(puppy)
   const puppyInquiryUrl = buildPuppyInquiryUrl(puppy)
-  const age = getAgeInWeeks(puppy.birthDate)
+  const age = formatPuppyAge(puppy.birthDate)
   const ready = canInquire ? getReadyDate(puppy.birthDate) : ''
   const profilePortrait = getPuppyProfilePortrait(puppy)
 
@@ -50,7 +50,7 @@ export default async function PuppyDetailPage({params}: Props) {
         <dl className="puppy-detail-facts">
           <div><dt>Sex</dt><dd>{puppy.sex === 'female' ? 'Female' : puppy.sex === 'male' ? 'Male' : 'To be confirmed'}</dd></div>
           {puppy.color ? <div><dt>Color</dt><dd>{puppy.color}</dd></div> : null}
-          {age !== null ? <div><dt>Age</dt><dd>{age} week{age === 1 ? '' : 's'} old</dd></div> : null}
+          {age !== null ? <div><dt>Age</dt><dd>{age}</dd></div> : null}
           {ready ? <div><dt>Estimated ready date</dt><dd>{ready}</dd></div> : null}
         </dl>
         {puppy.notes?.trim() && puppy.notes.trim().toLowerCase() !== puppy.color?.trim().toLowerCase() ? <p className="puppy-detail-notes">{puppy.notes}</p> : null}
