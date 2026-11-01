@@ -20,6 +20,7 @@ type SiteSettings = {
   homepageHeadline?: string
   homepageIntro?: string
   serviceArea?: string
+  goodDogUrl?: string
   heroImageUrl?: string
   heroThumb1Url?: string
   heroThumb2Url?: string
@@ -27,7 +28,7 @@ type SiteSettings = {
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  title, homepageHeadline, homepageIntro, serviceArea,
+  title, homepageHeadline, homepageIntro, serviceArea, goodDogUrl,
   "heroImageUrl": heroImage.asset->url,
   "heroThumb1Url": heroThumb1.asset->url,
   "heroThumb2Url": heroThumb2.asset->url,
@@ -45,6 +46,7 @@ export default async function HomePage() {
   const availableCount = puppies.filter(canInquireAboutPuppy).length
   const designPreview = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview'
   const introHeadline = siteSettings?.homepageHeadline || homepageHeadline
+  const goodDogStoriesUrl = `${(siteSettings?.goodDogUrl || 'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama').split('#')[0]}#tab=stories`
 
   return <main>
     <StructuredData data={organizationJsonLd} />
@@ -65,6 +67,20 @@ export default async function HomePage() {
         <span className="pill"><span className="dot" />{availableCount ? `${availableCount} available ${availableCount === 1 ? 'puppy' : 'puppies'}` : 'Ask about future puppies'}</span>
       </div>
       {activeLitters.length ? activeLitters.map(litter => <LitterSection key={litter._id} litter={litter} puppies={puppies} />) : <div className="litter-section"><h3>Looking for the next litter?</h3><p>No current litter is listed here. See what’s coming up, or tell me when you hope to bring a puppy home.</p><Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>}
+    </section>
+
+    <section id="owner-stories" className="brand-container home-family-stories" aria-labelledby="family-stories-title">
+      <div className="family-stories-panel">
+        <div>
+          <p className="eyebrow">Their words, their experience</p>
+          <h2 id="family-stories-title">From our puppy families</h2>
+          <p className="family-stories-intro">Choosing a puppy is personal. Get to know FluffyTail through the experiences of families who have brought one of our little ones home.</p>
+        </div>
+        <div className="family-stories-action">
+          <a className="brand-button" href={goodDogStoriesUrl} target="_blank" rel="noopener noreferrer" aria-describedby="family-stories-destination">Read verified owner stories <span aria-hidden="true">&#8599;</span></a>
+          <p id="family-stories-destination">On Good Dog · Opens in a new tab</p>
+        </div>
+      </div>
     </section>
 
     <section className="home-next">

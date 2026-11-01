@@ -148,6 +148,22 @@
 .section-heading p { margin: 8px 0 0; color: var(--brand-muted); }
 .home-puppies { padding-top: 20px; }
 .home-puppies .litter-section:first-of-type { margin-top: 26px; }
+.brand-container.home-family-stories { padding-top: 0; padding-bottom: 64px; }
+.family-stories-panel { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: center; gap: 40px; padding: 36px; border: 1px solid var(--brand-champagne); border-radius: 6px; background: #fbf8f3; }
+.family-stories-panel .eyebrow { margin-bottom: 10px; }
+.family-stories-panel h2 { font-size: 38px; margin: 0 0 14px; }
+.family-stories-intro { margin: 0; max-width: 54ch; color: var(--brand-muted); }
+.family-stories-action { text-align: center; }
+.family-stories-action p { font-size: 13px; color: var(--brand-muted); margin: 12px 0 0; }
+@media (max-width: 820px) {
+  .family-stories-panel { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 28px; }
+  .family-stories-action { text-align: left; }
+}
+@media (max-width: 600px) {
+  .brand-container.home-family-stories { padding-bottom: 40px; }
+  .family-stories-panel { padding: 26px 22px; }
+  .family-stories-panel h2 { font-size: 32px; }
+}
 .home-next { background: #f4f6f2; border-block: 1px solid #e1e6dc; }
 .home-next-inner { padding-block: 50px; display: flex; align-items: center; justify-content: space-between; gap: 36px; }
 .home-next h2 { font-size: 38px; margin: 0 0 12px; }
