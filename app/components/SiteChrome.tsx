@@ -52,8 +52,9 @@ export default function SiteChrome({children}: {children: ReactNode}) {
         </div>
         <nav aria-label="Explore FluffyTail">
           <Link href="/available-puppies">Our puppies</Link>
-          <Link href="/the-breed">About the breed</Link>
+          <Link href="/the-breed">Living with a Shih Tzu</Link>
           <Link href="/puppy-resources">Getting ready for home</Link>
+          <Link href="/pricing">Choosing a FluffyTail puppy</Link>
           <Link href="/contact">Contact Jeanne</Link>
         </nav>
         <div className="site-footer-bottom"><span>&copy; {new Date().getFullYear()} FluffyTail Shih Tzu</span><div><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms-and-conditions">Terms & Conditions</Link></div></div>

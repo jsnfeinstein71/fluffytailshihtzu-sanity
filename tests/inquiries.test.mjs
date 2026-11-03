@@ -335,7 +335,7 @@ test('native form presents server-selected puppy/photo context and defaults to e
 test('general and future-interest form presentation remains native without an invented puppy selection', async () => {
   const future = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({interest: 'waitlist'})}))
   assert.match(future, /Let’s talk about a future puppy\./)
-  assert.match(future, /Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:/)
+  assert.match(future, /Hi Jeanne, I am interested in a future puppy. Here’s what I have in mind:/)
   const general = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({})}))
   assert.match(general, /Say hello to Jeanne\./)
   for (const html of [future, general]) {
@@ -387,7 +387,7 @@ test('Contact starts empty with a placeholder while future-litter links retain t
   assert.match(html, /href="\/puppy-inquiry\?interest=waitlist"/)
   assert.doesNotMatch(html, /name="smsConsent"|<iframe|class="inquiry-context"/)
   const future = renderToStaticMarkup(await InquiryPage({searchParams: Promise.resolve({interest: 'waitlist'})}))
-  assert.match(future, /Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:<\/textarea>/)
+  assert.match(future, /Hi Jeanne, I am interested in a future puppy. Here’s what I have in mind:<\/textarea>/)
   assert.doesNotMatch(future, /placeholder="Tell Jeanne what you’d like to know/)
 })
 

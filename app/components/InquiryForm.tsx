@@ -12,8 +12,8 @@ function fitMessage(field: HTMLTextAreaElement | null) {
   field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`
 }
 
-export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoUrl = '', litterId = '', litterTitle = '', interest = 'general'}: {
-  litterId?:string; puppySlug?: string; puppyName?: string; puppyPhotoUrl?: string; litterTitle?: string; interest?: 'puppy' | 'waitlist' | 'general'
+export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoUrl = '', litterId = '', litterTitle = '', interest = 'general',reviewOnly=false}: {
+  reviewOnly?:boolean; litterId?:string; puppySlug?: string; puppyName?: string; puppyPhotoUrl?: string; litterTitle?: string; interest?: 'puppy' | 'waitlist' | 'general'
 }) {
   const [method, setMethod] = useState<ContactMethod>('Email')
   const [token, setToken] = useState('')
@@ -37,6 +37,7 @@ export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoU
   }, [confirmation, error])
 
   useEffect(() => {
+    if(reviewOnly)return
     const controller = new AbortController()
     fetch('/api/inquiry', {cache: 'no-store', signal: controller.signal})
       .then(async (response) => {
@@ -46,11 +47,11 @@ export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoU
       })
       .catch((reason) => {if (!controller.signal.aborted) setError(reason.message || formLoadingFailure)})
     return () => controller.abort()
-  }, [])
+  }, [reviewOnly])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (busy || !token) return
+    if (reviewOnly || busy || !token) return
     const form = new FormData(event.currentTarget)
     setBusy(true)
     setError('')
@@ -90,14 +91,15 @@ export default function InquiryForm({puppySlug = '', puppyName = '', puppyPhotoU
         <label key={value} className={method === value ? 'inquiry-method-selected' : undefined}><input type="radio" name="preferredContactMethod" value={value} checked={method === value} onChange={() => setMethod(value)} />{value}</label>
       ))}</div></fieldset>
       <label>Phone number {textRequested ? '' : '(optional)'}<input name="phone" type="tel" autoComplete="tel" maxLength={40} required={textRequested} /></label>
-      <label>Message<textarea name="message" rows={4} ref={messageRef} onInput={event => fitMessage(event.currentTarget)} onFocus={event => fitMessage(event.currentTarget)} minLength={5} maxLength={2000} placeholder={!puppySlug && interest === 'general' ? 'Tell Jeanne what you’d like to know.' : undefined} defaultValue={litterId?`Hi Jeanne, I’d like to ask about reserving a selection position in ${litterTitle}. Here’s what I have in mind:`:puppySlug ? `Hi Jeanne, I’d like to know more about ${puppyName}.` : interest === 'waitlist' ? 'Hi Jeanne, I’m interested in a future puppy. Here’s what I have in mind:' : ''} required /></label>
+      <label>Message<textarea name="message" rows={4} ref={messageRef} onInput={event => fitMessage(event.currentTarget)} onFocus={event => fitMessage(event.currentTarget)} minLength={5} maxLength={2000} placeholder={!puppySlug && interest === 'general' ? 'Tell Jeanne what you’d like to know.' : undefined} defaultValue={litterId?`Hi Jeanne, I’d like to talk about ${litterTitle} and future plans. Here’s what I have in mind:`:puppySlug ? `Hi Jeanne, I’d like to know more about ${puppyName}.` : interest === 'waitlist' ? 'Hi Jeanne, I am interested in a future puppy. Here’s what I have in mind:' : ''} required /></label>
       {textRequested ? <label className="inquiry-consent"><input type="checkbox" name="smsConsent" required />
         <span>By checking this box and submitting this puppy inquiry form, I agree to receive conversational and customer-care SMS messages from FluffyTail Shih Tzu at the phone number provided about my puppy inquiry, puppy availability, scheduling, and next steps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out and HELP for help. Consent is not a condition of purchase. See our <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" title="Opens in a new tab; your inquiry stays here">Privacy Policy</Link> and <Link href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" title="Opens in a new tab; your inquiry stays here">Terms and Conditions</Link>.</span>
       </label> : null}
       {!textRequested ? <p className="inquiry-policy-links">See our <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" title="Opens in a new tab; your inquiry stays here">Privacy Policy</Link> and <Link href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" title="Opens in a new tab; your inquiry stays here">Terms and Conditions</Link>.</p> : null}
       <div className="inquiry-honeypot" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
       {error ? <div className="inquiry-error" role="alert" tabIndex={-1} ref={feedbackRef}>{error}</div> : null}
-      <button type="submit" className="btn btnPrimary" disabled={busy || !token}>{busy ? 'Sending…' : 'Send to Jeanne'}</button>
+      {reviewOnly?<p role="status">Review only — submissions are disabled. No message will be sent or saved.</p>:null}
+      <button type="submit" className="btn btnPrimary" disabled={reviewOnly || busy || !token}>{reviewOnly?'Submissions disabled in review':busy ? 'Sending…' : 'Send to Jeanne'}</button>
     </form>
   )
 }

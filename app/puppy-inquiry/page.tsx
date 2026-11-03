@@ -9,6 +9,7 @@ import {getInventory,getPuppy} from '@/sanity/lib/inventory'
 import {unavailablePuppyNotice} from '@/lib/public-copy'
 import {canInquireAboutPuppy} from '@/lib/inventory'
 import {getPuppyProfilePortrait} from '@/lib/puppy-portraits'
+import {publicReviewEnabled} from '@/lib/public-review'
 
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({
@@ -43,7 +44,7 @@ export default async function PuppyInquiryPage({searchParams}: {searchParams: Se
       {unavailable ? <div className="inquiry-confirmation">
 
         <div className="ctaRow"><Link className="brand-button" href="/available-puppies">See available puppies</Link><Link className="text-link" href="/puppy-inquiry?interest=waitlist">Ask about future puppies</Link></div>
-      </div> : <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppyPhotoUrl} litterId={litter?._id||''} litterTitle={litter?.title||puppy?.litterTitle || ''} interest={interest} />}
+      </div> : <InquiryForm puppySlug={slug} puppyName={puppy?.name || ''} puppyPhotoUrl={puppyPhotoUrl} litterId={litter?._id||''} litterTitle={litter?.title||puppy?.litterTitle || ''} interest={interest} reviewOnly={publicReviewEnabled()} />}
       </div>
     </main>
   )

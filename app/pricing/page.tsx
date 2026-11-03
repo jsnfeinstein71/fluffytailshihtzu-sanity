@@ -16,7 +16,7 @@ export const metadata = publicPageMetadata({
 })
 
 export default async function PricingPage() {
-  const {litters, puppies} = await getInventory()
+  const {litters, puppies} = await getInventory().catch(()=>({litters:[],puppies:[]}))
   const offered = litters.filter((litter) =>
     ['current', 'planned'].includes(normalizeLitterStatus(litter.status) || ''),
   )

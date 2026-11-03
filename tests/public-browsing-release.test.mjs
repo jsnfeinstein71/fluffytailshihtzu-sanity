@@ -24,12 +24,13 @@ test('application contains no analytics provider loader or consent control and k
 })
 
 test('upcoming litter wording uses its own deposit, one common explanation and unchanged inquiry context',()=>{
+ const initialPlaces=[1,2,3,4].map(position=>({position,status:'Available'}))
  const html=renderToStaticMarkup(React.createElement('div',null,
-  React.createElement(LitterPlaces,{litterId:'fictional-first',title:'First fictional litter',depositCents:40000,showGuidance:true}),
-  React.createElement(LitterPlaces,{litterId:'fictional-second',title:'Second fictional litter',depositCents:52550})))
+  React.createElement(LitterPlaces,{litterId:'fictional-first',title:'First fictional litter',depositCents:40000,showGuidance:true,initialPlaces}),
+  React.createElement(LitterPlaces,{litterId:'fictional-second',title:'Second fictional litter',depositCents:52550,initialPlaces})))
  assert.match(html,/a \$400 deposit/);assert.match(html,/a \$525\.50 deposit/);assert.equal((html.match(/Every litter is different/g)||[]).length,1);assert.equal((html.match(/If the right puppy isn’t available/g)||[]).length,1)
  assert.match(html,/litterId=fictional-first/);assert.match(html,/litterId=fictional-second/);assert.equal((html.match(/Ask Jeanne about this litter/g)||[]).length,2);assert.equal((html.match(/1st pick/g)||[]).length,2);assert.equal((html.match(/4th pick/g)||[]).length,2);assert.doesNotMatch(html,/non.refundable/i)
- const missing=renderToStaticMarkup(React.createElement(LitterPlaces,{litterId:'fictional',title:'Unpriced fictional litter',depositCents:null}));assert.match(missing,/a deposit confirmed by Jeanne/);assert.doesNotMatch(missing,/\$400/)
+ const missing=renderToStaticMarkup(React.createElement(LitterPlaces,{litterId:'fictional',title:'Unpriced fictional litter',depositCents:null,initialPlaces}));assert.match(missing,/a deposit confirmed by Jeanne/);assert.doesNotMatch(missing,/\$400/)
 })
 
 test('browsing removes refund warnings while deposit checkout and request transport retain disclosure',()=>{
