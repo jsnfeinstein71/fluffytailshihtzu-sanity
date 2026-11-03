@@ -1,17 +1,18 @@
 'use client'
 import {useEffect,useRef,useState} from 'react'
+import {startPreviewPolling} from '@/lib/preview-polling'
 import type {LitterBoard,LitterReservation} from '@/lib/litter-reservations'
 import {pickLabels,litterDepositTerms} from '@/lib/litter-reservations'
 import {money,type Family,type Channel} from './model'
 import type {EmailWorkspace} from './useEmailWorkspace'
 import type {PaymentRequest} from './email-model'
 type Data={litters:{id:string;title:string;status:string;price:number;deposit:number}[];reservations:LitterReservation[];boards:LitterBoard[];puppies:{id:string;name:string;litterId:string;status:string}[]}
-export default function LitterReservations({family,email,channel,onPayment}:{family:Family;email:EmailWorkspace;channel:Channel;onPayment:(p:PaymentRequest,c:Channel,id:string)=>void}){
+export default function LitterReservations({family,email,channel,onPayment,previewPolling=false}:{previewPolling?:boolean;family:Family;email:EmailWorkspace;channel:Channel;onPayment:(p:PaymentRequest,c:Channel,id:string)=>void}){
  const [data,setData]=useState<Data|null>(null),[selected,setSelected]=useState(family.litterId||''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[preference,setPreference]=useState(''),[destination,setDestination]=useState(''),[puppy,setPuppy]=useState(''),[viewReservation,setViewReservation]=useState('')
  const generation=useRef(0),lock=useRef(false),dirty=useRef(false),offerId=useRef(crypto.randomUUID()),mounted=useRef(true)
  const familyReservations=data?.reservations.filter(r=>r.familyId===family.id&&r.state!=='released')||[]
  const own=familyReservations.find(r=>r._id===viewReservation)||familyReservations.find(r=>r.state==='reconciliation')||familyReservations[0]
- useEffect(()=>{mounted.current=true;const controller=new AbortController();async function refresh(){if(lock.current)return;const observed=generation.current;try{const r=await fetch('/inbox/workspace/api/litter-reservations',{cache:'no-store',signal:controller.signal});const result=await r.json();if(!r.ok)throw new Error(result.error);if(mounted.current&&observed===generation.current)setData(result)}catch{if(mounted.current&&!controller.signal.aborted)setError('Litter places could not be refreshed. Your entries are kept.')}}void refresh();const timer=setInterval(()=>void refresh(),15000);return()=>{mounted.current=false;controller.abort();clearInterval(timer)}},[])
+ useEffect(()=>{mounted.current=true;const controller=new AbortController();async function refresh(){if(lock.current)return;const observed=generation.current;try{const r=await fetch('/inbox/workspace/api/litter-reservations',{cache:'no-store',signal:controller.signal});const result=await r.json();if(!r.ok)throw new Error(result.error);if(mounted.current&&observed===generation.current)setData(result)}catch{if(mounted.current&&!controller.signal.aborted)setError('Litter places could not be refreshed. Your entries are kept.')}}if(previewPolling){const stop=startPreviewPolling(refresh,{intervalMs:60000});return()=>{mounted.current=false;controller.abort();stop()}}void refresh();const timer=setInterval(()=>void refresh(),15000);return()=>{mounted.current=false;controller.abort();clearInterval(timer)}},[previewPolling])
  useEffect(()=>{if(own&&!dirty.current)setPreference(own.preferences)},[own])
  async function act(body:Record<string,unknown>){
   if(lock.current)return;lock.current=true;generation.current++;setBusy(true);setError('');setNotice('')
