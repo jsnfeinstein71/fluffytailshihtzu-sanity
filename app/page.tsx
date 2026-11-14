@@ -63,7 +63,7 @@ export default async function HomePage() {
 
     <section className="brand-container home-puppies" aria-labelledby="puppies-title">
       <div className="section-heading">
-        <div><p className="eyebrow">Meet the little ones</p><h2 id="puppies-title">Current litters</h2><p>See who’s here, who’s available, and who already has a family waiting.</p></div>
+        <div><p className="eyebrow">Meet the little ones</p><h2 id="puppies-title">Current litters</h2><p>Meet the puppies who are currently available.</p></div>
         <span className="pill"><span className="dot" />{availableCount ? `${availableCount} available ${availableCount === 1 ? 'puppy' : 'puppies'}` : 'Ask about future puppies'}</span>
       </div>
       {activeLitters.length ? activeLitters.map(litter => <LitterSection key={litter._id} litter={litter} puppies={puppies} />) : <div className="litter-section"><h3>Looking for the next litter?</h3><p>No current litter is listed here. See what’s coming up, or tell me when you hope to bring a puppy home.</p><Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>}

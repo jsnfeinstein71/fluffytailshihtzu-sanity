@@ -150,6 +150,12 @@ export function getPuppiesForLitter(puppies: Puppy[], litterId: string) {
   })
 }
 
+// Browsing cards show only actual Available records. Keep the full inventory
+// and direct-page queries intact for status/history and existing shared links.
+export function getAvailablePuppiesForLitter(puppies: Puppy[], litterId: string) {
+  return getPuppiesForLitter(puppies, litterId).filter(puppy => puppy.status === 'available')
+}
+
 export function shouldShowWaitlist(litters: Litter[], puppies: Puppy[]) {
   const activeIds = new Set(getLittersByStatus(litters, 'current').map((litter) => litter._id))
   const available = puppies.filter((puppy) => puppy.status === 'available' && activeIds.has(puppy.litterId || ''))
