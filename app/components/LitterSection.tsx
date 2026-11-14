@@ -1,9 +1,10 @@
 import PuppyCard from './PuppyCard'
+import Link from 'next/link'
 import {tryPricing} from '@/lib/pricing'
-import {formatCurrency, formatDate, getPuppiesForLitter, type Litter, type Puppy} from '@/lib/inventory'
+import {formatCurrency, formatDate, getAvailablePuppiesForLitter, type Litter, type Puppy} from '@/lib/inventory'
 
 export default function LitterSection({litter, puppies}: {litter: Litter; puppies: Puppy[]}) {
-  const members = getPuppiesForLitter(puppies, litter._id)
+  const members = getAvailablePuppiesForLitter(puppies, litter._id)
   const pricing = tryPricing({litterPrice: litter.price, litterDeposit: litter.deposit})
   const born = formatDate(litter.birthDate)
   return (
@@ -22,7 +23,7 @@ export default function LitterSection({litter, puppies}: {litter: Litter; puppie
         {litter.summary ? <p className="lead" style={{marginTop: '10px', marginBottom: 0}}>{litter.summary}</p> : null}
       </div>
       <div className="puppyGrid">
-        {members.length ? members.map((puppy) => <PuppyCard key={puppy._id} puppy={puppy} />) : <p className="puppyMetaLine" style={{padding: '12px'}}>Individual puppy details will appear here when they’re added. You can ask Jeanne about this litter in the meantime.</p>}
+        {members.length ? members.map((puppy) => <PuppyCard key={puppy._id} puppy={puppy} />) : <div className="puppyMetaLine" style={{padding: '12px'}}><p>No puppies from this litter are currently available.</p><Link className="text-link" href="/upcoming-litters">See upcoming litters <span aria-hidden="true">&rarr;</span></Link></div>}
       </div>
     </section>
   )

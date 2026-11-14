@@ -51,7 +51,7 @@ test('manual sort overrides the date, unnumbered litters stay oldest first, and 
   assert.equal(litters[0]._id, 'new')
 })
 
-test('browsing keeps three current litters separate, with all statuses and server-managed default/override prices', async () => {
+test('browsing keeps current litter announcements and prices while listing only Available puppies', async () => {
   dataset = [
     ...Array.from({length: 3}, (_, i) => litter('litter-' + i, i === 1 ? 'active' : 'current', {price: 1600 + i * 100, deposit: i === 1 ? 500 : 400})),
     ...Array.from({length: 3}, (_, i) => ['available', 'hold', 'reserved'].map(status => puppy(`${i}-${status}`, 'litter-' + i, status, {overridePrice: status === 'available' ? 2000 + i * 100 : null, color: 'Cream and White'}))).flat(),
@@ -65,8 +65,8 @@ test('browsing keeps three current litters separate, with all statuses and serve
   assert.equal(sections.length, 3)
   for (const [index, [, id, section]] of sections.entries()) {
     assert.equal(id, 'litter-' + index)
-    for (const status of ['available', 'hold', 'reserved']) assert.equal((section.match(new RegExp(`data-puppy-id="${index}-${status}"`, 'g')) || []).length, 1)
-    assert.equal((section.match(/View puppy/g) || []).length, 3)
+    for (const status of ['available', 'hold', 'reserved']) assert.equal((section.match(new RegExp(`data-puppy-id="${index}-${status}"`, 'g')) || []).length, status === 'available' ? 1 : 0)
+    assert.equal((section.match(/View puppy/g) || []).length, 1)
     assert.match(section, /deposit toward the total/)
     assert.match(section, /View price &amp; what’s included/)
     assert.match(section, /Estimated ready date: Nov 26/)
@@ -86,14 +86,14 @@ test('past litters retain photos, metadata and original puppy relationships in c
   assert.match(html, /<details class="available-past-litter"[^>]*data-past-litter-id="archive"/)
   assert.doesNotMatch(html, /<details[^>]*\bopen(?:=|\s|>)/)
   for (const text of ['/original-archive.jpg', 'Historical summary', '$1,500', '$300', 'Past litters']) assert.ok(html.includes(text), text)
-  for (const id of ['past-reserved', 'past-home']) assert.equal((html.match(new RegExp(`data-puppy-id="${id}"`, 'g')) || []).length, 1)
+  for (const id of ['past-reserved', 'past-home']) assert.doesNotMatch(html, new RegExp(`data-puppy-id="${id}"`))
   assert.doesNotMatch(html, /available-count/)
 })
 
 test('browsing handles empty litters and invalid pricing without invented dates or amounts', async () => {
   dataset = [litter('empty', 'current', {birthDate: null}), litter('invalid', 'current', {birthDate: null, price: 0, deposit: 400}), puppy('invalid-price', 'invalid')]
   const html = await render(Available)
-  assert.match(html, /Individual puppy details will appear here when they’re added/)
+  assert.match(html, /No puppies from this litter are currently available/)
   assert.match(html, /Birth date to be confirmed/)
   assert.match(html, /Ask Jeanne about pricing/)
   assert.match(html, /href="\/puppies\/invalid-price"/)
@@ -108,27 +108,31 @@ test('browsing handles empty litters and invalid pricing without invented dates 
   assert.match(empty, /href="\/upcoming-litters"/)
 })
 
-test('every puppy status stays once in its original litter; only available accepts an inquiry', async () => {
+test('all statuses remain in inventory and direct pages, but only Available is listed', async () => {
   for (const status of ['available', 'hold', 'reserved', 'sold', 'holdback', 'gone-home', 'unexpected', null]) {
     dataset = [litter('original'), puppy('puppy', 'original', status)]
     for (const Component of [Home, Available]) {
       const html = await render(Component)
-      assert.equal((html.match(/data-puppy-id="puppy"/g) || []).length, 1)
-      assert.match(html, /href="\/puppies\/puppy"/)
-      assert.ok(html.includes(rules.formatPuppyStatus(status)))
+      assert.equal((html.match(/data-puppy-id="puppy"/g) || []).length, status === 'available' ? 1 : 0)
+      if (status === 'available') assert.match(html, /href="\/puppies\/puppy"/)
+      else {assert.doesNotMatch(html, /href="\/puppies\/puppy"/);assert.match(html, /currently available/);assert.match(html, /href="\/upcoming-litters"/)}
       assert.doesNotMatch(html, /Matched Puppies/)
     }
+    const inventory = await getInventory()
+    assert.equal(inventory.puppies.length,1)
+    assert.equal(inventory.puppies[0].status,status)
     const detail = await render(Detail, {params: Promise.resolve({slug: 'puppy'})})
+    assert.ok(detail.includes(rules.formatPuppyStatus(status)))
     assert.equal(detail.includes('Ask Jeanne about'), status === 'available')
     if (status !== 'available') assert.match(detail, /is reserved|isn’t available for a new reservation/)
   }
 })
 
-test('reserved and gone-home puppies in past litters remain browsable without duplicate listings', async () => {
+test('past litter announcements remain while unavailable puppy cards are hidden', async () => {
   dataset = [litter('old', 'past'), puppy('reserved', 'old', 'reserved'), puppy('home', 'old', 'gone-home')]
   const html = await render(Available)
   assert.match(html, /data-past-litter-id="old"/)
-  assert.equal((html.match(/data-puppy-id=/g) || []).length, 2)
+  assert.equal((html.match(/data-puppy-id=/g) || []).length, 0)
   assert.doesNotMatch(await render(Home), /data-puppy-id=/)
 })
 
