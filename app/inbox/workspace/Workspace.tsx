@@ -61,7 +61,8 @@ export default function Workspace({live=false,paymentTesting=false}:{live?:boole
   const families=saved.records?saved.records.map(familyFromSaved):live||paymentTesting?[]:fixtureFamilies
   const puppies=live||paymentTesting?(email.data?.inventory||[]):fixturePuppies
   const visible = families.filter(f => (filter==='Archived'?!!f.archivedAt:!f.archivedAt) && matchesFamily(f, search) && (filter !== 'Needs a reply' || f.unread) && (filter !== 'Pickup planning' || f.stage === 'Pickup planning'))
-  const family = visible.find(f => f.id === familyId)||visible[0]||{id:'',name:'Choose a family',initials:'',email:'',phone:'',location:'',preference:'Email' as const,smsConsent:false,stage:'',next:'',unread:false,checks:[],records:[],messages:[]}
+  const selectionScope=view==='Conversations'||view==='Families'?visible:families
+  const family = selectionScope.find(f => f.id === familyId)||selectionScope[0]||{id:'',name:'Choose a family',initials:'',email:'',phone:'',location:'',preference:'Email' as const,smsConsent:false,stage:'',next:'',unread:false,checks:[],records:[],messages:[]}
   const puppy = puppies.find(p => p.id === family.puppyId)
   const balance = paymentSummary(family,puppies)
   const draft = state.drafts[draftKey(family.id, channel)] || ''
