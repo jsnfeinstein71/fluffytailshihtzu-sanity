@@ -1,3 +1,4 @@
+import {commitFamilyRecords,persistInbound} from './family-lifecycle'
 import {attachmentParts} from './workspace-attachments'
 import {sameAttachments} from '@/lib/mail/attachment-model'
 import {samePaymentEmail} from '@/lib/mail/payment-email'
@@ -47,7 +48,7 @@ export async function ensureOutgoing(reviewId:string,origin:string){
   }
   const review=await validateSavedEmailReview(reviewId,origin)
   const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,...(review.attachments?.length?{attachments:review.attachments}:{}),...(review.paymentEmail?{paymentEmail:review.paymentEmail,html:review.html}:{}),messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
-  await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
+  await commitFamilyRecords(review.familyId,tx=>tx.createIfNotExists(record))
   const stored=await client.getDocument<OutgoingEmail>(id)
   if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
   return stored
@@ -136,7 +137,8 @@ async function syncReplies(familyId?:string,initializeOnly=false,background=fals
   if((liveWorkspaceEnabled()||testCustomerContacts())&&(!familyId||!/^inquiry-[a-f0-9]{64}$/.test(familyId)))throw new EmailWorkflowError('Choose a saved family conversation before synchronizing replies.')
   if(testCustomerContacts()){const family=await client.getDocument<import('@/app/inbox/workspace/persistence').SavedFamily>(workspaceId(familyId!));if(!family||!approvedTestCustomer(family.profile))throw new EmailWorkflowError('Only the approved test conversation can read matching replies.',403)}
   const cursorId=liveWorkspaceEnabled()||testCustomerContacts()?familyMailCursorId(familyId!):provider.capabilities.provider==='pair'?privateRecordId('staffMailCursor','review-v1:owner-only-trial:INBOX'):mailCursorId
-  await client.transaction().createIfNotExists({_id:cursorId,_type:'staffMailCursor',workspace:workspaceNamespace(),validity:'',lastUid:0,source:provider.capabilities.provider,syncToken:null,leaseUntil:0}).commit({visibility:'sync'})
+  const newCursor={_id:cursorId,_type:'staffMailCursor',workspace:workspaceNamespace(),...(familyId?{familyId}:{}),validity:'',lastUid:0,source:provider.capabilities.provider,syncToken:null,leaseUntil:0}
+  if(!await client.getDocument(cursorId)){if(familyId)await commitFamilyRecords(familyId,tx=>tx.createIfNotExists(newCursor));else await client.transaction().createIfNotExists(newCursor).commit({visibility:'sync'})}
   const cursor=await client.getDocument<SavedCursor>(cursorId)
   if(background&&cursor&&(cursor.leaseUntil>Date.now()||Date.now()-(cursor.lastCheckedAt||0)<15000))return 'Automatic updates are active.'
   if(!cursor||cursor.leaseUntil>Date.now())throw new EmailWorkflowError('Reply synchronization is already running. Refresh its result before trying again.',409)
@@ -162,7 +164,7 @@ async function syncReplies(familyId?:string,initializeOnly=false,background=fals
       const id=privateRecordId('staffIncomingEmail',`${workspaceNamespace()}:${jeanneEmail}:${message.messageId||`${message.validity}:${message.uid}`}`)
       const record:IncomingEmail={_id:id,_type:'staffIncomingEmail',workspace:workspaceNamespace(),id,familyId:parent.familyId,from:message.from,to:jeanneEmail,subject:message.subject,body:message.body,messageId:message.messageId||'',references:message.references,direction:'in',time:message.time,source:provider.capabilities.provider as 'fictional'|'pair',matchedOutgoingId:parent._id,uid:message.uid,validity:message.validity,importedAt:new Date().toISOString()}
       const before=await client.getDocument<IncomingEmail>(id)
-      await client.transaction().createIfNotExists(record).commit({visibility:'sync'})
+      await persistInbound(record,message.time,!initializeOnly&&!!cursor.validity&&message.uid>cursor.lastUid)
       const stored=await client.getDocument<IncomingEmail>(id)
       if(!stored||stored.familyId!==record.familyId||stored.from.toLowerCase()!==record.from.toLowerCase()||stored.body!==record.body||stored.messageId!==record.messageId||stored.to!==record.to||stored.subject!==record.subject||JSON.stringify(stored.references)!==JSON.stringify(record.references))throw new EmailWorkflowError('A reply identifier conflicts with a previously imported message. Its contents were not overwritten.',409)
       if(!before)imported++
@@ -217,6 +219,18 @@ export async function performTransportAction(input:unknown,origin:string){
 }
 
 export function familyMailCursorId(familyId:string){return privateRecordId('staffMailCursor',`${workspaceNamespace()}:${familyId}:INBOX`)}
+// Reuse the existing future-only thread reader, including its lease. No global
+// mailbox import, new provider or background service is introduced.
+export async function refreshArchivedReplies(){
+ requireWorkspace()
+ if(!getMailCapabilities().canSync)return
+ const families=await getOperatorClient().fetch<{familyKey:string;archivedAt:string}[]>('*[_type == "staffFamily" && workspace == $workspace && defined(archivedAt) && archivedAt != null][0...501]{familyKey,archivedAt}',{workspace:workspaceNamespace()},{cache:'no-store'})
+ if(families.length>500)throw new EmailWorkflowError('The archived reply list needs paginated review.',409)
+ if(!families.length)return
+ const ids=families.map(f=>familyMailCursorId(f.familyKey))
+ const cursors=await getOperatorClient().fetch<SavedCursor[]>('*[_id in $ids && _type == "staffMailCursor" && workspace == $workspace && source == $source && validity != "" && leaseUntil < $now && (!defined(lastCheckedAt) || lastCheckedAt < $before)] | order(lastCheckedAt asc)[0...3]',{ids,workspace:workspaceNamespace(),source:getMailCapabilities().provider,now:Date.now(),before:Date.now()-60000},{cache:'no-store'})
+ for(const cursor of cursors){const family=families.find(f=>familyMailCursorId(f.familyKey)===cursor._id);if(family)await syncReplies(family.familyKey,false,true)}
+}
 async function initializeFamilyMailbox(familyId:string){const cursor=await getOperatorClient().getDocument<SavedCursor>(familyMailCursorId(familyId));if(!cursor?.validity)await syncReplies(familyId,true)}
 
 // Payment confirmations share the existing durable outbox and attempt controls.

@@ -1,3 +1,4 @@
+import {commitFamilyRecords} from './family-lifecycle'
 import 'server-only'
 import {createHash,randomBytes,randomUUID} from 'node:crypto'
 import type Stripe from 'stripe'
@@ -29,7 +30,7 @@ async function litter(id:unknown){
  if(!Number.isFinite(l.price)||!Number.isFinite(l.deposit)||l.price<=0||l.deposit<=0||l.deposit>l.price)throw new LitterError('Configure this litter’s price and deposit before offering a place.')
  return l
 }
-async function family(id:string){const f=await client().getDocument<SavedFamily>(workspaceId(id));if(!f||f._type!=='staffFamily'||f.workspace!==workspaceNamespace()||f.familyKey!==id||(testing()?(!f.profile.paymentTestScenario||!f.profile.email.endsWith('@example.test')):!!f.profile.paymentTestScenario))throw new LitterError('Choose a saved family in this environment.');return f}
+async function family(id:string){const f=await client().getDocument<SavedFamily>(workspaceId(id));if(!f||f.deletionUntil&&Date.parse(f.deletionUntil)>Date.now()||f._type!=='staffFamily'||f.workspace!==workspaceNamespace()||f.familyKey!==id||(testing()?(!f.profile.paymentTestScenario||!f.profile.email.endsWith('@example.test')):!!f.profile.paymentTestScenario))throw new LitterError('Choose a saved family in this environment.');return f}
 async function reservation(id:string){const r=await client().getDocument<LitterReservation>(id);if(!r||r._type!=='litterReservation'||r.workspace!==workspaceNamespace()||r._id!==litterRecordId('litterReservation',r.requestId))throw new LitterError('Reservation unavailable.',404);return r}
 async function board(litterId:string,create=false){if(create)await client().createIfNotExists({_id:boardId(litterId),_type:'litterPlaces',workspace:workspaceNamespace(),litterId,places:[]});const b=await client().getDocument<LitterBoard>(boardId(litterId));if(b&&(b._type!=='litterPlaces'||b.workspace!==workspaceNamespace()||b.litterId!==litterId||!Array.isArray(b.places)||b.places.some(p=>![1,2,3,4].includes(p.position)||!['pending','reserved'].includes(p.state))||new Set(b.places.map(p=>p.position)).size!==b.places.length))throw new LitterError('This litter’s positions require review. No availability was assumed.');return b}
 const nextPlace=(b:LitterBoard|undefined)=>([1,2,3,4].find(n=>!b?.places.some(p=>p.position===n)))
@@ -57,12 +58,12 @@ export async function loadLitterReservations(){
  return {puppies,litters:litters.map(l=>({id:l._id,title:l.title,status:l.status,price:l.price,deposit:l.deposit})),reservations:presented,boards}
 }
 export async function offerLitterPlace(input:{familyId:string;litterId:string;position:number;preferences:string;requestId:string}){
- enabled();uuid(input.requestId);const l=await litter(input.litterId),f=await family(input.familyId),quote=getPricing({litterPrice:l.price,litterDeposit:l.deposit})
+ enabled();uuid(input.requestId);const l=await litter(input.litterId),quote=getPricing({litterPrice:l.price,litterDeposit:l.deposit});let f=await family(input.familyId)
  if(!['planned','upcoming'].includes(l.status))throw new LitterError('New litter places are offered before birth. Existing places remain accessible after birth.')
  const id=litterRecordId('litterReservation',input.requestId),prior=await client().getDocument<LitterReservation>(id)
  if(prior){if(prior.familyId!==input.familyId||prior.litterId!==input.litterId||prior.position!==input.position)throw new LitterError('That action belongs to another offer.');return await prepareLitterCheckout(prior._id)}
  const anchorId=litterRecordId('litterFamily',f.familyKey)
- await client().createIfNotExists({_id:anchorId,_type:'litterFamily',workspace:workspaceNamespace(),familyId:f.familyKey,reservationId:''})
+ await commitFamilyRecords(f.familyKey,tx=>tx.createIfNotExists({_id:anchorId,_type:'litterFamily',workspace:workspaceNamespace(),familyId:f.familyKey,reservationId:''}));f=await family(input.familyId)
  const anchor=await client().getDocument<{_rev:string;reservationId:string}>(anchorId),b=await board(l._id,true)
  if(anchor?.reservationId){const active=await reservation(anchor.reservationId);if(active.state!=='released')throw new LitterError('This family already has a litter deposit or place. Transfer its existing reservation instead.')}
  if(!b||nextPlace(b)!==input.position)throw new LitterError('The next available position changed. Refresh the four places before offering it.')

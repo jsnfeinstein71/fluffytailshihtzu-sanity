@@ -192,7 +192,7 @@ test('reply imports deduplicate across sync retries and preserve cursor on an im
   const outgoing=store.documents.get(outgoingId(review))
   globalThis.fixtureMailProvider=fakeProvider({sync:async()=>({validity:'fictional-v1',lastUid:2,messages:[{uid:2,validity:'fictional-v1',messageId:'<newreply@example.test>',from:outgoing.to,to:outgoing.from,subject:'Re: next steps',body:'Second fictional reply',inReplyTo:outgoing.messageId,references:[outgoing.messageId],time:new Date().toISOString()}]})})
   const transaction=store.transaction
-  store.transaction=()=>{const tx=transaction(),create=tx.createIfNotExists;tx.createIfNotExists=doc=>{if(doc._type==='staffIncomingEmail')throw new Error('Import persistence unavailable');return create(doc)};return tx}
+  store.transaction=()=>{const tx=transaction(),create=tx.create;tx.create=doc=>{if(doc._type==='staffIncomingEmail')throw new Error('Import persistence unavailable');return create(doc)};return tx}
   assert.equal((await send({type:'sync'})).status,503);assert.equal(store.documents.get(mailCursorId).lastUid,beforeCursor.lastUid)
   store.transaction=transaction
   assert.equal((await send({type:'sync'})).status,200)

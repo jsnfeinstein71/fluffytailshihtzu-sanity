@@ -10,7 +10,7 @@ import {workspaceStoreFixture} from '../tests/workspace-store-fixture.mjs'
 
 if(process.env.VERCEL)throw new Error('This fixture helper is local-only.')
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..')
-const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview',process.env.FLUFFYTAIL_LAYOUT_QA==='1'?'layout-qa.json':'families.json')
+const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview',process.env.FLUFFYTAIL_FAMILY_QA==='1'?'family-qa-20261114.json':process.env.FLUFFYTAIL_LAYOUT_QA==='1'?'layout-qa.json':'families.json')
 const allowed=['PATH','Path','SystemRoot','SYSTEMROOT','SystemDrive','WINDIR','windir','COMSPEC','ComSpec','PATHEXT','TEMP','TMP','LOCALAPPDATA','APPDATA','USERPROFILE','HOME']
 const childEnv=Object.fromEntries(allowed.filter(key=>process.env[key]).map(key=>[key,process.env[key]]))
 Object.assign(childEnv,{NEXT_PUBLIC_SANITY_PROJECT_ID:'gu1xkpsg',NEXT_PUBLIC_SANITY_DATASET:'synthetic',VERCEL_ENV:'preview',FLUFFYTAIL_LOCAL_MAIL_UI:'1',FLUFFYTAIL_MAIL_MODE:'fictional',FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'fixture-operator',INBOX_BASIC_AUTH_PASS:'fixture-only-password'})
@@ -36,6 +36,7 @@ globalThis.fixtureOperatorClient=workspaceStoreFixture(initial,async documents=>
 })
 const {GET,POST}=await import('../app/inbox/workspace/api/state/route.ts')
 const emailRoutes=await import('../app/inbox/workspace/api/email/route.ts')
+const familyRoutes=await import('../app/inbox/workspace/api/family/route.ts')
 const fileRoutes=await import('../app/inbox/workspace/api/files/route.ts')
 const accessRoutes=await import('../app/inbox/access/api/route.ts')
 const {default:PaymentPreview}=await import('../app/inbox/workspace/payment-preview/[requestId]/page.tsx')
@@ -52,6 +53,8 @@ let queue=Promise.resolve()
 const app=spawn(process.execPath,[join(root,'node_modules','next','dist','bin','next'),'start','--port','3101','--hostname','localhost'],{cwd:root,env:childEnv,stdio:['ignore','inherit','inherit'],windowsHide:true})
 app.on('error',()=>{console.error('The local app could not start.');process.exitCode=1})
 const server=createServer(async(req,res)=>{
+  // Disposable loopback-only layout QA uses a fictional operator, never a real staff credential.
+  if(process.env.FLUFFYTAIL_FAMILY_QA==='1')req.headers.authorization='Basic '+Buffer.from('fixture-operator:fixture-only-password').toString('base64')
   const path=req.url||'/'
   const pathname=path.split('?')[0]
   if(pathname==='/inbox/mail/api/local'){
@@ -83,13 +86,13 @@ const server=createServer(async(req,res)=>{
     res.writeHead(status,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow'})
     res.end('<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff test payment request</title><link rel="stylesheet" href="/inbox/workspace/workspace-review.css"></head><body>'+renderToStaticMarkup(page)+'</body></html>');return
   }
-  if(pathname==='/inbox/access/api'||pathname==='/inbox/workspace/api/state'||pathname==='/inbox/workspace/api/email'||pathname==='/inbox/workspace/api/files'){
+  if(pathname==='/inbox/access/api'||pathname==='/inbox/workspace/api/state'||pathname==='/inbox/workspace/api/email'||pathname==='/inbox/workspace/api/files'||pathname==='/inbox/workspace/api/family'){
     // Serialize the disk-backed fixture. Real Sanity concurrency is tested separately.
     const task=queue.then(async()=>{
       const chunks=[];let length=0
       for await(const chunk of req){length+=chunk.length;if(length>(pathname.endsWith('/files')?3500000:150000)){res.writeHead(413,{'Cache-Control':'no-store'});res.end('Request too large');return}chunks.push(chunk)}
       const request=new Request('http://localhost:3100'+path,{method:req.method,headers:req.headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)})
-      const routes=pathname==='/inbox/access/api'?accessRoutes:pathname.endsWith('/email')?emailRoutes:pathname.endsWith('/files')?fileRoutes:{GET,POST}
+      const routes=pathname==='/inbox/access/api'?accessRoutes:pathname.endsWith('/email')?emailRoutes:pathname.endsWith('/files')?fileRoutes:pathname.endsWith('/family')?familyRoutes:{GET,POST}
       const response=req.method==='GET'?await routes.GET(request):req.method==='POST'?await routes.POST(request):new Response(null,{status:405})
       res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()))
     })

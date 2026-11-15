@@ -1,0 +1,27 @@
+# Staff family archive and controlled deletion — November 14, 2026
+
+Owner-authorized focused Production release, based on main `48b4ca0`. Pending education/availability and synthetic-usage changes are excluded. No configuration, credentials, schema migration, customer messages, charges, existing family mutations or reservation changes are part of deployment.
+
+## Everyday actions
+
+In Conversations, select a family, open Family details → Details menu → Archive family. Unfinished email/text drafts, file selections and a typed private note are saved first; a failed/conflicting save stops the action and leaves the entries in place. The confirmation explains any puppy association, litter reservation history and payment requests. Archiving changes list visibility only. The next matching active family is selected, or an empty state appears. Search/filter counts and follow-up counts exclude archived families by default.
+
+Choose the Archived family filter to view archived conversations and their preserved drafts/history. Details menu → Restore family returns the selected family to the active list. The mobile family-list and Details panels are unchanged; Archived also appears in the conversation subtitle.
+
+Genuine new inbound SMS callbacks use a single atomic message-create/family-revision update. A duplicate SID never restores a later archive. Ambiguous shared phone numbers are not guessed into a family. Existing Pair thread synchronization similarly restores only a new, matched, post-archive reply beyond the established future-only cursor. Watermark initialization, historical messages, duplicate Message-IDs and delivery-status updates do not restore archives. Archived Pair threads with existing watermarks are checked while the workspace is visible, at most once per minute per thread and at most three eligible threads per tick. No historical import or new background service is enabled; a closed workspace does not poll Pair. Refresh/manual restore remain available.
+
+## Controlled deletion
+
+Details menu → More family actions → Delete family opens a private server-generated review listing the family's name and the exact categories/counts and photo names to remove. Eligible records are empty, exact contact duplicates, or explicitly marked tests. A name that happens to contain “test” or “fictional” never grants permission. To explicitly mark a fictional record, staff must type its family name; that does not override any protection. Final deletion separately requires the exact family name and the current review token.
+
+Payment records/requests, agreements/contracts, litter reservation/transfer/credit history, puppy associations, sent/prepared/uncertain sending history, linked records with unclear ownership, shared files/references and unrecognized record types block deletion. Saved documents are conservatively protected because they may contain agreements or puppy records. The dialog gives the specific reason and offers Archive. No document or sent-message deletion exception exists for tests.
+
+Source inquiry submissions remain in the original Inbox. Only the workspace family and safe, exclusively owned removable records are deleted. An opaque private deletion marker at the former family ID prevents historical inquiry projection from recreating it. The marker contains no family contact details, messages, notes or attachments. This is an operational deletion, not a purge of Sanity's retained document history or an erasure of original Inbox submissions.
+
+Eligibility is rechecked on submission and again under a short, revision-checked deletion lock. New family-owned uploads, drafts, email reviews/outgoing messages, payment requests, litter offers and inbound messages participate in that family revision boundary. A concurrent writer either wins before deletion and invalidates review, or is rejected while deletion is checked; provider callbacks can retry. Every removed linked record also has a revision assertion in the final atomic transaction. A transaction failure removes nothing and releases the lock; a crashed worker's lock expires after 90 seconds. No query-based deletion guard relies on Sanity's eventually consistent search store.
+
+## Verification
+
+Application-handler tests use newly created in-memory fictional families/providers, including signed Twilio-shaped callbacks and the actual Pair thread synchronizer. They cover archive/restore, full draft/note preservation, duplicate/import/status handling, minute-bounded archived-thread checks, protected test-history blocking, explicit test classification, shared attachment references, exact contact duplicates, stale review tokens, concurrent record creation, failed final deletion and inquiry reprojection suppression. Existing messaging/payment/litter/authentication regressions remain part of the full suite.
+
+Visible browser QA uses a separate disposable disk-backed local fixture (`family-qa-20261114.json`), never the completed Preview histories or real records. Desktop and 390px phone controls cover Archive, Archived filtering, saved-draft retention, Restore, the separate Delete menu, blocked unclassified deletion, explicit test marking and typed-name deletion. Screenshots and check evidence remain outside the repository under the local FamilyArchiveRelease evidence folder. Production verification is read-only: deployed commit/hostname, signed-out protection and existing authenticated staff rendering. No real family is archived/deleted to demonstrate the release.

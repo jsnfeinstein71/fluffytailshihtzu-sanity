@@ -108,3 +108,7 @@
 .ops-context .ops-compose-actions,.ops-payment-link-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0}
 .ops-context select,.ops-context textarea,.ops-context input:not([type=checkbox]){min-width:0;max-width:100%}
 .ops-litter-reservations ol{padding-left:20px}.ops-litter-reservations ol.ops-litter-places{padding-left:0}
+
+/* Family lifecycle actions remain inside the existing details panel. */
+.ops-family-actions{min-width:0;width:100%;font-size:.85rem}.ops-family-actions summary{cursor:pointer;padding:.5rem 0}.ops-family-actions details details{margin-top:.5rem}.ops-family-actions button{margin:.35rem 0;max-width:100%;white-space:normal}
+.ops-family-dialog{margin:auto;background:#fffcf7;color:#58493d;border:1px solid #d8bd9d;border-radius:16px;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:24px;overflow:auto;box-sizing:border-box;overflow-wrap:anywhere}.ops-family-dialog::backdrop{background:#30271f88}.ops-family-dialog h2{margin-top:0}.ops-family-dialog label{display:block;margin:16px 0}.ops-family-dialog input{display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:8px;border:1px solid #d8bd9d;border-radius:6px}.ops-family-dialog button{margin:8px 8px 0 0}.ops-family-dialog p,.ops-family-dialog li{line-height:1.5}

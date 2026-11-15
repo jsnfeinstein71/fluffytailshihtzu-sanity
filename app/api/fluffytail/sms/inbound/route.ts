@@ -6,6 +6,7 @@ import {readRequestText} from '@/lib/request-body'
 import {getOperatorClient} from '@/sanity/lib/operator-client'
 import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {privateRecordId} from '@/sanity/lib/private-records'
+import {persistInbound} from '@/sanity/lib/family-lifecycle'
 
 export const runtime = 'nodejs'
 
@@ -59,12 +60,15 @@ export async function POST(req: NextRequest) {
     const existing = await sanity.fetch('*[_type == "smsMessage" && messageSid == $sid][0]._id', {sid: messageSid}, {cache: 'no-store'})
     if (existing) return reply()
     const receipt = randomUUID()
-    const record = await sanity.createIfNotExists({
+    const matches=await sanity.fetch<{familyKey:string}[]>('*[_type == "staffFamily" && workspace == "live-v1" && profile.phone == $from][0...2]{familyKey}',{from},{cache:'no-store'})
+    const receivedAt=new Date().toISOString()
+    const created = await persistInbound({
       _id: privateRecordId('sms', messageSid), _type: 'smsMessage', receipt,
+      ...(matches.length===1?{familyId:matches[0].familyKey,workspace:'live-v1'}:{}),
       messageSid, from, to, body, direction: 'inbound', source: 'fluffytail',
-      signatureVerified: true, optOutType:['STOP','START','HELP'].includes(field('OptOutType'))?field('OptOutType'):'', receivedAt: new Date().toISOString(), numMedia, mediaUrls,
-    })
-    return reply(record.receipt === receipt)
+      signatureVerified: true, optOutType:['STOP','START','HELP'].includes(field('OptOutType'))?field('OptOutType'):'', receivedAt, numMedia, mediaUrls,
+    },receivedAt,true)
+    return reply(created)
   } catch (error) {
     return NextResponse.json({error: error instanceof InquiryError ? error.message : 'Message persistence failed.'},
       {status: error instanceof InquiryError ? error.status : 503})

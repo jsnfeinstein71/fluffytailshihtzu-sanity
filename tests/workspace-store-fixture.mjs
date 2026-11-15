@@ -17,26 +17,32 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
     async create(doc){if(documents.has(doc._id))throw conflict();documents.set(doc._id,{...structuredClone(doc),_rev:`fixture-${randomUUID()}`});await save();return structuredClone(documents.get(doc._id))},
     async createIfNotExists(doc){if(!documents.has(doc._id)){documents.set(doc._id,{...structuredClone(doc),_rev:`fixture-${randomUUID()}`});await save()}return structuredClone(documents.get(doc._id))},
     transaction(){
-      const pending=[],patches=[],creates=[]
-      const tx={create(doc){creates.push(doc);return tx},createIfNotExists(doc){pending.push(doc);return tx},patch(id,input){
+      const operations=[]
+      const tx={create(doc){operations.push({kind:'create',doc});return tx},createIfNotExists(doc){operations.push({kind:'ensure',doc});return tx},delete(selection){operations.push({kind:'delete',selection});return tx},patch(id,input){
         let expected;const sets={}
         const builder={ifRevisionId(value){expected=value;return builder},set(values){Object.assign(sets,structuredClone(values));return builder}}
         if(typeof input==='function')input(builder);else builder.set(input.set||{})
-        patches.push({id,expected,sets});return tx
+        operations.push({kind:'patch',id,expected,sets});return tx
       },async commit(){
-        if(beforePatch&&patches.length){const fn=beforePatch;beforePatch=null;await fn(documents,patches[0].id)}
+        const firstPatch=operations.find(o=>o.kind==='patch')
+        if(beforePatch&&firstPatch){const fn=beforePatch;beforePatch=null;await fn(documents,firstPatch.id)}
         if(nextFailure){const error=nextFailure;nextFailure=null;throw error}
         const next=new Map([...documents].map(([key,value])=>[key,structuredClone(value)]))
-        for(const d of creates){if(next.has(d._id))throw conflict();next.set(d._id,{...structuredClone(d),_rev:`fixture-${randomUUID()}`})}
-        for(const d of pending)if(!next.has(d._id))next.set(d._id,{...structuredClone(d),_rev:`fixture-${randomUUID()}`})
-        for(const {id,expected,sets} of patches){
-          const record=next.get(id);if(!record||expected!==undefined&&record._rev!==expected)throw conflict()
-          for(const [key,value]of Object.entries(sets)){const segments=key.split('.');let cursor=record;for(const segment of segments.slice(0,-1))cursor=cursor[segment];cursor[segments.at(-1)]=structuredClone(value)}
-          record._rev=`fixture-${randomUUID()}`
+        for(const op of operations){
+          if(op.kind==='create'||op.kind==='ensure'){
+            if(next.has(op.doc._id)){if(op.kind==='create')throw conflict();continue}
+            next.set(op.doc._id,{...structuredClone(op.doc),_rev:`fixture-${randomUUID()}`})
+          }else if(op.kind==='patch'){
+            const record=next.get(op.id);if(!record||op.expected!==undefined&&record._rev!==op.expected)throw conflict()
+            for(const [key,value]of Object.entries(op.sets)){const segments=key.split('.');let cursor=record;for(const segment of segments.slice(0,-1))cursor=cursor[segment];cursor[segments.at(-1)]=structuredClone(value)}
+            record._rev=`fixture-${randomUUID()}`
+          }else{
+            const ids=typeof op.selection==='string'?[op.selection]:(await evaluate(parse(op.selection.query),{dataset:[...next.values()],params:op.selection.params})).get()
+            for(const id of ids)next.delete(typeof id==='string'?id:id._id)
+          }
         }
-        for(const doc of pending)if(!documents.has(doc._id))documents.set(doc._id,next.get(doc._id))
-        for(const doc of creates)documents.set(doc._id,next.get(doc._id))
-        for(const {id}of patches)documents.set(id,next.get(id))
+        for(const id of documents.keys())if(!next.has(id))documents.delete(id)
+        for(const [id,doc]of next)if(JSON.stringify(doc)!==JSON.stringify(documents.get(id)))documents.set(id,doc)
         await save()
       }}
       return tx

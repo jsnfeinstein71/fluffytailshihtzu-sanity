@@ -34,7 +34,7 @@ export function useSavedWorkspace() {
     setRecords(data.families)
   },[])
 
-  const ingestProfiles=useCallback((families:SavedFamily[])=>setRecords(previous=>families.map(family=>{const current=previous?.find(f=>f.familyKey===family.familyKey);return current?{...current,profile:family.profile}:family})),[])
+  const ingestProfiles=useCallback((families:SavedFamily[])=>setRecords(previous=>families.map(family=>{const current=previous?.find(f=>f.familyKey===family.familyKey);return current?{...current,archivedAt:family.archivedAt,profile:family.profile}:family})),[])
   const load=useCallback(async(signal?:AbortSignal)=>{
     setLoading(true);setError('')
     try{
