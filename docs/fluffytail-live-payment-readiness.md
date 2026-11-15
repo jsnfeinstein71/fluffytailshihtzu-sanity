@@ -44,3 +44,8 @@ The actual built workspace was opened in the local browser with a new, separate 
 Production comparison retains both payment-request revisions exactly and still has no ledger records. Opening the existing staff view triggers the already-known no-op inquiry projection: family `_rev` values refreshed while their `_updatedAt` times remained before this review. This review did not patch those families or their financial/reservation data. No new production configuration or code was deployed.
 
 This branch is for review only. Its Vercel Preview uses normal deployment protection and existing fail-closed operational guards; it is not a new live-payment test environment. Local fixture provider results must not be described as hosted persistence or actual money movement.
+
+
+## Production release authorization — November 14, 2026
+
+The owner approved releasing PR #40's two prepared corrections after the existing required checks pass: accurate live/test/legacy staff payment identification with Stripe transaction links, and bounded customer receipt refresh. This supersedes the earlier review-only gate above. No other pending PR or feature is included. The owner separately selected the existing Discover destination; ownership/destination inspection, any saved payout setting and final readback are tracked privately because bank details do not belong in source. No manual transfer, existing-balance movement, card order, customer send or charge is authorized during release verification. The next genuine buyer deposit remains the live payment-to-bank evidence checkpoint.
