@@ -31,6 +31,8 @@ export function workspaceStoreFixture(initial=[],persist=async()=>{}) {
         for(const op of operations){
           if(op.kind==='create'||op.kind==='ensure'){
             if(next.has(op.doc._id)){if(op.kind==='create')throw conflict();continue}
+            const original=documents.get(op.doc._id)
+            if(original&&original._type!==op.doc._type)throw Object.assign(new Error('Immutable document type'),{statusCode:400})
             next.set(op.doc._id,{...structuredClone(op.doc),_rev:`fixture-${randomUUID()}`})
           }else if(op.kind==='patch'){
             const record=next.get(op.id);if(!record||op.expected!==undefined&&record._rev!==op.expected)throw conflict()

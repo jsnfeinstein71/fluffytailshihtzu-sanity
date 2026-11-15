@@ -106,7 +106,7 @@ export async function manageFamily(input:unknown){
   for(const r of [...final.removable,locked])tx=tx.patch(r._id,p=>p.ifRevisionId(r._rev).set({deletionCheck:true})).delete(r._id)
   // An opaque marker prevents old inquiry projection from recreating personal
   // data. Original Inbox submissions remain outside this family-list action.
-  tx=tx.create({_id:family._id,_type:'staffFamilyDeleted',workspace:workspaceNamespace(),deletedAt:new Date().toISOString()})
+  tx=tx.create({_id:family._id,_type:'staffFamily',workspace:workspaceNamespace(),deletedAt:new Date().toISOString()})
   await tx.commit({visibility:'sync'})
  }finally{
   const latest=await client.getDocument<SavedFamily>(family._id)

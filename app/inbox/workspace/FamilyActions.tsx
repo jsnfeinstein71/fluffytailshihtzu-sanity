@@ -15,6 +15,7 @@ export default function FamilyActions({familyId,archived,busy,preserve,onChanged
   if(!review)return
   setWorking(true);setError('')
   try{
+   if(!await preserve())throw new Error('Your unfinished entries could not be saved. They are kept here; resolve the save error before continuing.')
    const response=await fetch('/inbox/workspace/api/family',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,familyId,token:review.token,name})}),data=await response.json()
    if(!response.ok){await load();throw new Error(data.error)}
    if(action==='mark-test'){await load();setName('');return}

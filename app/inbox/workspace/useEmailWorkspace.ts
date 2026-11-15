@@ -78,6 +78,7 @@ export function useEmailWorkspace(ready:boolean){
   }
   async function save(familyId:string){
     const entry=entries[familyId];if(!entry||entry.conflict)return false
+    if(sameEmail(entry.value,entry.base))return true
     const result=await request({type:'save',familyId,revision:entry.revision,value:entry.value})
     if(result){const saved=result.drafts.find(d=>d.familyId===familyId);if(saved)setEntries(previous=>{
       const latest=previous[familyId];if(!latest)return previous

@@ -85,7 +85,7 @@ test('test names do not confer deletion permission; explicit marking does, while
  await remove(review)
  assert.equal(store.documents.has(file._id),false);assert.equal(store.documents.has(email._id),false)
  assert.deepEqual(store.documents.get(workspaceId(other)),original)
- const marker=store.documents.get(workspaceId(id));assert.equal(marker._type,'staffFamilyDeleted');assert.equal(marker.profile,undefined);assert.equal((await listWorkspaceFamilies()).length,1)
+ const marker=store.documents.get(workspaceId(id));assert.equal(marker._type,'staffFamily');assert.ok(marker.deletedAt);assert.equal(marker.profile,undefined);assert.equal((await listWorkspaceFamilies()).length,1)
  await assert.rejects(commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','d')),[owned('staffAttachment','d')._id]),/no longer available/)
  assert.equal(store.documents.has(owned('staffAttachment','d')._id),false)
 })
@@ -128,6 +128,11 @@ test('a failed final deletion transaction removes nothing and releases its tempo
  const current=store.documents.get(workspaceId(id));assert.equal(current._type,'staffFamily');assert.equal(current.deletionUntil,null)
  assert.equal(store.documents.size,2)
 })
+test('the storage fixture enforces Sanity immutable document types across delete/recreate transactions',async()=>{
+ const before=structuredClone(store.documents.get(workspaceId(id)))
+ await assert.rejects(store.transaction().delete(before._id).create({_id:before._id,_type:'differentType'}).commit(),/Immutable document type/)
+ assert.deepEqual(store.documents.get(before._id),before)
+})
 test('saved paperwork is protected even for an explicit test family',async()=>{
  const doc=owned('staffAttachment','b',{kind:'document',contentType:'application/pdf',filename:'purchase-paperwork.pdf'});store.documents.set(doc._id,doc)
  await manageFamily({action:'mark-test',familyId:id,name:'Fictional Lifecycle Family'})
@@ -165,7 +170,7 @@ test('original inquiry reprojection cannot recreate a deleted family or change u
  const f=[...store.documents.values()].find(d=>d._type==='staffFamily'&&d.profile.email===inquiry.email)
  await manageFamily({action:'mark-test',familyId:f.familyKey,name:f.profile.name})
  const review=await reviewFamily(f.familyKey);await manageFamily({action:'delete',familyId:f.familyKey,token:review.token,name:f.profile.name})
- await projectInquiryFamily(inquiry);assert.equal(store.documents.get(f._id)._type,'staffFamilyDeleted');assert.deepEqual(store.documents.get(inquiry._id),inquiry)
+ await projectInquiryFamily(inquiry);assert.ok(store.documents.get(f._id).deletedAt);assert.equal(store.documents.get(f._id).profile,undefined);assert.deepEqual(store.documents.get(inquiry._id),inquiry)
 })
 test('family handlers enforce authentication, origin, write freeze and strict action inputs',async()=>{
  assert.equal((await api.GET(req(undefined,{authorization:''}))).status,401)
