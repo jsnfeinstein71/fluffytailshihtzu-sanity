@@ -20,10 +20,10 @@ export async function savedFamily(id:string){
 }
 // Every independently created family-owned record participates in the same
 // revision boundary as deletion. A stale creator cannot leave an orphan.
-export async function commitFamilyRecords(id:string,build:(tx:ReturnType<ReturnType<typeof getOperatorClient>['transaction']>)=>ReturnType<ReturnType<typeof getOperatorClient>['transaction']>){
+export async function commitFamilyRecords(id:string,build:(tx:ReturnType<ReturnType<typeof getOperatorClient>['transaction']>)=>ReturnType<ReturnType<typeof getOperatorClient>['transaction']>,ownedIds:string[],protect=false){
  for(let n=0;n<3;n++){
   const family=await savedFamily(id)
-  try{await build(getOperatorClient().transaction()).patch(family._id,p=>p.ifRevisionId(family._rev).set({activityRevision:randomUUID()})).commit({visibility:'sync'});return}catch(e){if(!conflict(e)||n===2)throw e}
+  try{await build(getOperatorClient().transaction()).patch(family._id,p=>p.ifRevisionId(family._rev).set({activityRevision:randomUUID(),ownedRecordIds:[...new Set([...(family.ownedRecordIds||[]),...ownedIds])],...(protect?{protectedHistory:true}:{})})).commit({visibility:'sync'});return}catch(e){if(!conflict(e)||n===2)throw e}
  }
 }
 export async function persistInbound(record:{_id:string;_type:string;familyId?:string;[key:string]:unknown},receivedAt:string,genuine:boolean){
@@ -33,7 +33,7 @@ export async function persistInbound(record:{_id:string;_type:string;familyId?:s
   const family=record.familyId?await savedFamily(record.familyId):null
   const restore=family?.archivedAt&&genuine&&Date.parse(receivedAt)>Date.parse(family.archivedAt)
   let tx=client.transaction().create(record)
-  if(family)tx=tx.patch(family._id,p=>p.ifRevisionId(family._rev).set({activityRevision:randomUUID(),...(restore?{archivedAt:null,'profile.unread':true}:{} )}))
+  if(family)tx=tx.patch(family._id,p=>p.ifRevisionId(family._rev).set({activityRevision:randomUUID(),ownedRecordIds:[...new Set([...(family.ownedRecordIds||[]),record._id])],...(restore?{archivedAt:null,'profile.unread':true}:{} )}))
   try{await tx.commit({visibility:'sync'});return true}catch(e){if(!conflict(e)||n===3)throw e}
  }
  return false
@@ -46,6 +46,9 @@ async function inspect(id:string,locked?:SavedFamily){
  const systemIds=[privateRecordId('staffMailCursor',`${workspaceNamespace()}:${id}:INBOX`),privateRecordId('staffMailGuard',`${workspaceNamespace()}:${id}`)]
  const linked=await client.fetch<Linked[]>('*[_id != $id && '+related+'] [0...501]{_id,_rev,_type,familyId,staffFamilyId,workspace,filename,kind,contentType,state,status,attempts[0...1]{_key},value{body,subject,attachmentIds},activeId}',{id:family._id,key:id,systemIds,inquiry:family.profile.inquiryId||null,email:family.profile.email?.toLowerCase()||null,phone:family.profile.phone||null},{cache:'no-store'})
  const blocked:string[]=[],warnings:string[]=[]
+ if(family.protectedHistory)blocked.push('This family has protected payment, reservation or outgoing-message history. Archive it instead.')
+ if(family.protectedHistory)warnings.push('Protected business history stays with this family. Archiving does not close payment requests, cancel reservations or change pickup arrangements.')
+ if(family.ownedRecordIds?.some(recordId=>!linked.some(r=>r._id===recordId)))blocked.push('Recent linked activity is still updating, or a linked record is missing. Wait and review again, or archive the family. Nothing can be deleted until its saved records agree.')
  if(linked.length>500)blocked.push('More than 500 linked records need review. Archive this family instead.')
  if(family.profile.puppyId)warnings.push('A puppy is associated with this family. Any reservation and pickup arrangements stay unchanged.')
  if(family.profile.litterReservationId||linked.some(r=>/reservation|litterFamily/i.test(r._type)))warnings.push('This family has litter reservation history. Any active selection position stays unchanged.')

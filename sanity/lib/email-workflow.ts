@@ -48,7 +48,7 @@ export async function ensureOutgoing(reviewId:string,origin:string){
   }
   const review=await validateSavedEmailReview(reviewId,origin)
   const record={_id:id,_type:'staffOutgoingEmail',workspace:workspaceNamespace(),reviewId,familyId:review.familyId,from:review.from,replyTo:review.replyTo,to:review.to,subject:review.subject,body:review.body,...(review.attachments?.length?{attachments:review.attachments}:{}),...(review.paymentEmail?{paymentEmail:review.paymentEmail,html:review.html}:{}),messageId:`<${id.split('.').at(-1)}@fluffytailshihtzu.com>`,inReplyTo:review.inReplyTo,references:review.references,paymentRequestId:review.paymentRequestId,draftRevision:review.draftRevision,createdAt:new Date().toISOString(),state:'prepared',attempts:[],source:'disabled',delivery:'unconfirmed'}
-  await commitFamilyRecords(review.familyId,tx=>tx.createIfNotExists(record))
+  await commitFamilyRecords(review.familyId,tx=>tx.createIfNotExists(record),[id],true)
   const stored=await client.getDocument<OutgoingEmail>(id)
   if(!stored||stored.draftRevision!==review.draftRevision||stored.to!==record.to||stored.body!==record.body||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html)throw new EmailWorkflowError('Outgoing record could not be confirmed. Nothing was submitted.',409)
   return stored
@@ -138,7 +138,7 @@ async function syncReplies(familyId?:string,initializeOnly=false,background=fals
   if(testCustomerContacts()){const family=await client.getDocument<import('@/app/inbox/workspace/persistence').SavedFamily>(workspaceId(familyId!));if(!family||!approvedTestCustomer(family.profile))throw new EmailWorkflowError('Only the approved test conversation can read matching replies.',403)}
   const cursorId=liveWorkspaceEnabled()||testCustomerContacts()?familyMailCursorId(familyId!):provider.capabilities.provider==='pair'?privateRecordId('staffMailCursor','review-v1:owner-only-trial:INBOX'):mailCursorId
   const newCursor={_id:cursorId,_type:'staffMailCursor',workspace:workspaceNamespace(),...(familyId?{familyId}:{}),validity:'',lastUid:0,source:provider.capabilities.provider,syncToken:null,leaseUntil:0}
-  if(!await client.getDocument(cursorId)){if(familyId)await commitFamilyRecords(familyId,tx=>tx.createIfNotExists(newCursor));else await client.transaction().createIfNotExists(newCursor).commit({visibility:'sync'})}
+  if(!await client.getDocument(cursorId)){if(familyId)await commitFamilyRecords(familyId,tx=>tx.createIfNotExists(newCursor),[cursorId]);else await client.transaction().createIfNotExists(newCursor).commit({visibility:'sync'})}
   const cursor=await client.getDocument<SavedCursor>(cursorId)
   if(background&&cursor&&(cursor.leaseUntil>Date.now()||Date.now()-(cursor.lastCheckedAt||0)<15000))return 'Automatic updates are active.'
   if(!cursor||cursor.leaseUntil>Date.now())throw new EmailWorkflowError('Reply synchronization is already running. Refresh its result before trying again.',409)

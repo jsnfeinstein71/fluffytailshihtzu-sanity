@@ -63,7 +63,7 @@ export async function offerLitterPlace(input:{familyId:string;litterId:string;po
  const id=litterRecordId('litterReservation',input.requestId),prior=await client().getDocument<LitterReservation>(id)
  if(prior){if(prior.familyId!==input.familyId||prior.litterId!==input.litterId||prior.position!==input.position)throw new LitterError('That action belongs to another offer.');return await prepareLitterCheckout(prior._id)}
  const anchorId=litterRecordId('litterFamily',f.familyKey)
- await commitFamilyRecords(f.familyKey,tx=>tx.createIfNotExists({_id:anchorId,_type:'litterFamily',workspace:workspaceNamespace(),familyId:f.familyKey,reservationId:''}));f=await family(input.familyId)
+ await commitFamilyRecords(f.familyKey,tx=>tx.createIfNotExists({_id:anchorId,_type:'litterFamily',workspace:workspaceNamespace(),familyId:f.familyKey,reservationId:''}),[anchorId],true);f=await family(input.familyId)
  const anchor=await client().getDocument<{_rev:string;reservationId:string}>(anchorId),b=await board(l._id,true)
  if(anchor?.reservationId){const active=await reservation(anchor.reservationId);if(active.state!=='released')throw new LitterError('This family already has a litter deposit or place. Transfer its existing reservation instead.')}
  if(!b||nextPlace(b)!==input.position)throw new LitterError('The next available position changed. Refresh the four places before offering it.')

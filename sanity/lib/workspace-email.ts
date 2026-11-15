@@ -214,7 +214,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
       }
     }
     const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...(liveWorkspaceEnabled()||approvedTestCustomer(family.profile)||litterReservationsEnabled()&&family.profile.paymentTestScenario?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
-    await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists(record))
+    await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists(record),[record._id],true)
     const stored=await checkedPayment(record._id,family)
     if(stored.puppyId!==record.puppyId||stored.kind!==record.kind)throw new EmailWorkflowError('That request ID already belongs to a different payment request.',409)
     return {preparedPaymentId:record._id}
@@ -229,11 +229,11 @@ export async function prepareEmailAction(input:unknown,origin:string){
     if((current?._rev||null)!==action.revision)throw new EmailWorkflowError('This email changed in another tab. Compare the saved copy before replacing it.',409,current?asDraft(current):{familyId:action.familyId,revision:null,value:emptyEmail(family.drafts.Email)})
     const updatedAt=new Date().toISOString()
     if(!current){
-      await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists({_id:id,_type:'staffEmailDraft',workspace:workspaceNamespace(),familyId:action.familyId,value:action.value,updatedAt}))
+      await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists({_id:id,_type:'staffEmailDraft',workspace:workspaceNamespace(),familyId:action.familyId,value:action.value,updatedAt}),[id])
       const saved=await client.getDocument<DraftDocument>(id)
       if(!saved||!sameEmail(saved.value,action.value))throw new EmailWorkflowError('Another tab created a different draft. Your entries are kept.',409,saved?asDraft(saved):undefined)
     }else{
-      try{await commitFamilyRecords(family.familyKey,tx=>tx.patch(id,p=>p.ifRevisionId(current._rev).set({value:action.value,updatedAt})))}
+      try{await commitFamilyRecords(family.familyKey,tx=>tx.patch(id,p=>p.ifRevisionId(current._rev).set({value:action.value,updatedAt})),[id])}
       catch(error){if((error as {statusCode?:number})?.statusCode===409){const latest=await client.getDocument<DraftDocument>(id);throw new EmailWorkflowError('This email changed in another tab. Your entries are kept.',409,latest?asDraft(latest):undefined)}throw error}
     }
     return {}
@@ -252,7 +252,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
   if(liveWorkspaceEnabled()&&payment&&!paymentEmail)throw new EmailWorkflowError('This payment link needs review before sending.',409)
   const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
   const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(attachments.length?{attachments}:{}),...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
-  await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists(record))
+  await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists(record),[record._id],true)
   const stored=await client.getDocument<EmailReview>(record._id)
   if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html||!samePaymentEmail(stored.paymentEmail,record.paymentEmail))throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
   return {reviewId:record._id}
