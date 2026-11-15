@@ -13,5 +13,5 @@ test('composer offers the correct deposit/balance, keeps files available when fu
  html=render({...family,records:[{paymentStatus:'paid',amountPaid:400}]});assert.match(html,/Final-payment request · \$1,200.00/);assert.doesNotMatch(html,/Deposit request/)
  const paid={...family,records:[{paymentStatus:'paid',amountPaid:400},{paymentStatus:'paid',amountPaid:1200}]};html=render(paid);assert.doesNotMatch(html,/value="payment"/);assert.match(html,/Photos/);assert.match(html,/Documents/)
  html=render(family,'Text');assert.match(html,/value="payment"/);assert.doesNotMatch(html,/Photos|Documents|type="file"/);assert.equal(render(paid,'Text'),'')
- html=renderToStaticMarkup(React.createElement(TestPayments,{family:paid,email}));assert.doesNotMatch(html,/Request \$0|<button|signed webhook|Webhook/);assert.match(html,/Payment confirmed/)
+ html=renderToStaticMarkup(React.createElement(TestPayments,{family:paid,email}));assert.doesNotMatch(html,/Request \$0|<button|signed webhook|Webhook/);assert.match(html,/Payment recorded/)
 })
