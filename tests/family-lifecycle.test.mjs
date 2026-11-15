@@ -85,8 +85,8 @@ test('test names do not confer deletion permission; explicit marking does, while
  await remove(review)
  assert.equal(store.documents.has(file._id),false);assert.equal(store.documents.has(email._id),false)
  assert.deepEqual(store.documents.get(workspaceId(other)),original)
- const marker=store.documents.get(workspaceId(id));assert.equal(marker._type,'staffFamilyDeleted');assert.equal(marker.profile,undefined);assert.equal((await listWorkspaceFamilies()).length,1)
- await assert.rejects(commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','d'))),/no longer available/)
+ const marker=store.documents.get(workspaceId(id));assert.equal(marker._type,'staffFamily');assert.ok(marker.deletedAt);assert.equal(marker.profile,undefined);assert.equal((await listWorkspaceFamilies()).length,1)
+ await assert.rejects(commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','d')),[owned('staffAttachment','d')._id]),/no longer available/)
  assert.equal(store.documents.has(owned('staffAttachment','d')._id),false)
 })
 test('shared attachment references and unknown linked records block deletion with specific explanations',async()=>{
@@ -111,10 +111,10 @@ test('new inbound or draft changes invalidate a deletion review without removing
 })
 test('deletion lock prevents concurrent new records and preserves them if they win first',async()=>{
  const review=await reviewFamily(id)
- store.beforeNextPatch(async()=>{await commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','e')))})
+ store.beforeNextPatch(async()=>{await commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','e')),[owned('staffAttachment','e')._id])})
  await assert.rejects(remove(review));assert.ok(store.documents.has(owned('staffAttachment','e')._id));assert.ok(store.documents.get(workspaceId(id)).profile)
  const f=store.documents.get(workspaceId(id));f.deletionUntil=new Date(Date.now()+60000).toISOString();f.deletionToken='other-delete'
- await assert.rejects(commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','f'))),/being checked/)
+ await assert.rejects(commitFamilyRecords(id,tx=>tx.create(owned('staffAttachment','f')),[owned('staffAttachment','f')._id]),/being checked/)
  assert.equal(store.documents.has(owned('staffAttachment','f')._id),false)
 })
 test('a failed final deletion transaction removes nothing and releases its temporary lock',async()=>{
@@ -128,10 +128,30 @@ test('a failed final deletion transaction removes nothing and releases its tempo
  const current=store.documents.get(workspaceId(id));assert.equal(current._type,'staffFamily');assert.equal(current.deletionUntil,null)
  assert.equal(store.documents.size,2)
 })
+test('the storage fixture enforces Sanity immutable document types across delete/recreate transactions',async()=>{
+ const before=structuredClone(store.documents.get(workspaceId(id)))
+ await assert.rejects(store.transaction().delete(before._id).create({_id:before._id,_type:'differentType'}).commit(),/Immutable document type/)
+ assert.deepEqual(store.documents.get(before._id),before)
+})
 test('saved paperwork is protected even for an explicit test family',async()=>{
  const doc=owned('staffAttachment','b',{kind:'document',contentType:'application/pdf',filename:'purchase-paperwork.pdf'});store.documents.set(doc._id,doc)
  await manageFamily({action:'mark-test',familyId:id,name:'Fictional Lifecycle Family'})
  const review=await reviewFamily(id);assert.ok(review.blocked.some(b=>/paperwork/.test(b)));await assert.rejects(remove(review));assert.deepEqual(store.documents.get(doc._id),doc)
+})
+test('a committed linked record hidden by search lag blocks deletion; protected history remains blocked even without indexed records',async()=>{
+ const record=owned('staffAttachment','c',{kind:'photo',contentType:'image/png'})
+ await commitFamilyRecords(id,tx=>tx.create(record),[record._id])
+ const fetch=store.fetch
+ store.fetch=async(query,params)=>query.includes('systemIds')?[]:fetch(query,params)
+ let review=await reviewFamily(id)
+ assert.ok(review.blocked.some(b=>/Recent linked activity/.test(b)))
+ await assert.rejects(remove(review));assert.ok(store.documents.get(record._id))
+ store.fetch=fetch
+ const request=owned('staffPaymentRequest','d')
+ await commitFamilyRecords(id,tx=>tx.create(request),[request._id],true)
+ store.fetch=async(query,params)=>query.includes('systemIds')?[]:fetch(query,params)
+ review=await reviewFamily(id);assert.ok(review.blocked.some(b=>/protected payment/.test(b)))
+ await assert.rejects(remove(review));assert.ok(store.documents.get(request._id))
 })
 test('the signed live SMS handler restores one matched archived family once; duplicate callbacks leave a later archive intact',async()=>{
  Object.assign(process.env,{VERCEL_ENV:'production',NEXT_PUBLIC_SANITY_PROJECT_ID:'3glz6dkx',NEXT_PUBLIC_SANITY_DATASET:'production',FLUFFYTAIL_STAFF_WORKSPACE_ENABLED:'1',TWILIO_AUTH_TOKEN:'offline-signature-only'})
@@ -150,7 +170,7 @@ test('original inquiry reprojection cannot recreate a deleted family or change u
  const f=[...store.documents.values()].find(d=>d._type==='staffFamily'&&d.profile.email===inquiry.email)
  await manageFamily({action:'mark-test',familyId:f.familyKey,name:f.profile.name})
  const review=await reviewFamily(f.familyKey);await manageFamily({action:'delete',familyId:f.familyKey,token:review.token,name:f.profile.name})
- await projectInquiryFamily(inquiry);assert.equal(store.documents.get(f._id)._type,'staffFamilyDeleted');assert.deepEqual(store.documents.get(inquiry._id),inquiry)
+ await projectInquiryFamily(inquiry);assert.ok(store.documents.get(f._id).deletedAt);assert.equal(store.documents.get(f._id).profile,undefined);assert.deepEqual(store.documents.get(inquiry._id),inquiry)
 })
 test('family handlers enforce authentication, origin, write freeze and strict action inputs',async()=>{
  assert.equal((await api.GET(req(undefined,{authorization:''}))).status,401)

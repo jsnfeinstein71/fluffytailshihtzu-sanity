@@ -5,7 +5,7 @@ export default function FamilyActions({familyId,archived,busy,preserve,onChanged
  const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement|null>(null)
  const [review,setReview]=useState<FamilyReview|null>(null),[mode,setMode]=useState(''),[name,setName]=useState(''),[error,setError]=useState(''),[working,setWorking]=useState(false)
  useEffect(()=>{if(mode)dialog.current?.showModal();else dialog.current?.close()},[mode])
- function close(){setMode('');setError('');trigger.current?.focus()}
+ function close(){dialog.current?.close();setMode('');setError('');trigger.current?.focus()}
  async function load(){const response=await fetch(`/inbox/workspace/api/family?family=${encodeURIComponent(familyId)}`,{cache:'no-store'}),data=await response.json();if(!response.ok)throw new Error(data.error);setReview(data.review);return data.review as FamilyReview}
  async function open(action:string,button:HTMLButtonElement){
   trigger.current=button;setWorking(true);setError('')
@@ -15,6 +15,7 @@ export default function FamilyActions({familyId,archived,busy,preserve,onChanged
   if(!review)return
   setWorking(true);setError('')
   try{
+   if(!await preserve())throw new Error('Your unfinished entries could not be saved. They are kept here; resolve the save error before continuing.')
    const response=await fetch('/inbox/workspace/api/family',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,familyId,token:review.token,name})}),data=await response.json()
    if(!response.ok){await load();throw new Error(data.error)}
    if(action==='mark-test'){await load();setName('');return}
