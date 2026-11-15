@@ -1,3 +1,4 @@
+import {commitFamilyRecords,persistInbound} from './family-lifecycle'
 import {approvedTestCustomer,testCustomerContacts,testSmsConsentText} from '@/lib/test-customer'
 import 'server-only'
 import {liveWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
@@ -41,7 +42,7 @@ export async function submitWorkspaceSms(input:unknown){
  if(optOut&&(optOut.optOutType==='STOP'||!['start','unstop'].includes(optOut.body.trim().toLowerCase())&&optOut.optOutType!=='START'))throw new WorkspaceError('This number has opted out. Do not text it.',403)
  if(!liveWorkspaceEnabled())await refreshTestCustomerSms(family.familyKey)
  const twilio=liveWorkspaceEnabled()?getTwilio():getTestCustomerTwilio(),id=privateRecordId('staffSms',`${workspaceNamespace()}:${family.familyKey}:${family.textVersion||0}`)
- await client.transaction().createIfNotExists({_id:id,_type:'smsMessage',workspace:workspaceNamespace(),familyId:family.familyKey,from:liveWorkspaceEnabled()?process.env.TWILIO_FROM_NUMBER:process.env.FLUFFYTAIL_TEST_TWILIO_FROM_NUMBER,to,body:data.body,direction:'outbound',source:'fluffytail',status:'prepared',delivery:'unconfirmed',receivedAt:new Date().toISOString()}).commit({visibility:'sync'})
+ await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists({_id:id,_type:'smsMessage',workspace:workspaceNamespace(),familyId:family.familyKey,from:liveWorkspaceEnabled()?process.env.TWILIO_FROM_NUMBER:process.env.FLUFFYTAIL_TEST_TWILIO_FROM_NUMBER,to,body:data.body,direction:'outbound',source:'fluffytail',status:'prepared',delivery:'unconfirmed',receivedAt:new Date().toISOString()}))
  const blocked=await client.fetch<{_id:string}[]>('*[_type == "smsMessage" && workspace == $workspace && familyId == $familyId && status in ["sending","uncertain"]][0...1]',{workspace:workspaceNamespace(),familyId:family.familyKey},{cache:'no-store'});if(blocked.some(r=>r._id!==id))throw new WorkspaceError('This family has an uncertain text attempt. Review it before sending another draft.',409)
  const record=await client.getDocument<{_rev:string;status:string;body:string}>(id)
  if(!record||record.body!==data.body)throw new WorkspaceError('The saved text attempt needs review.',409)
@@ -92,6 +93,6 @@ async function refreshTestCustomerSms(familyId:string){
   const time=message.dateSent||message.dateCreated
   if(message.from!==to||message.to!==from||!time||time.getTime()<Date.parse(records[0].receivedAt)||!/^SM[a-f0-9]{32}$/i.test(message.sid))continue
   const id=privateRecordId('testSmsIncoming','review-v1:'+message.sid)
-  await client.transaction().createIfNotExists({_id:id,_type:'smsMessage',workspace:'review-v1',testOnly:true,familyId,from:to,to:from,body:message.body||'',direction:'inbound',source:'fluffytail-test',providerVerified:true,messageSid:message.sid,receivedAt:time.toISOString(),status:'received'}).commit({visibility:'sync'})
+  await persistInbound({_id:id,_type:'smsMessage',workspace:'review-v1',testOnly:true,familyId,from:to,to:from,body:message.body||'',direction:'inbound',source:'fluffytail-test',providerVerified:true,messageSid:message.sid,receivedAt:time.toISOString(),status:'received'},time.toISOString(),true)
  }
 }

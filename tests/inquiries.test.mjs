@@ -63,6 +63,15 @@ beforeEach(() => {
     },
     async create(doc) {docs.push({...clone(doc), _rev: String(++revision)}); return clone(doc)},
     async delete(id) {docs = docs.filter(doc => doc._id !== id)},
+    transaction(){
+      const pending=[]
+      const tx={create(doc){pending.push(clone(doc));return tx},async commit(){
+        if(failSave||failLog&&pending.some(d=>d._type==='smsMessage'))throw Error('Fixture persistence failure')
+        if(pending.some(d=>docs.some(item=>item._id===d._id)))throw Object.assign(Error('Conflict'),{statusCode:409})
+        for(const doc of pending)docs.push({...doc,_rev:String(++revision)})
+      }}
+      return tx
+    },
     patch(id) {
       return {values: {}, increments: {}, revision: null,
         set(values) {Object.assign(this.values, values); return this},
