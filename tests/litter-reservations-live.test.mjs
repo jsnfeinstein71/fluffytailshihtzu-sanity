@@ -97,3 +97,16 @@ test('explicit confirmation requires verified ledger state, uses the branded rec
  assert.equal(snapshot.paymentEmail.kind,'deposit-confirmation');assert.match(snapshot.html,/View payment confirmation/);assert.match(snapshot.body,/Jeanne’s personal text is kept exactly/);assert.equal(sent.length,count)
  await emailAction({type:'dispatch',reviewId:review.reviewId,confirmed:true});assert.equal(sent.length,count+1);assert.equal(sent.at(-1).paymentEmail.kind,'deposit-confirmation')
 })
+
+test('assignment expires public inventory after reserved commit and not after rejected assignment',async()=>{
+ const calls=[];globalThis.fixtureRevalidateTag=(...args)=>{assert.equal(db.documents.get('fictional-puppy').status,'reserved');calls.push(args)}
+ try{
+  const p=await offer();await ok(await deliver(p));assert.equal(calls.length,0)
+  await action({type:'transfer',confirmed:true,id:p.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:''})
+  const assign={type:'assign',confirmed:true,id:p.litterReservationId,puppyId:'fictional-puppy',requestId:randomUUID()}
+  assert.equal((await route.POST(req(assign))).status,409);assert.equal(calls.length,0)
+  db.documents.get('fictional-spring').status='current'
+  await action(assign);assert.deepEqual(calls,[['public-inventory',{expire:0}]])
+  await action(assign);assert.equal(calls.length,2)
+ }finally{delete globalThis.fixtureRevalidateTag}
+})

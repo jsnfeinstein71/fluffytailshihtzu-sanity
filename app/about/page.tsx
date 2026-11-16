@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {pageDescriptions} from '@/lib/public-copy'
 import {parentPortraits} from '@/lib/parent-portraits'
 import PublicImage from '../components/PublicImage'
-export const revalidate = 60
+export const revalidate = 3600
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({
   title: 'Meet Jeanne',

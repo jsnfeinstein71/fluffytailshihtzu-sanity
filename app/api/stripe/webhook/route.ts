@@ -1,3 +1,4 @@
+import {expirePublicInventory} from '@/lib/public-inventory-cache'
 import {applyLitterPayment} from '@/sanity/lib/litter-reservations'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {applyLiveStaffPayment} from '@/sanity/lib/live-payment'
@@ -64,7 +65,8 @@ async function recordCheckout(session: Stripe.Checkout.Session) {
       if (link) transaction.patch(link._id, {set: {active: false}})
     }
   }
-  await transaction.commit()
+  // Public cache expiry must not race the query index after reserving a puppy.
+  await transaction.commit({visibility: 'sync'})
 }
 
 async function recordInvoice(invoice: Stripe.Invoice) {
@@ -102,10 +104,14 @@ export async function POST(req: NextRequest) {
     if(event.type.startsWith('checkout.session.')&&session.metadata?.litterReservationId){const result=await applyLitterPayment(event);if(result&&'confirmationEligible' in result&&result.confirmationEligible)await ensureLivePaymentConfirmation(session.id);return NextResponse.json({received:true})}
     if(event.type.startsWith('checkout.session.')&&session.metadata?.staffPaymentRequestId&&liveWorkspaceEnabled()){
       const result=await applyLiveStaffPayment(event)
+      if(result.recorded||result.duplicate)expirePublicInventory()
       if(result.confirmationEligible)await ensureLivePaymentConfirmation(session.id)
       return NextResponse.json({received:true})
     }
-    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') await recordCheckout(event.data.object as Stripe.Checkout.Session)
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+      await recordCheckout(session)
+      if(session.payment_status === 'paid' && session.metadata?.paymentType === 'deposit' && session.metadata?.puppySlug) expirePublicInventory()
+    }
     if (event.type === 'invoice.paid') await recordInvoice(event.data.object as Stripe.Invoice)
     return NextResponse.json({received: true})
   } catch {
