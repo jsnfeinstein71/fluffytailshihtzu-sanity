@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {pageDescriptions} from '@/lib/public-copy'
 import {getInventory} from '@/sanity/lib/inventory'
 import {getLittersByStatus, getPuppiesForLitter} from '@/lib/inventory'
-export const revalidate = 60
+export const revalidate = 3600
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({
   title: 'Getting ready for home',

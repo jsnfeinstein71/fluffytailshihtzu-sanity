@@ -6,7 +6,7 @@ import Link from 'next/link'
 import InquiryForm from '../components/InquiryForm'
 import {client} from '@/sanity/lib/client'
 
-export const revalidate = 60
+export const revalidate = 3600
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({title: 'Contact Jeanne', description:pageDescriptions.contact, path: '/contact'})
 
@@ -14,7 +14,7 @@ type SiteSettings = {goodDogUrl?: string}
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{goodDogUrl}`
 
 export default async function ContactPage() {
-  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}})
+  const siteSettings = await client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 3600}})
   const goodDogUrl = siteSettings?.goodDogUrl || 'https://my.gooddog.com/fluffytail-shih-tzu-alabama'
 
   return <main className="wrap inquiry-page contact-page">

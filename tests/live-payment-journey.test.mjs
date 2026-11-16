@@ -110,3 +110,15 @@ test('a deposit verified by an earlier live release permits its true remaining b
  const ledger={_id:'earlier-live-ledger',_type:'paymentRecord',stripeCheckoutSessionId:s.id,paymentStatus:'paid',paymentType:'deposit',amountPaid:400,quotedTotalCents:160000,quotedDepositCents:40000,puppyId:'puppy',puppySlug:'fixture-puppy',staffFamilyId:familyId,customerEmail:'fixture@example.test'};store.documents.set(ledger._id,structuredClone(ledger))
  const balance=await create('balance',2);assert.equal(balance.amountCents,120000);assert.equal(balance.paidCents,40000);assert.deepEqual(store.documents.get(ledger._id),ledger);assert.equal(store.documents.get(p._id).webhookVerifiedAt,undefined);assert.equal(sent.length,0)
 })
+
+test('verified staff deposit expires public inventory only after commit',async()=>{
+ const calls=[];globalThis.fixtureRevalidateTag=(...args)=>{assert.equal(store.documents.get('puppy').status,'reserved');calls.push(args)}
+ try{
+  const deposit=await create('deposit')
+  await signed(deposit,{paid:false});assert.equal(calls.length,0)
+  await signed(deposit,{valid:false});assert.equal(calls.length,0)
+  assert.equal((await signed(deposit)).status,200)
+  assert.deepEqual(calls,[['public-inventory',{expire:0}]])
+  assert.equal((await signed(deposit)).status,200);assert.equal(calls.length,2)
+ }finally{delete globalThis.fixtureRevalidateTag}
+})

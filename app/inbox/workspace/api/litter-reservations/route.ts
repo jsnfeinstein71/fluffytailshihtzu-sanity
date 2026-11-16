@@ -1,3 +1,4 @@
+import {expirePublicInventory} from '@/lib/public-inventory-cache'
 import {NextResponse} from 'next/server'
 import {requireOperator} from '@/lib/operator-auth'
 import {readRequestText} from '@/lib/request-body'
@@ -22,7 +23,7 @@ export async function POST(req:Request){
    case 'refresh':await reconcileLitterHold(data.id);break
    case 'close':await closeLitterRequest(data.id);break
    case 'transfer':await moveLitterReservation(data);break
-   case 'assign':await assignLitterPuppy(data);break
+   case 'assign':await assignLitterPuppy(data);expirePublicInventory();break
    case 'preferences':await editLitterPreferences(data.id,data.preferences);break
    case 'test-born':await markTestLitterBorn(data.litterId);break
    default:throw new LitterError('Choose an available reservation action.',400)

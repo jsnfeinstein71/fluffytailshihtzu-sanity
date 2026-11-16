@@ -1,4 +1,4 @@
-export const revalidate = 60
+export const revalidate = 3600
 
 import './home.css'
 import {homepageHeadline,homepageIntro,pageDescriptions} from '@/lib/public-copy'
@@ -37,7 +37,7 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 
 export default async function HomePage() {
   const [publishedSettings, {litters, puppies}] = await Promise.all([
-    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 60}}),
+    client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 3600}}),
     getInventory(),
   ])
   const siteSettings=editorialSettings(publishedSettings)

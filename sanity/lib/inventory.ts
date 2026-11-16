@@ -5,7 +5,7 @@ import {client} from './client'
 import type {Litter, Puppy} from '@/lib/inventory'
 import {littersQuery, puppiesQuery, puppyQuery} from './inventory-queries'
 
-const publicOptions = {perspective: 'published' as const, next: {revalidate: 60}}
+const publicOptions = {perspective: 'published' as const, next: {revalidate: 3600, tags: ['public-inventory']}}
 
 export const getInventory = cache(async () => {
   const [litters, puppies] = await Promise.all([

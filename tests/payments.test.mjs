@@ -450,3 +450,17 @@ test('signed Stripe redelivery after a local freeze creates one private payment 
   assert.equal(records()[0].amountPaid, 125)
   assert.equal(calls.length, 0)
 })
+
+ test('deposit cache expiry follows committed payment and retries safely without another ledger', async () => {
+  const calls=[];globalThis.fixtureRevalidateTag=(...args)=>{assert.equal(docs[1].status,'reserved');calls.push(args)}
+  try {
+   const session=await createdDeposit()
+   await signedEvent('checkout.session.completed',session);assert.equal(calls.length,0)
+   session.payment_status='paid'
+   await signedEvent('checkout.session.completed',session,false);assert.equal(calls.length,0)
+   assert.equal((await signedEvent('checkout.session.completed',session)).status,200)
+   assert.deepEqual(calls,[['public-inventory',{expire:0}]])
+   assert.equal((await signedEvent('checkout.session.completed',session)).status,200)
+   assert.equal(calls.length,2);assert.equal(records().length,1)
+  } finally {delete globalThis.fixtureRevalidateTag}
+ })

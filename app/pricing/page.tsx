@@ -6,7 +6,7 @@ import {getInventory} from '@/sanity/lib/inventory'
 import {formatCurrency, normalizeLitterStatus} from '@/lib/inventory'
 import {tryPricing} from '@/lib/pricing'
 
-export const revalidate = 60
+export const revalidate = 3600
 
 import {publicPageMetadata} from '@/lib/seo'
 export const metadata = publicPageMetadata({
