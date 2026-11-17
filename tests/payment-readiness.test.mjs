@@ -25,6 +25,15 @@ test('payment refresh stops after terminal receipts, remains bounded and pauses 
  const terminal=clock();reads=0;startPaymentRefresh(async()=>{reads++;return false},{immediate:true,environment:terminal.environment});await terminal.advance(600000);assert.equal(reads,1);assert.equal(terminal.size,0)
  const canceled=clock();reads=0;const cancel=startPaymentRefresh(async()=>{reads++;return true},{environment:canceled.environment});cancel();await canceled.advance(600000);assert.equal(reads,0)
 })
+
+test('default payment refresh calls browser timers with their global receiver',t=>{
+ const prior=Object.getOwnPropertyDescriptor(globalThis,'document'),listeners=new Set(),handle=123
+ Object.defineProperty(globalThis,'document',{configurable:true,value:{visibilityState:'visible',addEventListener:(_name,fn)=>listeners.add(fn),removeEventListener:(_name,fn)=>listeners.delete(fn)}})
+ let scheduled=0,cleared=0
+ t.mock.method(globalThis,'setTimeout',function(fn,ms){assert.equal(this,globalThis);assert.equal(typeof fn,'function');assert.equal(ms,3000);scheduled++;return handle})
+ t.mock.method(globalThis,'clearTimeout',function(timer){assert.equal(this,globalThis);assert.equal(timer,handle);cleared++})
+ try{const stop=startPaymentRefresh(async()=>false);assert.equal(scheduled,1);assert.equal(listeners.size,1);stop();assert.equal(cleared,1);assert.equal(listeners.size,0)}finally{t.mock.restoreAll();if(prior)Object.defineProperty(globalThis,'document',prior);else delete globalThis.document}
+})
 test('history distinguishes verified live, test and legacy records and uses safe mode-specific Stripe links',()=>{
  const record={paymentStatus:'paid',amountPaid:400,paymentType:'deposit',testOnly:false,workspace:'live-v1',webhookVerifiedAt:'2026-11-14T12:00:00Z',stripePaymentIntentId:'pi_fixture123'}
  assert.equal(paymentRecordLabel(record),'Live payment confirmed');assert.equal(stripeTransactionLink(record),'https://dashboard.stripe.com/payments/pi_fixture123')

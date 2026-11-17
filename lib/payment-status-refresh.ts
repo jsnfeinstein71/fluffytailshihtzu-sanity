@@ -6,7 +6,7 @@ export function paymentRefreshFinished(receipt:PaymentRefreshState){
 type RefreshEnvironment={now:()=>number;visible:()=>boolean;setTimer:(fn:()=>void,ms:number)=>ReturnType<typeof setTimeout>;clearTimer:(timer:ReturnType<typeof setTimeout>)=>void;listen:(fn:()=>void)=>()=>void}
 // The receipt remains server-verified. This only limits read traffic from an open page.
 export function startPaymentRefresh(task:()=>Promise<boolean>,options:{immediate?:boolean;environment?:RefreshEnvironment}={}){
- const env=options.environment||{now:Date.now,visible:()=>document.visibilityState==='visible',setTimer:setTimeout,clearTimer:clearTimeout,listen:(fn)=>{document.addEventListener('visibilitychange',fn);return()=>document.removeEventListener('visibilitychange',fn)}} satisfies RefreshEnvironment
+ const env=options.environment||{now:Date.now,visible:()=>document.visibilityState==='visible',setTimer:(fn,ms)=>globalThis.setTimeout(fn,ms),clearTimer:timer=>globalThis.clearTimeout(timer),listen:(fn)=>{document.addEventListener('visibilitychange',fn);return()=>document.removeEventListener('visibilitychange',fn)}} satisfies RefreshEnvironment
  const deadline=env.now()+300000
  let stopped=false,busy=false,timer:ReturnType<typeof setTimeout>|undefined
  function schedule(ms=5000){if(!stopped&&env.now()<deadline)timer=env.setTimer(()=>void tick(),ms)}
