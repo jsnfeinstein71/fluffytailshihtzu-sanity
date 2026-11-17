@@ -1,5 +1,5 @@
 import {expirePublicInventory} from '@/lib/public-inventory-cache'
-import {requireStripeMetadataAccount,stripeAccountMetadata,stripeAccountMigrationEnabled} from '@/lib/stripe-account'
+import {requireStripeMetadataAccount,stripeAccountMetadata,stripeAccountMigrationEnabled,stripeWebhookSigningSecret} from '@/lib/stripe-account'
 import {applyLitterPayment} from '@/sanity/lib/litter-reservations'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {applyLiveStaffPayment} from '@/sanity/lib/live-payment'
@@ -96,9 +96,10 @@ export async function POST(req: NextRequest) {
   if (process.env.VERCEL_ENV === 'preview') return NextResponse.json({error: 'Provider callbacks are disabled in preview.'}, {status: 503})
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing signature', {status: 400})
-  if (!process.env.STRIPE_WEBHOOK_SECRET) return new NextResponse('Webhook is not configured', {status: 503})
+  const signingSecret = stripeWebhookSigningSecret()
+  if (!signingSecret) return new NextResponse('Webhook is not configured', {status: 503})
   let event: Stripe.Event
-  try {event = getStripe().webhooks.constructEvent(await req.text(), signature, process.env.STRIPE_WEBHOOK_SECRET)} catch {return new NextResponse('Webhook Error', {status: 400})}
+  try {event = getStripe().webhooks.constructEvent(await req.text(), signature, signingSecret)} catch {return new NextResponse('Webhook Error', {status: 400})}
   if(process.env.VERCEL_ENV==='production'&&event.livemode!==true)return new NextResponse('Live events are required', {status:400})
   try {
     const session=event.data.object as Stripe.Checkout.Session

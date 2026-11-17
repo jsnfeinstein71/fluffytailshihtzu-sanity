@@ -6,6 +6,16 @@ export function stripeAccountMigrationEnabled() {
   return process.env.VERCEL_ENV === 'production' && process.env.FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION === '1'
 }
 
+// Stage the new merchant's credentials without changing a running legacy release.
+// The single cutover flag selects both credentials; neither falls back afterward.
+export function stripeServerSecretKey() {
+  return stripeAccountMigrationEnabled() ? process.env.FLUFFYTAIL_JEANNE_STRIPE_SECRET_KEY : process.env.STRIPE_SECRET_KEY
+}
+
+export function stripeWebhookSigningSecret() {
+  return stripeAccountMigrationEnabled() ? process.env.FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET : process.env.STRIPE_WEBHOOK_SECRET
+}
+
 export function configuredStripeAccountId(): string | undefined {
   // An inherited live account pin must never change an isolated Preview.
   if (process.env.VERCEL_ENV === 'preview' || process.env.FLUFFYTAIL_PAYMENT_TEST_WORKSPACE === '1') {

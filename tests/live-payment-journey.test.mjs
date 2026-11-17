@@ -23,7 +23,7 @@ beforeEach(()=>{
  globalThis.fixtureMailProvider={capabilities:{provider:'pair',canDispatch:true,canSync:true},send:async message=>{sent.push(structuredClone(message));return {outcome,code:'FIXTURE_'+outcome}},sync:async input=>{reads.push(input);return {validity:'fixture-mailbox',lastUid:1,messages:[]}}}
 })
 async function create(kind,number=1){const p=await ok(await action({type:'payment',familyId,puppyId:'puppy',kind,requestId:`00000000-0000-4000-8000-${String(number).padStart(12,'0')}`}));const data=await ok(await action({type:'checkout',familyId,paymentRequestId:p.preparedPaymentId}));return data.paymentRequests.find(r=>r._id===p.preparedPaymentId)}
-async function signed(payment,{paid=true,type='checkout.session.completed',valid=true,live=true}={}){const s=sessions.get(payment.checkoutSessionId);s.payment_status=paid?'paid':'unpaid';s.status=type.endsWith('expired')?'expired':'complete';const payload=JSON.stringify({id:'evt_fixture'+sequence,type,livemode:live,data:{object:s}});return webhook.POST(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret:valid?secret:'wrong_secret'})},body:payload}))}
+async function signed(payment,{paid=true,type='checkout.session.completed',valid=true,live=true}={}){const s=sessions.get(payment.checkoutSessionId);s.payment_status=paid?'paid':'unpaid';s.status=type.endsWith('expired')?'expired':'complete';const payload=JSON.stringify({id:'evt_fixture'+sequence,type,livemode:live,data:{object:s}});const signingSecret=process.env.FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION==='1'?process.env.FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:secret;return webhook.POST(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret:valid?signingSecret:'wrong_secret'})},body:payload}))}
 async function sendRequest(payment,body='A personal note from Jeanne.',replyToId=null){const data=await ok(await email.GET(request('/inbox/workspace/api/email')));const prior=data.drafts.find(d=>d.familyId===familyId);const draft={familyId,revision:prior?.revision||null,value:{subject:'Your puppy payment',body,replyToId,paymentRequestId:payment._id}};return sendEmailDraft(familyId,draft,`00000000-0000-4000-8000-${String(100+sequence).padStart(12,'0')}`,async input=>ok(await action(input)))}
 
 test('live-shaped application journey formats requests, validates public checkout and confirms signed ledger exactly once without touching real providers',async()=>{
@@ -126,7 +126,7 @@ test('verified staff deposit expires public inventory only after commit',async()
 
 const merchant='acct_JeanneFixture'
 function activateMerchant(){
- Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:merchant,STRIPE_LEGACY_LINKS_CLOSED:'1'})
+ Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:merchant,STRIPE_LEGACY_LINKS_CLOSED:'1',FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:'whsec_new_merchant_fixture_only'})
  globalThis.fixtureStripe.accounts={retrieve:async()=>({id:merchant,charges_enabled:true,payouts_enabled:true,details_submitted:true,requirements:{currently_due:[],past_due:[],disabled_reason:null}})}
 }
 test('merchant cutover blocks the wrong key and incomplete payout activation before any Checkout is created',async()=>{
@@ -163,4 +163,16 @@ test('new merchant signed events retain pending, failed and duplicate protection
  await ok(await signed(deposit,{type:'checkout.session.async_payment_succeeded'}));await ok(await signed(deposit,{type:'checkout.session.async_payment_succeeded'}))
  const records=[...store.documents.values()].filter(d=>d._type==='paymentRecord');assert.equal(records.length,1);assert.equal(records[0].stripeAccountId,merchant);assert.equal(sent.length,1)
  const balance=await create('balance',903);assert.equal(balance.amountCents,120000);assert.equal(balance.stripeAccountId,merchant);assert.equal(store.documents.get('puppy').status,'reserved')
+})
+
+test('cutover rejects the previous webhook secret and fails closed if the new secret is missing',async()=>{
+ activateMerchant();const deposit=await create('deposit'),session=sessions.get(deposit.checkoutSessionId)
+ session.payment_status='paid';session.status='complete'
+ const payload=JSON.stringify({id:'evt_old_signature_fixture',type:'checkout.session.completed',livemode:true,data:{object:session}})
+ const signature=globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret})
+ const callback=()=>webhook.POST(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':signature},body:payload}))
+ assert.equal((await callback()).status,400)
+ delete process.env.FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET
+ assert.equal((await callback()).status,503)
+ assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,0);assert.equal(sent.length,0);assert.equal(store.documents.get('puppy').status,'available')
 })

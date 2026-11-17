@@ -114,7 +114,7 @@ test('assignment expires public inventory after reserved commit and not after re
 
 test('merchant migration keeps the litter deposit account through transfer, selection and final balance',async()=>{
  const account='acct_JeanneLitterFixture'
- Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:account,STRIPE_LEGACY_LINKS_CLOSED:'1'})
+ Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:account,STRIPE_LEGACY_LINKS_CLOSED:'1',FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:process.env.STRIPE_WEBHOOK_SECRET})
  globalThis.fixtureStripe.accounts={retrieve:async()=>({id:account,charges_enabled:true,payouts_enabled:true,details_submitted:true,requirements:{}})}
  const p=await offer();assert.equal(p.stripeAccountId,account);assert.equal(sessions.get(p.checkoutSessionId).metadata.stripeAccountId,account)
  await ok(await deliver(p));await ok(await deliver(p));assert.equal([...db.documents.values()].filter(d=>d._type==='paymentRecord').length,1)
