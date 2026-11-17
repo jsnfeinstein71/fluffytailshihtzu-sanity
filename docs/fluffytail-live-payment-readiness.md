@@ -1,5 +1,11 @@
 # Live payment readiness review — November 14, 2026
 
+## November 16 ownership correction and merchant migration in preparation
+
+The owner corrected the merchant ownership: Innovation Strategies LLC belongs to Jason, while FluffyTail is Jeanne Downey's independently operated sole proprietorship. The earlier account's enabled capabilities and payout configuration do not establish readiness for Jeanne's merchant business. Do not repurpose or close Jason's account, reuse its bank destination, or reinterpret its records as Jeanne's.
+
+Focused migration preparation is on `codex/jeanne-stripe-account-migration`, based on main `86967c4` (including PR #41 public cache work). See [the migration runbook](fluffytail-jeanne-stripe-migration.md). Production cutover is blocked until Jeanne's account, bank eligibility, live credentials/webhook and closure of previous payable links are verified. No production credentials or customer records have been changed in this preparation.
+
 Scope: current Production `426193d`, read-only provider/configuration inspection and existing records. No real request, Checkout, payment, message, refund or payout was created. No settings or operational records were intentionally changed. The historical migration and unrelated pending releases remain paused.
 
 ## Inspected Production evidence

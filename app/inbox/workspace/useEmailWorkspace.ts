@@ -115,7 +115,7 @@ export function useEmailWorkspace(ready:boolean){
     paymentFlow.current=true;setPaymentBusy(true)
     const key=`link:${familyId}:${puppyId}:${kind}`;requestIds.current[key]||=crypto.randomUUID()
     try{
-      const existing=data?.paymentRequests.find(p=>p.familyId===familyId&&p.puppyId===puppyId&&p.kind===kind&&!p.webhookVerifiedAt&&!p.checkoutOutcome&&Date.parse(p.expiresAt)>Date.now())
+      const existing=data?.paymentRequests.find(p=>p.familyId===familyId&&p.puppyId===puppyId&&p.kind===kind&&!p.retiredAccount&&!p.webhookVerifiedAt&&!p.checkoutOutcome&&Date.parse(p.expiresAt)>Date.now())
       const preparedId=existing?._id||(await request({type:'payment',familyId,puppyId,kind,requestId:requestIds.current[key]}))?.preparedPaymentId
       if(preparedId){const result=await request({type:'checkout',familyId,paymentRequestId:preparedId});if(result){delete requestIds.current[key];return result.paymentRequests.find(p=>p._id===preparedId)}}
     }finally{paymentFlow.current=false;setPaymentBusy(false)}

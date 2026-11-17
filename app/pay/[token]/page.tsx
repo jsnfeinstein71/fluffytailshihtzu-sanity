@@ -1,4 +1,5 @@
 import {paymentCopy} from '@/lib/public-copy'
+import {retiredStripeRequest} from '@/lib/stripe-account'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {customerLivePayment} from '@/sanity/lib/customer-live-payment'
 import {paymentTestWorkspaceEnabled} from '@/lib/payment-test-mode'
@@ -44,6 +45,7 @@ async function legacyDepositDestination(token:string){
   )
   // Legacy quotes without a verifiable price snapshot must be reissued by the operator.
   if (!link?.active || !link.stripeCheckoutUrl || !link.puppySlug || !link.expiresAt || Date.parse(link.expiresAt) <= Date.now() || !Number.isFinite(Date.parse(link.expiresAt)) || link.checkoutMetadata?.pricingVersion !== '1') return null
+  if(retiredStripeRequest({stripeAccountId:link.checkoutMetadata.stripeAccountId}))return null
   let valid = false
   try {
     const {puppy, pricing, balance} = await getPaymentContext(link.puppySlug)

@@ -21,6 +21,7 @@ async function deliver(p,{type='checkout.session.completed',paid=true,live=true,
 const receipt=p=>customer.GET(new Request(origin+'/api/payment/'+p.publicToken),{params:Promise.resolve({token:p.publicToken})}).then(ok)
 async function sendRequest(p){const data=await email.GET(new Request(origin+'/inbox/workspace/api/email',{headers:{authorization}})).then(ok),draft=data.drafts.find(d=>d.familyId===p.familyId);return sendEmailDraft(p.familyId,{familyId:p.familyId,revision:draft.revision,value:{subject:'Your approved litter selection position',body:'A personal message from Jeanne.',replyToId:null,paymentRequestId:p._id}},randomUUID(),emailAction)}
 beforeEach(()=>{
+ for(const key of ['FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION','STRIPE_ACCOUNT_ID','STRIPE_LEGACY_LINKS_CLOSED'])delete process.env[key]
  Object.assign(process.env,{INQUIRY_FORM_SECRET:'fixture-litter-inquiry-secret-at-least-32-characters',FLUFFYTAIL_STAFF_WORKSPACE_ENABLED:'1',NEXT_PUBLIC_SITE_URL:origin,FLUFFYTAIL_LITTER_RESERVATIONS_LIVE_ENABLED:'1',STRIPE_SECRET_KEY:'sk_live_fixture_only',STRIPE_WEBHOOK_SECRET:secret,VERCEL_ENV:'production',NEXT_PUBLIC_SANITY_PROJECT_ID:'3glz6dkx',NEXT_PUBLIC_SANITY_DATASET:'production',STAFF_PASSKEY_MODE:'off',FLUFFYTAIL_LITTER_RESERVATIONS_ENABLED:'0',FLUFFYTAIL_PAYMENT_TEST_WORKSPACE:'0',FLUFFYTAIL_STRIPE_TEST_ENABLED:'1',FLUFFYTAIL_STRIPE_TEST_SECRET_KEY:'sk_test_litter_fixture',FLUFFYTAIL_STRIPE_TEST_WEBHOOK_SECRET:secret,FLUFFYTAIL_PAYMENT_TEST_ORIGIN:origin,FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'staff',INBOX_BASIC_AUTH_PASS:'fixture'})
  delete process.env.FLUFFYTAIL_TEST_CUSTOMER_COMMUNICATIONS;delete globalThis.fixtureTestContacts
  db=workspaceStoreFixture();globalThis.fixtureOperatorClient=db;sessions=new Map();intents=new Map();seq=0;sent=[]
@@ -109,4 +110,21 @@ test('assignment expires public inventory after reserved commit and not after re
   await action(assign);assert.deepEqual(calls,[['public-inventory',{expire:0}]])
   await action(assign);assert.equal(calls.length,2)
  }finally{delete globalThis.fixtureRevalidateTag}
+})
+
+test('merchant migration keeps the litter deposit account through transfer, selection and final balance',async()=>{
+ const account='acct_JeanneLitterFixture'
+ Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:account,STRIPE_LEGACY_LINKS_CLOSED:'1',FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:process.env.STRIPE_WEBHOOK_SECRET,FLUFFYTAIL_JEANNE_STRIPE_SECRET_KEY:'rk_live_new_merchant_fixture_only'})
+ globalThis.fixtureStripe.accounts={retrieve:async()=>({id:account,charges_enabled:true,payouts_enabled:true,details_submitted:true,requirements:{}})}
+ const p=await offer();assert.equal(p.stripeAccountId,account);assert.equal(sessions.get(p.checkoutSessionId).metadata.stripeAccountId,account)
+ await ok(await deliver(p));await ok(await deliver(p));assert.equal([...db.documents.values()].filter(d=>d._type==='paymentRecord').length,1)
+ await action({type:'transfer',confirmed:true,id:p.litterReservationId,litterId:'fictional-spring',position:1,requestId:randomUUID(),note:'Owner-approved fixture transfer'})
+ db.documents.get('fictional-spring').status='current'
+ await action({type:'assign',confirmed:true,id:p.litterReservationId,puppyId:'fictional-puppy',requestId:randomUUID()})
+ const prepared=await emailAction({type:'payment',familyId:familyId(1),puppyId:'fictional-puppy',kind:'balance',requestId:randomUUID()})
+ const final=(await emailAction({type:'checkout',familyId:familyId(1),paymentRequestId:prepared.preparedPaymentId})).paymentRequests.find(p=>p._id===prepared.preparedPaymentId)
+ assert.equal(final.stripeAccountId,account);assert.equal(final.amountCents,120000);await ok(await deliver(final));await ok(await deliver(final))
+ const view=await receipt(final);assert.equal(view.paidCents,160000);assert.equal(view.remainingCents,0)
+ const records=[...db.documents.values()].filter(d=>d._type==='paymentRecord');assert.equal(records.length,2);assert.ok(records.every(r=>r.stripeAccountId===account));assert.equal([...db.documents.values()].filter(d=>d._type==='litterCreditApplication').length,1)
+ assert.equal(db.documents.get('fictional-puppy').status,'reserved')
 })

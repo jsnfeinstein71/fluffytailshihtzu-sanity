@@ -10,7 +10,7 @@ import {workspaceStoreFixture} from '../tests/workspace-store-fixture.mjs'
 
 if(process.env.VERCEL)throw new Error('This fixture helper is local-only.')
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..')
-const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview',process.env.FLUFFYTAIL_PAYMENT_QA==='1'?'payment-qa-20261114.json':process.env.FLUFFYTAIL_FAMILY_QA==='1'?'family-qa-20261114.json':process.env.FLUFFYTAIL_LAYOUT_QA==='1'?'layout-qa.json':'families.json')
+const storage=join(process.env.LOCALAPPDATA || process.env.TMPDIR || '/tmp','FluffyTail','WorkspaceReview',process.env.FLUFFYTAIL_STRIPE_MIGRATION_QA==='1'?'stripe-migration-qa-20261116.json':process.env.FLUFFYTAIL_PAYMENT_QA==='1'?'payment-qa-20261114.json':process.env.FLUFFYTAIL_FAMILY_QA==='1'?'family-qa-20261114.json':process.env.FLUFFYTAIL_LAYOUT_QA==='1'?'layout-qa.json':'families.json')
 const allowed=['PATH','Path','SystemRoot','SYSTEMROOT','SystemDrive','WINDIR','windir','COMSPEC','ComSpec','PATHEXT','TEMP','TMP','LOCALAPPDATA','APPDATA','USERPROFILE','HOME']
 const childEnv=Object.fromEntries(allowed.filter(key=>process.env[key]).map(key=>[key,process.env[key]]))
 Object.assign(childEnv,{NEXT_PUBLIC_SANITY_PROJECT_ID:'gu1xkpsg',NEXT_PUBLIC_SANITY_DATASET:'synthetic',VERCEL_ENV:'preview',FLUFFYTAIL_LOCAL_MAIL_UI:'1',FLUFFYTAIL_MAIL_MODE:'fictional',FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'fixture-operator',INBOX_BASIC_AUTH_PASS:'fixture-only-password'})
@@ -54,7 +54,7 @@ const app=spawn(process.execPath,[join(root,'node_modules','next','dist','bin','
 app.on('error',()=>{console.error('The local app could not start.');process.exitCode=1})
 const server=createServer(async(req,res)=>{
   // Disposable loopback-only layout QA uses a fictional operator, never a real staff credential.
-  if(process.env.FLUFFYTAIL_FAMILY_QA==='1'||process.env.FLUFFYTAIL_PAYMENT_QA==='1')req.headers.authorization='Basic '+Buffer.from('fixture-operator:fixture-only-password').toString('base64')
+  if(process.env.FLUFFYTAIL_FAMILY_QA==='1'||process.env.FLUFFYTAIL_PAYMENT_QA==='1'||process.env.FLUFFYTAIL_STRIPE_MIGRATION_QA==='1')req.headers.authorization='Basic '+Buffer.from('fixture-operator:fixture-only-password').toString('base64')
   const path=req.url||'/'
   const pathname=path.split('?')[0]
   if(pathname==='/inbox/mail/api/local'){

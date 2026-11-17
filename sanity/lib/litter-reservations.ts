@@ -1,3 +1,5 @@
+import {stripeAccountMetadata,requireCurrentStripeAccount,requireStripeMetadataAccount} from '@/lib/stripe-account'
+import {getVerifiedStripe,depositClaimId} from './stripe-merchant'
 import {commitFamilyRecords} from './family-lifecycle'
 import 'server-only'
 import {createHash,randomBytes,randomUUID} from 'node:crypto'
@@ -16,7 +18,7 @@ import type {PaymentRequest} from '@/app/inbox/workspace/email-model'
 
 export class LitterError extends Error{constructor(message:string,public status=409){super(message)}}
 type Litter={_id:string;_rev:string;_type:string;title:string;status:string;price:number;deposit:number;isVisible?:boolean;litterReservationTest?:boolean;paymentTestScenario?:string}
-type Ledger={_id:string;_rev:string;_type:string;amountPaid:number;staffFamilyId:string;staffPaymentRequestId:string;litterReservationId:string;stripeCheckoutSessionId:string;webhookVerifiedAt:string;puppyId?:string}
+type Ledger={stripeAccountId?:string;_id:string;_rev:string;_type:string;amountPaid:number;staffFamilyId:string;staffPaymentRequestId:string;litterReservationId:string;stripeCheckoutSessionId:string;webhookVerifiedAt:string;puppyId?:string}
 const client=()=>getOperatorClient(),now=()=>new Date().toISOString()
 export const litterRecordId=(kind:string,key:string)=>privateRecordId(kind,workspaceNamespace()+':'+key)
 const boardId=(id:string)=>litterRecordId('litterPlaces',id)
@@ -69,7 +71,7 @@ export async function offerLitterPlace(input:{familyId:string;litterId:string;po
  if(!b||nextPlace(b)!==input.position)throw new LitterError('The next available position changed. Refresh the four places before offering it.')
  const paymentRequestId=litterRecordId('staffPaymentRequest',input.requestId),token=randomBytes(24).toString('hex'),createdAt=now()
  const r:LitterReservation={_id:id,_rev:'',_type:'litterReservation',workspace:workspaceNamespace(),familyId:f.familyKey,litterId:l._id,litterTitle:l.title,position:input.position,state:'pending',preferences:preferences(input.preferences),requestId:input.requestId,paymentRequestId,depositCents:quote.depositCents,totalCents:quote.totalCents,history:[entry('offered',{toLitter:l._id,toPosition:input.position})]}
- const p:PaymentRequest={_id:paymentRequestId,_type:'staffPaymentRequest',workspace:workspaceNamespace(),testOnly:testing(),requestId:input.requestId,familyId:f.familyKey,puppyId:'',puppyName:l.title,kind:'deposit',amountCents:quote.depositCents,totalCents:quote.totalCents,depositCents:quote.depositCents,paidCents:0,createdAt,expiresAt:new Date(Date.now()+3600000).toISOString(),publicToken:token,litterReservationId:id,litterId:l._id,selectionPosition:input.position}
+ const p:PaymentRequest={_id:paymentRequestId,_type:'staffPaymentRequest',...stripeAccountMetadata(),workspace:workspaceNamespace(),testOnly:testing(),requestId:input.requestId,familyId:f.familyKey,puppyId:'',puppyName:l.title,kind:'deposit',amountCents:quote.depositCents,totalCents:quote.totalCents,depositCents:quote.depositCents,paidCents:0,createdAt,expiresAt:new Date(Date.now()+3600000).toISOString(),publicToken:token,litterReservationId:id,litterId:l._id,selectionPosition:input.position}
  const {_rev:unused,...document}=r;void unused
  try{await client().transaction().create(document).create(p).patch(b._id,p=>p.ifRevisionId(b._rev).set({places:[...b.places,{_key:String(input.position),position:input.position,reservationId:id,state:'pending'}]})).patch(anchorId,p=>p.ifRevisionId(anchor!._rev).set({reservationId:id})).patch(f._id,p=>p.ifRevisionId(f._rev).set({'profile.litterId':l._id,'profile.litterTitle':l.title,'profile.litterReservationId':id})).commit({visibility:'sync'})}catch(e){if(conflict(e))throw new LitterError('Another offer claimed a place first. Nothing was charged; refresh the positions.');throw e}
  return await prepareLitterCheckout(id)
@@ -77,18 +79,21 @@ export async function offerLitterPlace(input:{familyId:string;litterId:string;po
 export async function prepareLitterCheckout(id:string){
  enabled();const origin=configuration(),r=await reservation(id),f=await family(r.familyId),p=await client().getDocument<PaymentRequest>(r.paymentRequestId)
  if(!p||r.state!=='pending')throw new LitterError('This place is not awaiting a deposit.')
+ requireCurrentStripeAccount(p)
  if(p.checkoutSessionId)return p
  // A durable hold precedes the provider call. Unknown outcomes retain the hold;
  // retries use the same Stripe idempotency key and the original quote.
- const s=await getStripe().checkout.sessions.create({mode:'payment',...(testing()&&process.env.FLUFFYTAIL_LITTER_TEST_PAYMENT_CONFIGURATION?{payment_method_configuration:process.env.FLUFFYTAIL_LITTER_TEST_PAYMENT_CONFIGURATION}:{}),customer_email:f.profile.email,client_reference_id:r._id,expires_at:Math.floor(Date.parse(p.expiresAt)/1000),line_items:[{price_data:{currency:'usd',unit_amount:p.amountCents,product_data:{name:`${testing()?'TEST · ':''}${r.position}${r.position===1?'st':r.position===2?'nd':r.position===3?'rd':'th'} pick · ${r.litterTitle}`,description:'Litter selection position only; no individual puppy, sex, color or litter size is guaranteed.'}},quantity:1}],success_url:origin+'/pay/'+p.publicToken,cancel_url:origin+'/pay/'+p.publicToken+'?result=canceled',metadata:{litterReservationId:r._id,staffPaymentRequestId:p._id,staffFamilyId:r.familyId,staffTestOnly:testing()?'1':'0',customerPaymentToken:p.publicToken!,selectionPosition:String(r.position),litterId:r.litterId,depositCents:String(r.depositCents)}},{idempotencyKey:'litter-deposit:'+p._id})
+ const s=await (await getVerifiedStripe()).checkout.sessions.create({mode:'payment',...(testing()&&process.env.FLUFFYTAIL_LITTER_TEST_PAYMENT_CONFIGURATION?{payment_method_configuration:process.env.FLUFFYTAIL_LITTER_TEST_PAYMENT_CONFIGURATION}:{}),customer_email:f.profile.email,client_reference_id:r._id,expires_at:Math.floor(Date.parse(p.expiresAt)/1000),line_items:[{price_data:{currency:'usd',unit_amount:p.amountCents,product_data:{name:`${testing()?'TEST · ':''}${r.position}${r.position===1?'st':r.position===2?'nd':r.position===3?'rd':'th'} pick · ${r.litterTitle}`,description:'Litter selection position only; no individual puppy, sex, color or litter size is guaranteed.'}},quantity:1}],success_url:origin+'/pay/'+p.publicToken,cancel_url:origin+'/pay/'+p.publicToken+'?result=canceled',metadata:{...stripeAccountMetadata(),litterReservationId:r._id,staffPaymentRequestId:p._id,staffFamilyId:r.familyId,staffTestOnly:testing()?'1':'0',customerPaymentToken:p.publicToken!,selectionPosition:String(r.position),litterId:r.litterId,depositCents:String(r.depositCents)}},{idempotencyKey:'litter-deposit:'+p._id})
  if(s.livemode!==!testing()||!s.id.startsWith(testing()?'cs_test_':'cs_live_')||s.amount_total!==p.amountCents||s.currency!=='usd')throw new LitterError('The isolated checkout could not be verified. The hold remains for review.')
  await client().patch(p._id).set({checkoutSessionId:s.id,stripeCheckoutUrl:s.url,checkoutUrl:origin+'/pay/'+p.publicToken}).commit({visibility:'sync'})
  return await client().getDocument<PaymentRequest>(p._id)
 }
 export async function litterPaymentContext(sessionId:string){
  enabled();const s=await getStripe().checkout.sessions.retrieve(sessionId),m=s.metadata
+ requireStripeMetadataAccount(m)
  if(s.livemode!==!testing()||!s.id.startsWith(testing()?'cs_test_':'cs_live_')||s.currency!=='usd'||m?.staffTestOnly!==(testing()?'1':'0')||!m.litterReservationId)throw new LitterError('This is not an isolated litter checkout.')
  const r=await reservation(m.litterReservationId),p=await client().getDocument<PaymentRequest>(r.paymentRequestId),f=await family(r.familyId)
+ if(p)requireCurrentStripeAccount(p)
  if(!p||p.checkoutUrl!==configuration()+'/pay/'+p.publicToken||!(/^[a-f0-9]{48}$/.test(p.publicToken||''))||p._type!=='staffPaymentRequest'||p.workspace!==workspaceNamespace()||p.testOnly!==testing()||p.checkoutSessionId!==s.id||p._id!==m.staffPaymentRequestId||m.staffFamilyId!==f.familyKey||s.client_reference_id!==r._id||s.amount_total!==r.depositCents||p.amountCents!==r.depositCents||m.customerPaymentToken!==p.publicToken||m.litterId!==p.litterId||m.selectionPosition!==String(p.selectionPosition)||m.depositCents!==String(p.depositCents)||s.customer_email?.toLowerCase()!==f.profile.email)throw new LitterError('The saved reservation and Stripe quote do not match.')
  return {s,r,p,f}
 }
@@ -126,10 +131,10 @@ export async function applyLitterPayment(event:Stripe.Event){
  for(let attempt=0;attempt<4;attempt++){
   const {s,r,p,f}=await litterPaymentContext(received.id)
   const ledgerId=litterRecordId('litterPayment',s.id),prior=await client().getDocument<Ledger>(ledgerId)
-  if(prior){if(prior.amountPaid!==p.amountCents/100||prior.staffFamilyId!==r.familyId||prior.litterReservationId!==r._id||prior.stripeCheckoutSessionId!==s.id)throw new LitterError('A verified payment identity conflicts.');return {duplicate:true,litterReservation:true,confirmationEligible:!testing()&&r.state!=='reconciliation'}}
+  if(prior){if(prior.stripeAccountId!==p.stripeAccountId||prior.amountPaid!==p.amountCents/100||prior.staffFamilyId!==r.familyId||prior.litterReservationId!==r._id||prior.stripeCheckoutSessionId!==s.id)throw new LitterError('A verified payment identity conflicts.');return {duplicate:true,litterReservation:true,confirmationEligible:!testing()&&r.state!=='reconciliation'}}
   if(s.payment_status!=='paid'){await reconcileLitterHold(r._id);return {pending:true,litterReservation:true}}
   const b=await board(r.litterId),occupies=b?.places.some(x=>x.reservationId===r._id&&x.position===r.position),state=occupies&&r.state==='pending'?'reserved':'reconciliation',at=now()
-  const tx=client().transaction().create({_id:ledgerId,_type:'paymentRecord',workspace:workspaceNamespace(),testOnly:testing(),paymentStatus:'paid',paymentType:'deposit',amountPaid:p.amountCents/100,litterReservationId:r._id,litterId:p.litterId,litterQuotedTotalCents:p.totalCents,quotedDepositCents:p.depositCents,staffFamilyId:r.familyId,staffPaymentRequestId:p._id,stripeCheckoutSessionId:s.id,stripePaymentIntentId:typeof s.payment_intent==='string'?s.payment_intent:'',stripeEventId:event.id,webhookVerifiedAt:at,createdAt:at,customerEmail:f.profile.email,customerName:f.profile.name,customerPhone:f.profile.phone||'',paymentConfirmationVersion:2,totalPaidCents:p.amountCents})
+  const tx=client().transaction().create({_id:ledgerId,_type:'paymentRecord',...stripeAccountMetadata(),workspace:workspaceNamespace(),testOnly:testing(),paymentStatus:'paid',paymentType:'deposit',amountPaid:p.amountCents/100,litterReservationId:r._id,litterId:p.litterId,litterQuotedTotalCents:p.totalCents,quotedDepositCents:p.depositCents,staffFamilyId:r.familyId,staffPaymentRequestId:p._id,stripeCheckoutSessionId:s.id,stripePaymentIntentId:typeof s.payment_intent==='string'?s.payment_intent:'',stripeEventId:event.id,webhookVerifiedAt:at,createdAt:at,customerEmail:f.profile.email,customerName:f.profile.name,customerPhone:f.profile.phone||'',paymentConfirmationVersion:2,totalPaidCents:p.amountCents})
   tx.patch(r._id,p=>p.ifRevisionId(r._rev).set({state,ledgerId,history:[...r.history,entry(state==='reserved'?'deposit-verified':'late-payment-review',{note:state==='reconciliation'?'Money recorded; no occupied place was reassigned.':''})]})).patch(p._id,patch=>patch.ifRevisionId((p as PaymentRequest&{_rev:string})._rev).set({webhookVerifiedAt:at,paymentVerification:testing()?'test-paid':'paid',stripeEventId:event.id}))
   if(occupies&&b)tx.patch(b._id,p=>p.ifRevisionId(b._rev).set({places:b.places.map(p=>p.reservationId===r._id?{...p,state:'reserved'}:p)}))
   try{await tx.commit({visibility:'sync'});return {recorded:true,litterReservation:true,confirmationEligible:!testing()&&state==='reserved',reconciliation:state==='reconciliation'}}catch(e){if(!conflict(e))throw e}
@@ -162,7 +167,9 @@ export async function assignLitterPuppy(input:{id:string;puppyId:string;requestI
  if(Number.isFinite(puppy.overridePrice??l.price)&&Math.round((puppy.overridePrice??l.price)*100)<paidCents)throw new LitterError('This puppy costs less than the deposit credit. Jeanne must decide how to handle the excess before assignment.')
  const quote=getPricing({litterPrice:l.price,litterDeposit:paidCents/100,overridePrice:puppy.overridePrice})
  const prior=await client().fetch<{_id:string}[]>('*[_type=="paymentRecord" && puppyId==$puppyId && paymentStatus=="paid"]{_id}',{puppyId:puppy._id},{cache:'no-store'});if(prior.length)throw new LitterError('This puppy already has a payment; reconcile it before assigning another deposit.')
- const claimId=privateRecordId('deposit',puppy._id)
+ const claimId=depositClaimId(puppy._id)
+ const previousClaim=claimId!==privateRecordId('deposit',puppy._id)?await client().getDocument<{litterCreditSelectionId?:string}>(privateRecordId('deposit',puppy._id)):null
+ if(previousClaim?.litterCreditSelectionId)throw new LitterError('This puppy already has an applied litter deposit.')
  const [claim,legacyClaim]=await Promise.all([client().getDocument<{_id:string;_rev:string;active?:boolean;litterCreditSelectionId?:string}>(claimId),client().getDocument<{active?:boolean}>('deposit-active-'+createHash('sha256').update(puppy._id).digest('hex'))])
  if(claim?.active||claim?.litterCreditSelectionId||legacyClaim?.active)throw new LitterError('This puppy has an existing deposit checkout or selection. Close and reconcile it before applying this litter credit.')
  // Share the existing per-puppy deposit claim slot. CAS/create makes assignment
@@ -176,7 +183,7 @@ export async function assignLitterPuppy(input:{id:string;puppyId:string;requestI
 export async function editLitterPreferences(id:string,value:unknown){enabled();const r=await reservation(id);await client().patch(id).ifRevisionId(r._rev).set({preferences:preferences(value)}).commit({visibility:'sync'})}
 export async function markTestLitterBorn(id:string){enabled();if(!testing())throw new LitterError('The fictional birth control is unavailable in live mode.',403);const l=await litter(id);if(!['planned','upcoming'].includes(l.status))return;await client().patch(l._id).ifRevisionId(l._rev).set({status:'current'}).commit({visibility:'sync'})}
 export async function customerLitterPayment(p:PaymentRequest){
- enabled();if(!p.checkoutSessionId||!p.litterReservationId)throw new LitterError('Payment unavailable.')
+ enabled();requireCurrentStripeAccount(p);if(!p.checkoutSessionId||!p.litterReservationId)throw new LitterError('Payment unavailable.')
  const {s,r}=await litterPaymentContext(p.checkoutSessionId),paid=!!p.webhookVerifiedAt,b=await board(r.litterId),held=b?.places.some(x=>x.reservationId===r._id)
  const state=r.state==='reconciliation'?'unavailable':paid?'confirmed':s.payment_status==='paid'||s.status==='complete'&&r.state==='pending'?'pending':r.state==='released'||s.status==='expired'?'expired':held?'ready':'unavailable'
  return {testOnly:testing(),litterReservation:true as const,selectionPosition:r.position,litterTitle:r.litterTitle,puppyName:r.litterTitle,kind:p.kind,amountCents:p.amountCents,totalCents:p.totalCents,depositCents:p.depositCents,paidCents:paid?p.amountCents:0,remainingCents:p.totalCents-(paid?p.amountCents:0),reserved:r.state==='reserved',state,checkoutUrl:state==='ready'&&s.status==='open'?s.url:null,confirmation:'not-scheduled'}

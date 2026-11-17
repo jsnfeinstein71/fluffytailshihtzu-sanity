@@ -15,6 +15,7 @@ function request(path,body){return new Request(origin+path,{method:body?'POST':'
 async function ok(response){assert.equal(response.status,200,await response.clone().text());return response.json()}
 const action=body=>email.POST(request('/inbox/workspace/api/email',body)),receipt=token=>customer.GET(new Request(origin+'/api/payment/'+token),{params:Promise.resolve({token})})
 beforeEach(()=>{
+ for(const key of ['FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION','STRIPE_ACCOUNT_ID','STRIPE_LEGACY_LINKS_CLOSED'])delete process.env[key]
  Object.assign(process.env,{VERCEL_ENV:'production',NEXT_PUBLIC_SITE_URL:origin,NEXT_PUBLIC_SANITY_PROJECT_ID:'3glz6dkx',NEXT_PUBLIC_SANITY_DATASET:'production',FLUFFYTAIL_STAFF_WORKSPACE_ENABLED:'1',STRIPE_SECRET_KEY:'sk_live_fixture_only',STRIPE_WEBHOOK_SECRET:secret,FLUFFYTAIL_MAIL_MODE:'pair',FLUFFYTAIL_PAIR_SEND_ENABLED:'1',FLUFFYTAIL_PAIR_READ_ENABLED:'1',FLUFFYTAIL_PAIR_MAIL_PASSWORD:'offline-only',FLUFFYTAIL_WRITE_FREEZE:'0',INBOX_BASIC_AUTH_USER:'staff',INBOX_BASIC_AUTH_PASS:'offline-password'})
  delete process.env.FLUFFYTAIL_PAYMENT_TEST_WORKSPACE;globalThis.fixtureTestContacts=null;sequence=0;sessions=new Map();sent=[];outcome='accepted';reads=[]
  store=workspaceStoreFixture([{_id:'litter',_type:'litter',title:'Fixture litter',status:'current',isVisible:true,price:1600,deposit:400},{_id:'puppy',_rev:'puppy-initial',_type:'puppy',name:'Fixture puppy',status:'available',isVisible:true,slug:{current:'fixture-puppy'},litter:{_ref:'litter'}},{_id:workspaceId(familyId),_rev:'family-initial',_type:'staffFamily',workspace:'live-v1',schemaVersion:1,familyKey:familyId,profile:{id:familyId,source:'inquiry',inquiryId:'fixture-inquiry',name:'Fixture family',initials:'FF',email:'fixture@example.test',phone:'',preference:'Email',smsConsent:false,stage:'Ready',next:'Fixture',puppyId:'puppy',puppySlug:'fixture-puppy',messages:[],records:[]},drafts:{Email:'',Text:''},notes:[],checks:[]}]);globalThis.fixtureOperatorClient=store
@@ -22,7 +23,7 @@ beforeEach(()=>{
  globalThis.fixtureMailProvider={capabilities:{provider:'pair',canDispatch:true,canSync:true},send:async message=>{sent.push(structuredClone(message));return {outcome,code:'FIXTURE_'+outcome}},sync:async input=>{reads.push(input);return {validity:'fixture-mailbox',lastUid:1,messages:[]}}}
 })
 async function create(kind,number=1){const p=await ok(await action({type:'payment',familyId,puppyId:'puppy',kind,requestId:`00000000-0000-4000-8000-${String(number).padStart(12,'0')}`}));const data=await ok(await action({type:'checkout',familyId,paymentRequestId:p.preparedPaymentId}));return data.paymentRequests.find(r=>r._id===p.preparedPaymentId)}
-async function signed(payment,{paid=true,type='checkout.session.completed',valid=true,live=true}={}){const s=sessions.get(payment.checkoutSessionId);s.payment_status=paid?'paid':'unpaid';s.status=type.endsWith('expired')?'expired':'complete';const payload=JSON.stringify({id:'evt_fixture'+sequence,type,livemode:live,data:{object:s}});return webhook.POST(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret:valid?secret:'wrong_secret'})},body:payload}))}
+async function signed(payment,{paid=true,type='checkout.session.completed',valid=true,live=true}={}){const s=sessions.get(payment.checkoutSessionId);s.payment_status=paid?'paid':'unpaid';s.status=type.endsWith('expired')?'expired':'complete';const payload=JSON.stringify({id:'evt_fixture'+sequence,type,livemode:live,data:{object:s}});const signingSecret=process.env.FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION==='1'?process.env.FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:secret;return webhook.POST(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret:valid?signingSecret:'wrong_secret'})},body:payload}))}
 async function sendRequest(payment,body='A personal note from Jeanne.',replyToId=null){const data=await ok(await email.GET(request('/inbox/workspace/api/email')));const prior=data.drafts.find(d=>d.familyId===familyId);const draft={familyId,revision:prior?.revision||null,value:{subject:'Your puppy payment',body,replyToId,paymentRequestId:payment._id}};return sendEmailDraft(familyId,draft,`00000000-0000-4000-8000-${String(100+sequence).padStart(12,'0')}`,async input=>ok(await action(input)))}
 
 test('live-shaped application journey formats requests, validates public checkout and confirms signed ledger exactly once without touching real providers',async()=>{
@@ -121,4 +122,64 @@ test('verified staff deposit expires public inventory only after commit',async()
   assert.deepEqual(calls,[['public-inventory',{expire:0}]])
   assert.equal((await signed(deposit)).status,200);assert.equal(calls.length,2)
  }finally{delete globalThis.fixtureRevalidateTag}
+})
+
+const merchant='acct_JeanneFixture'
+function activateMerchant(){
+ Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:merchant,STRIPE_LEGACY_LINKS_CLOSED:'1',FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:'whsec_new_merchant_fixture_only',FLUFFYTAIL_JEANNE_STRIPE_SECRET_KEY:'rk_live_new_merchant_fixture_only'})
+ globalThis.fixtureStripe.accounts={retrieve:async()=>({id:merchant,charges_enabled:true,payouts_enabled:true,details_submitted:true,requirements:{currently_due:[],past_due:[],disabled_reason:null}})}
+}
+test('merchant cutover blocks the wrong key and incomplete payout activation before any Checkout is created',async()=>{
+ activateMerchant()
+ const prepared=await ok(await action({type:'payment',familyId,puppyId:'puppy',kind:'deposit',requestId:'00000000-0000-4000-8000-000000000901'}))
+ for(const account of [{id:'acct_OtherFixture',charges_enabled:true,payouts_enabled:true},{id:merchant,charges_enabled:true,payouts_enabled:false},{id:merchant,charges_enabled:true,payouts_enabled:true,details_submitted:true,requirements:{currently_due:['external_account']}}]){
+  globalThis.fixtureStripe.accounts.retrieve=async()=>account
+  const r=await action({type:'checkout',familyId,paymentRequestId:prepared.preparedPaymentId});assert.notEqual(r.status,200);assert.equal(sessions.size,0);assert.equal(store.documents.get('puppy').status,'available')
+ }
+ delete process.env.STRIPE_LEGACY_LINKS_CLOSED
+ assert.notEqual((await action({type:'checkout',familyId,paymentRequestId:prepared.preparedPaymentId})).status,200);assert.equal(sessions.size,0);assert.equal(sent.length,0)
+})
+test('merchant cutover preserves a previous request and unfinished message while blocking its public link and send path',async()=>{
+ const old=await create('deposit'),original=structuredClone(store.documents.get(old._id)),claim=structuredClone([...store.documents.values()].find(d=>d._type==='depositLink'))
+ const saved=await ok(await action({type:'save',familyId,revision:null,value:{subject:'Personal subject',body:'My unfinished personal note.',replyToId:null,paymentRequestId:old._id}}))
+ sessions.get(old.checkoutSessionId).status='expired';activateMerchant()
+ const retrieve=globalThis.fixtureStripe.checkout.sessions.retrieve;let reads=0;globalThis.fixtureStripe.checkout.sessions.retrieve=async id=>{reads++;return retrieve(id)}
+ assert.equal((await receipt(old.publicToken)).status,404);assert.equal(reads,0)
+ assert.notEqual((await action({type:'checkout',familyId,paymentRequestId:old._id})).status,200)
+ const data=await ok(await email.GET(request('/inbox/workspace/api/email'))),draft=data.drafts.find(d=>d.familyId===familyId)
+ assert.equal(data.paymentRequests.find(p=>p._id===old._id).retiredAccount,true);assert.equal(data.paymentRequests.find(p=>p._id===old._id).checkoutUrl,undefined)
+ const reviewed=await action({type:'review',familyId,revision:draft.revision});assert.notEqual(reviewed.status,200);assert.equal(sent.length,0)
+ const next=await create('deposit',902);assert.equal(next.stripeAccountId,merchant);assert.equal(sessions.get(next.checkoutSessionId).metadata.stripeAccountId,merchant)
+ assert.deepEqual(store.documents.get(old._id),original);assert.deepEqual(store.documents.get(claim._id),claim)
+ const kept=[...store.documents.values()].find(d=>d._type==='staffEmailDraft');assert.equal(kept.value.body,'My unfinished personal note.');assert.equal(kept.value.paymentRequestId,old._id);void saved
+})
+test('new merchant signed events retain pending, failed and duplicate protection and record account-specific history',async()=>{
+ activateMerchant();const deposit=await create('deposit'),session=sessions.get(deposit.checkoutSessionId)
+ session.metadata.stripeAccountId='acct_PreviousFixture'
+ assert.equal((await signed(deposit)).status,500);assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,0);assert.equal(sent.length,0)
+ session.metadata.stripeAccountId=merchant
+ await ok(await signed(deposit,{paid:false}));assert.equal((await ok(await receipt(deposit.publicToken))).state,'pending')
+ await ok(await signed(deposit,{paid:false,type:'checkout.session.async_payment_failed'}));assert.equal((await ok(await receipt(deposit.publicToken))).state,'failed')
+ await ok(await signed(deposit,{type:'checkout.session.async_payment_succeeded'}));await ok(await signed(deposit,{type:'checkout.session.async_payment_succeeded'}))
+ const records=[...store.documents.values()].filter(d=>d._type==='paymentRecord');assert.equal(records.length,1);assert.equal(records[0].stripeAccountId,merchant);assert.equal(sent.length,1)
+ const balance=await create('balance',903);assert.equal(balance.amountCents,120000);assert.equal(balance.stripeAccountId,merchant);assert.equal(store.documents.get('puppy').status,'reserved')
+})
+
+test('cutover rejects the previous webhook secret and fails closed if the new secret is missing',async()=>{
+ activateMerchant();const deposit=await create('deposit'),session=sessions.get(deposit.checkoutSessionId)
+ session.payment_status='paid';session.status='complete'
+ const payload=JSON.stringify({id:'evt_old_signature_fixture',type:'checkout.session.completed',livemode:true,data:{object:session}})
+ const signature=globalThis.fixtureStripe.webhooks.generateTestHeaderString({payload,secret})
+ const callback=()=>webhook.POST(new Request(origin+'/api/stripe/webhook',{method:'POST',headers:{'stripe-signature':signature},body:payload}))
+ assert.equal((await callback()).status,400)
+ delete process.env.FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET
+ assert.equal((await callback()).status,503)
+ assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,0);assert.equal(sent.length,0);assert.equal(store.documents.get('puppy').status,'available')
+})
+
+test('new merchant checkout and public page work with only staged credentials, without the previous keys',async()=>{
+ activateMerchant();delete process.env.STRIPE_SECRET_KEY;delete process.env.STRIPE_WEBHOOK_SECRET
+ const deposit=await create('deposit'),data=await ok(await receipt(deposit.publicToken))
+ assert.equal(data.state,'ready');assert.equal(deposit.stripeAccountId,merchant);assert.equal(sent.length,0)
+ await ok(await signed(deposit));assert.equal((await ok(await receipt(deposit.publicToken))).paidCents,40000)
 })

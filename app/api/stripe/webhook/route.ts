@@ -1,4 +1,5 @@
 import {expirePublicInventory} from '@/lib/public-inventory-cache'
+import {requireStripeMetadataAccount,stripeAccountMetadata,stripeAccountMigrationEnabled,stripeWebhookSigningSecret} from '@/lib/stripe-account'
 import {applyLitterPayment} from '@/sanity/lib/litter-reservations'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {applyLiveStaffPayment} from '@/sanity/lib/live-payment'
@@ -37,7 +38,7 @@ async function findPuppy(sanity: ReturnType<typeof getOperatorClient>, metadata:
   return matches[0]
 }
 
-async function recordCheckout(session: Stripe.Checkout.Session) {
+async function recordCheckout(session: Stripe.Checkout.Session,eventId:string) {
   if (session.payment_status !== 'paid' || !['deposit', 'manual-payment'].includes(session.metadata?.paymentType || '') || !session.metadata?.puppySlug) return
   const amountPaid = paidAmount(session.amount_total, session.currency)
   validateQuote(session.metadata, session.amount_total!)
@@ -47,7 +48,7 @@ async function recordCheckout(session: Stripe.Checkout.Session) {
   const puppy = await findPuppy(sanity, session.metadata)
   const recordId = privateRecordId('paymentCheckout', session.id)
   const transaction = sanity.transaction().createIfNotExists({
-    _id: recordId, _type: 'paymentRecord', stripeCheckoutSessionId: session.id,
+    _id: recordId, _type: 'paymentRecord',...stripeAccountMetadata(),...(stripeAccountMigrationEnabled()?{workspace:'live-v1',testOnly:false,webhookVerifiedAt:new Date().toISOString(),stripeEventId:eventId}:{}),stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : '',
     paymentType: session.metadata.paymentType, amountPaid, paymentStatus: 'paid',
     ...(session.metadata.pricingVersion==='1'?{quotedTotalCents:Number(session.metadata.totalPriceCents),quotedDepositCents:Number(session.metadata.depositCents)}:{}),
@@ -69,7 +70,7 @@ async function recordCheckout(session: Stripe.Checkout.Session) {
   await transaction.commit({visibility: 'sync'})
 }
 
-async function recordInvoice(invoice: Stripe.Invoice) {
+async function recordInvoice(invoice: Stripe.Invoice,eventId:string) {
   if (!invoice.id || !invoice.metadata?.puppySlug || invoice.amount_paid <= 0) return
   const amountPaid = paidAmount(invoice.amount_paid, invoice.currency)
   validateQuote(invoice.metadata, invoice.amount_paid)
@@ -78,7 +79,7 @@ async function recordInvoice(invoice: Stripe.Invoice) {
   if (existing) return
   const puppy = await findPuppy(sanity, invoice.metadata)
   const transaction = sanity.transaction().createIfNotExists({
-    _id: privateRecordId('paymentInvoice', invoice.id), _type: 'paymentRecord', stripeInvoiceId: invoice.id,
+    _id: privateRecordId('paymentInvoice', invoice.id), _type: 'paymentRecord',...stripeAccountMetadata(),...(stripeAccountMigrationEnabled()?{workspace:'live-v1',testOnly:false,webhookVerifiedAt:new Date().toISOString(),stripeEventId:eventId}:{}),stripeInvoiceId: invoice.id,
     paymentType: 'invoice', amountPaid, paymentStatus: 'paid', puppyId: puppy._id, litterId: puppy.litterId,
     puppySlug: invoice.metadata.puppySlug, puppyName: invoice.metadata.puppyName,
     customerName: invoice.metadata.customerName, customerEmail: invoice.metadata.customerEmail, customerPhone: invoice.metadata.customerPhone,
@@ -95,12 +96,15 @@ export async function POST(req: NextRequest) {
   if (process.env.VERCEL_ENV === 'preview') return NextResponse.json({error: 'Provider callbacks are disabled in preview.'}, {status: 503})
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing signature', {status: 400})
-  if (!process.env.STRIPE_WEBHOOK_SECRET) return new NextResponse('Webhook is not configured', {status: 503})
+  const signingSecret = stripeWebhookSigningSecret()
+  if (!signingSecret) return new NextResponse('Webhook is not configured', {status: 503})
   let event: Stripe.Event
-  try {event = getStripe().webhooks.constructEvent(await req.text(), signature, process.env.STRIPE_WEBHOOK_SECRET)} catch {return new NextResponse('Webhook Error', {status: 400})}
+  try {event = getStripe().webhooks.constructEvent(await req.text(), signature, signingSecret)} catch {return new NextResponse('Webhook Error', {status: 400})}
   if(process.env.VERCEL_ENV==='production'&&event.livemode!==true)return new NextResponse('Live events are required', {status:400})
   try {
     const session=event.data.object as Stripe.Checkout.Session
+    // Only this merchant's signed, account-tagged objects can mutate records.
+    if(event.type.startsWith('checkout.session.')||event.type==='invoice.paid')requireStripeMetadataAccount(session.metadata)
     if(event.type.startsWith('checkout.session.')&&session.metadata?.litterReservationId){const result=await applyLitterPayment(event);if(result&&'confirmationEligible' in result&&result.confirmationEligible)await ensureLivePaymentConfirmation(session.id);return NextResponse.json({received:true})}
     if(event.type.startsWith('checkout.session.')&&session.metadata?.staffPaymentRequestId&&liveWorkspaceEnabled()){
       const result=await applyLiveStaffPayment(event)
@@ -109,10 +113,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({received:true})
     }
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-      await recordCheckout(session)
+      await recordCheckout(session,event.id)
       if(session.payment_status === 'paid' && session.metadata?.paymentType === 'deposit' && session.metadata?.puppySlug) expirePublicInventory()
     }
-    if (event.type === 'invoice.paid') await recordInvoice(event.data.object as Stripe.Invoice)
+    if (event.type === 'invoice.paid') await recordInvoice(event.data.object as Stripe.Invoice,event.id)
     return NextResponse.json({received: true})
   } catch {
     // A retryable error preserves the signed event in Stripe for reconciliation; avoid logging customer payloads.

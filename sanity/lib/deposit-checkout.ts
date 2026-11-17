@@ -3,7 +3,8 @@ import {privateRecordId} from './private-records'
 import {paymentTestWorkspaceEnabled,requirePaymentTestConfiguration} from '@/lib/payment-test-mode'
 import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
-import {getStripe} from './stripe'
+import {getVerifiedStripe,depositClaimId} from './stripe-merchant'
+import {stripeAccountMetadata} from '@/lib/stripe-account'
 import {getPaymentContext,paymentMetadata,PaymentError} from './payment-context'
 type DepositLink = {
   _id: string; _rev?: string; token: string; active: boolean; expiresAt: string
@@ -14,7 +15,7 @@ type DepositLink = {
 
 export async function createDepositCheckout(context:Awaited<ReturnType<typeof getPaymentContext>>,body:{customerName?:string;customerEmail?:string;customerPhone?:string},base:string,scope:Record<string,string>={}){
  if(paymentTestWorkspaceEnabled()&&scope.staffTestOnly!=='1')throw new PaymentError('Use the isolated family workspace to request this test payment.',403)
-    const stripe = getStripe()
+    const stripe = await getVerifiedStripe()
     const {sanity, puppy, pricing, balance} = context
     if (!['available', 'hold'].includes(puppy.status) || !['current', 'active'].includes(puppy.litterStatus) || puppy.isVisible === false || puppy.litterVisible === false || balance.paidCents > 0) {
       throw new PaymentError('This puppy is not eligible for a new deposit.', 409)
@@ -26,16 +27,19 @@ export async function createDepositCheckout(context:Awaited<ReturnType<typeof ge
     if (!customerEmail && !customerPhone) throw new PaymentError('Customer email or phone is required.')
     const token = randomBytes(24).toString('hex')
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    const metadata = {...paymentMetadata(context),...scope, customerName, customerEmail, customerPhone, token, paymentType: 'deposit', chargedAmountCents: String(pricing.depositCents)}
+    const metadata = {...paymentMetadata(context),...scope,...stripeAccountMetadata(), customerName, customerEmail, customerPhone, token, paymentType: 'deposit', chargedAmountCents: String(pricing.depositCents)}
     const legacyId = `deposit-active-${createHash('sha256').update(puppy._id).digest('hex')}`
     const legacy = await sanity.getDocument<DepositLink>(legacyId)
     if (legacy?.active && (!Number.isFinite(Date.parse(legacy.expiresAt)) || Date.parse(legacy.expiresAt) > Date.now())) {
       throw new PaymentError('An earlier deposit claim exists. Reconcile or expire its Stripe checkout before creating a private replacement.', 409)
     }
-    const linkId = privateRecordId('deposit', puppy._id)
+    const linkId = depositClaimId(puppy._id)
+    // A completed selection keeps protecting the puppy across merchant changes.
+    const previousClaim = linkId !== privateRecordId('deposit',puppy._id) ? await sanity.getDocument<DepositLink>(privateRecordId('deposit',puppy._id)) : null
+    if(previousClaim?.litterCreditSelectionId)throw new PaymentError('This puppy already has an applied litter deposit. Review its existing reservation.',409)
     // One active deposit link per puppy; Sanity's conditional revision prevents competing claims.
     let link = await sanity.createIfNotExists<DepositLink>({
-      _id: linkId, _type: 'depositLink', token, active: true, expiresAt,
+      _id: linkId, _type: 'depositLink',...stripeAccountMetadata(), token, active: true, expiresAt,
       puppySlug: puppy.slug, puppyName: puppy.name, puppyId: puppy._id, litterId: puppy.litterId,
       customerName, customerEmail, customerPhone, checkoutMetadata: metadata, createdAt: new Date().toISOString(),
     })
