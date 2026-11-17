@@ -2,7 +2,8 @@ import {NextRequest, NextResponse} from 'next/server'
 import {requireOperator} from '@/lib/operator-auth'
 import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {toCents} from '@/lib/pricing'
-import {getStripe} from '@/sanity/lib/stripe'
+import {getVerifiedStripe} from '@/sanity/lib/stripe-merchant'
+import {stripeAccountMetadata} from '@/lib/stripe-account'
 import {getPaymentContext, paymentMetadata, paymentBaseUrl, paymentFailure, PaymentError} from '@/sanity/lib/payment-context'
 
 export const runtime = 'nodejs'
@@ -20,12 +21,12 @@ export async function POST(req: NextRequest) {
     const amountCents = toCents(body.amount, 'Requested payment')
     if (amountCents > balance.remainingCents) throw new PaymentError('Requested payment exceeds the outstanding balance.', 409)
     const base = paymentBaseUrl(req)
-    const session = await getStripe().checkout.sessions.create({
+    const session = await (await getVerifiedStripe()).checkout.sessions.create({
       mode: 'payment', client_reference_id: puppy._id,
       success_url: `${base}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/puppies/${encodeURIComponent(puppy.slug)}`,
       customer_email: String(body.customerEmail || '').trim() || undefined,
-      metadata: {...paymentMetadata(context), paymentType: 'manual-payment', chargedAmountCents: String(amountCents),
+      metadata: {...paymentMetadata(context),...stripeAccountMetadata(), paymentType: 'manual-payment', chargedAmountCents: String(amountCents),
         customerName: String(body.customerName || '').trim(), customerEmail: String(body.customerEmail || '').trim(), customerPhone: String(body.customerPhone || '').trim(),
         remainingBalanceCents: String(balance.remainingCents - amountCents),
       },

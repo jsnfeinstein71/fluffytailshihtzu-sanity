@@ -1,3 +1,4 @@
+import {stripeAccountMetadata,requireCurrentStripeAccount,retiredStripeRequest,requireStripeMetadataAccount} from '@/lib/stripe-account'
 import {commitFamilyRecords} from './family-lifecycle'
 import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
 import {findLiveLedger,ledgerMatches,livePaymentContext,livePaymentUrl} from './live-payment'
@@ -128,6 +129,7 @@ async function quote(family:SavedFamily,puppyId:string,kind:'deposit'|'balance')
 async function checkedPayment(id:string,family:SavedFamily,requireCurrent=true){
   const request=await getOperatorClient().getDocument<PaymentRequest>(id)
   if(!request||request._type!=='staffPaymentRequest'||request.workspace!==workspaceNamespace()||request.familyId!==family.familyKey||request._id!==workspacePaymentId(request.requestId)||request.testOnly===liveWorkspaceEnabled())throw new EmailWorkflowError('That payment request does not belong to this family.',409)
+  if(requireCurrent&&retiredStripeRequest(request))throw new EmailWorkflowError('This request belongs to the previous payment account. Its history is kept; prepare a replacement only after reviewing it.',409)
   if(!requireCurrent)return request
   if(request.litterReservationId){const current=await customerLitterPayment(request);if(current.state!=='ready')throw new EmailWorkflowError('This litter deposit request is no longer payable. Refresh its reservation before sending.',409);return request}
   if(!Number.isFinite(Date.parse(request.expiresAt))||Date.parse(request.expiresAt)<=Date.now())throw new EmailWorkflowError('This payment request has expired. Prepare a fresh request before reviewing the email.',409)
@@ -138,6 +140,7 @@ async function checkedPayment(id:string,family:SavedFamily,requireCurrent=true){
 async function checkedMessagePayment(value:EmailValue,family:SavedFamily){
  if(!value.paymentRequestId)return null
  const p=await checkedPayment(value.paymentRequestId,family,false),confirmation=value.paymentLinkPurpose==='confirmation'
+ if(retiredStripeRequest(p))throw new EmailWorkflowError('This request belongs to the previous payment account. Remove it before sending. Your personal message and files are kept.',409)
  const receipt=p.checkoutSessionId&&(liveWorkspaceEnabled()||paymentTestWorkspaceEnabled())?(p.litterReservationId?await customerLitterPayment(p):liveWorkspaceEnabled()?await customerLivePayment(p.publicToken||p.checkoutSessionId):p.publicToken?await customerTestPayment(p.publicToken):null):null
  const paid=!!p.webhookVerifiedAt||receipt?.state==='confirmed'
  if(!confirmation){
@@ -167,7 +170,8 @@ export async function loadMailbox():Promise<MailData>{
    const ledger=ledgers.find(l=>l.stripeCheckoutSessionId===p.checkoutSessionId&&l.staffFamilyId===p.familyId&&l.staffPaymentRequestId===p._id&&l.testOnly===p.testOnly&&l.workspace===p.workspace&&Math.round(l.amountPaid*100)===p.amountCents&&l.webhookVerifiedAt)
    const paid=!!p.webhookVerifiedAt||!!ledger,family=saved.find(f=>f.familyKey===p.familyId),verifiedPaidCents=p.litterReservationId?p.amountCents:(family?.profile.records||[]).reduce((sum,r)=>sum+Math.round(r.amountPaid*100),0)
    let result:PaymentRequest={...p,verifiedPaid:paid,...(paid?{verifiedPaidCents,verifiedReserved:p.litterReservationId?false:inventory.find(i=>i.id===p.puppyId)?.status==='reserved'}:{})}
-   if(liveWorkspaceEnabled()){try{result={...result,checkoutUrl:livePaymentUrl(p)}}catch{/* Unprepared link stays unavailable. */}}
+   if(retiredStripeRequest(p)){result={...result,retiredAccount:true,checkoutUrl:undefined,stripeCheckoutUrl:undefined}}
+   else if(liveWorkspaceEnabled()){try{result={...result,checkoutUrl:livePaymentUrl(p)}}catch{/* Unprepared link stays unavailable. */}}
    return result
   })
   return {litterReservationsEnabled:litterReservationsEnabled(),attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests:presentedPayments,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
@@ -192,6 +196,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
       const unsettled=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && testOnly == $testOnly && familyId == $familyId && puppyId == $puppyId && defined(checkoutSessionId) && !defined(webhookVerifiedAt)][0...21]',{workspace:workspaceNamespace(),testOnly:!liveWorkspaceEnabled(),familyId:family.familyKey,puppyId:action.puppyId},{cache:'no-store'})
       if(unsettled.length>20)throw new EmailWorkflowError('Earlier checkouts need review before requesting another payment.',409)
       for(const prior of unsettled){
+        if(retiredStripeRequest(prior))continue // Cutover requires independent closure of every previous-account payable link.
         const session=await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId!)
         // Earlier live releases recorded verified payments without stamping the
         // request. Honor that ledger without rewriting it or backfilling mail.
@@ -199,13 +204,14 @@ export async function prepareEmailAction(input:unknown,origin:string){
           const context=await livePaymentContext(session),ledger=await findLiveLedger(session.id)
           if(ledger&&ledgerMatches(ledger,context))continue
         }
+        requireCurrentStripeAccount(prior);requireStripeMetadataAccount(session.metadata)
         if(session.livemode!==liveWorkspaceEnabled()||session.payment_status==='paid'||session.status==='complete'&&prior.checkoutOutcome!=='failed')throw new EmailWorkflowError('An earlier Stripe payment is awaiting confirmation. Do not request or pay again; review that payment first.',409)
       }
     }
     const details=await quote(family,action.puppyId,action.kind)
     if(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled()){
       const pending=await client.fetch<PaymentRequest[]>('*[_type == "staffPaymentRequest" && workspace == $workspace && testOnly == $testOnly && familyId == $familyId && puppyId == $puppyId && kind == $kind && expiresAt > $now] | order(createdAt desc)[0...1]',{workspace:workspaceNamespace(),testOnly:!liveWorkspaceEnabled(),familyId:family.familyKey,puppyId:action.puppyId,kind:action.kind,now:new Date().toISOString()},{cache:'no-store'})
-      if(pending[0]&&Object.entries(details).every(([key,value])=>pending[0][key as keyof PaymentRequest]===value)){
+      if(pending[0]&&!retiredStripeRequest(pending[0])&&Object.entries(details).every(([key,value])=>pending[0][key as keyof PaymentRequest]===value)){
         const prior=pending[0],session=prior.checkoutSessionId?await getStripe().checkout.sessions.retrieve(prior.checkoutSessionId):null
         if(session?.status!=='expired')return {preparedPaymentId:prior._id}
         await client.patch(prior._id).set({expiresAt:new Date().toISOString()}).commit({visibility:'sync'})
@@ -213,7 +219,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
         if(link)await client.patch(link._id).set({active:false,expiresAt:new Date().toISOString()}).commit({visibility:'sync'})
       }
     }
-    const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...(liveWorkspaceEnabled()||approvedTestCustomer(family.profile)||litterReservationsEnabled()&&family.profile.paymentTestScenario?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
+    const record:PaymentRequest={_id:workspacePaymentId(action.requestId),_type:'staffPaymentRequest',...stripeAccountMetadata(),...(liveWorkspaceEnabled()||approvedTestCustomer(family.profile)||litterReservationsEnabled()&&family.profile.paymentTestScenario?{publicToken:randomBytes(24).toString('hex')}:{}),workspace:workspaceNamespace(),familyId:action.familyId,requestId:action.requestId,puppyId:action.puppyId,kind:action.kind,...details,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),testOnly:!liveWorkspaceEnabled()}
     await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists(record),[record._id],true)
     const stored=await checkedPayment(record._id,family)
     if(stored.puppyId!==record.puppyId||stored.kind!==record.kind)throw new EmailWorkflowError('That request ID already belongs to a different payment request.',409)
@@ -328,5 +334,6 @@ async function paymentTransport(action:{type:'checkout'|'verify';familyId:string
   return {}
 }
 function verifySession(session:Awaited<ReturnType<ReturnType<typeof getStripe>['checkout']['sessions']['retrieve']>>,request:PaymentRequest,family:SavedFamily){
+ requireCurrentStripeAccount(request);requireStripeMetadataAccount(session.metadata)
  if(session.livemode!==liveWorkspaceEnabled()||!session.id.startsWith(liveWorkspaceEnabled()?'cs_live_':'cs_test_')||session.currency!=='usd'||session.amount_total!==request.amountCents||session.metadata?.staffTestOnly!==(liveWorkspaceEnabled()?'0':'1')||session.metadata.staffFamilyId!==family.familyKey||session.metadata.staffPaymentRequestId!==request._id||session.metadata.puppyId!==request.puppyId||session.metadata.customerEmail!==family.profile.email)throw new EmailWorkflowError('Stripe test mode, amount or family association did not match. Review the provider record.',409)
 }

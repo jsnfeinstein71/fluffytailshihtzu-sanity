@@ -3,7 +3,8 @@ import {requireOperator} from '@/lib/operator-auth'
 import {operationalWriteFreeze} from '@/sanity/lib/write-freeze'
 import {privateRecordId} from '@/sanity/lib/private-records'
 import {toCents} from '@/lib/pricing'
-import {getStripe} from '@/sanity/lib/stripe'
+import {getVerifiedStripe} from '@/sanity/lib/stripe-merchant'
+import {stripeAccountMetadata} from '@/lib/stripe-account'
 import {getPaymentContext, paymentMetadata, paymentFailure, PaymentError} from '@/sanity/lib/payment-context'
 
 export const runtime = 'nodejs'
@@ -20,11 +21,11 @@ export async function POST(req: NextRequest) {
     const context = await getPaymentContext(String(body.puppySlug || '').trim())
     const {sanity, puppy, pricing, balance, records} = context
     if (!balance.remainingCents) throw new PaymentError('This puppy has already been paid in full.', 409)
-    const metadata = {...paymentMetadata(context), paymentType: 'invoice', customerEmail,
+    const metadata = {...paymentMetadata(context),...stripeAccountMetadata(), paymentType: 'invoice', customerEmail,
       customerName: String(body.customerName || '').trim(), customerPhone: String(body.customerPhone || '').trim(),
       chargedAmountCents: String(balance.remainingCents),
     }
-    const stripe = getStripe()
+    const stripe = await getVerifiedStripe()
     const customer = await stripe.customers.create({name: metadata.customerName || undefined, email: customerEmail, phone: metadata.customerPhone || undefined, metadata})
     await stripe.invoiceItems.create({customer: customer.id, currency: 'usd', amount: pricing.totalCents, description: `${puppy.name} total price - ${puppy.litterTitle}`})
     for (const record of records) {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (!invoice.id) throw new Error('Invoice ID unavailable.')
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id)
     if (finalized.amount_due !== balance.remainingCents || finalized.currency !== 'usd') throw new Error('Stripe invoice amount does not match the server balance.')
-    await sanity.create({_id: privateRecordId('invoice'), _type: 'invoiceRecord', createdAt: new Date().toISOString(), stripeInvoiceId: finalized.id, stripeCustomerId: customer.id,
+    await sanity.create({_id: privateRecordId('invoice'), _type: 'invoiceRecord',...stripeAccountMetadata(), createdAt: new Date().toISOString(), stripeInvoiceId: finalized.id, stripeCustomerId: customer.id,
       hostedInvoiceUrl: finalized.hosted_invoice_url || '', status: finalized.status || '',
       puppySlug: puppy.slug, puppyName: puppy.name, puppyId: puppy._id, litterId: puppy.litterId,
       customerName: metadata.customerName, customerEmail, customerPhone: metadata.customerPhone,

@@ -1,4 +1,5 @@
 import {paymentCopy} from '@/lib/public-copy'
+import {requireStripeMetadataAccount} from '@/lib/stripe-account'
 import {redirect} from 'next/navigation'
 import {liveWorkspaceEnabled} from '@/lib/workspace-mode'
 import {livePaymentContext,livePaymentUrl} from '@/sanity/lib/live-payment'
@@ -32,6 +33,7 @@ export default async function PaymentSuccessPage({searchParams}: {searchParams: 
   if (typeof sessionId === 'string' && /^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
     try {
       const session = await getStripe().checkout.sessions.retrieve(sessionId)
+      requireStripeMetadataAccount(session.metadata)
       if (session.payment_status === 'paid' && session.currency === 'usd' && session.amount_total && Number.isSafeInteger(session.amount_total) && session.amount_total > 0 && ['deposit', 'manual-payment'].includes(session.metadata?.paymentType || '')) {
         amount = session.amount_total / 100
         deposit = session.metadata?.paymentType === 'deposit'

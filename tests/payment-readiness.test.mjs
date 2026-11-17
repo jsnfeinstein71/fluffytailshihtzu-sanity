@@ -29,6 +29,9 @@ test('history distinguishes verified live, test and legacy records and uses safe
  const record={paymentStatus:'paid',amountPaid:400,paymentType:'deposit',testOnly:false,workspace:'live-v1',webhookVerifiedAt:'2026-11-14T12:00:00Z',stripePaymentIntentId:'pi_fixture123'}
  assert.equal(paymentRecordLabel(record),'Live payment confirmed');assert.equal(stripeTransactionLink(record),'https://dashboard.stripe.com/payments/pi_fixture123')
  assert.equal(paymentRecordLabel({...record,testOnly:true,workspace:'review-v1'}),'Test payment confirmed');assert.match(stripeTransactionLink({...record,testOnly:true,workspace:'review-v1'}),/\/test\/payments\//)
+ assert.equal(stripeTransactionLink({...record,stripeAccountId:'acct_JeanneFixture'}),'https://dashboard.stripe.com/acct_JeanneFixture/payments/pi_fixture123')
+ assert.equal(stripeTransactionLink({...record,stripeAccountId:'acct_JeanneFixture',testOnly:true,workspace:'review-v1'}),'https://dashboard.stripe.com/acct_JeanneFixture/test/payments/pi_fixture123')
+ assert.equal(stripeTransactionLink({...record,stripeAccountId:'../bad'}),null)
  assert.equal(paymentRecordLabel({paymentStatus:'paid',amountPaid:400}),'Payment recorded');assert.equal(stripeTransactionLink({paymentStatus:'paid',amountPaid:400,stripePaymentIntentId:'pi_fixture'}),null)
  assert.equal(stripeTransactionLink({...record,stripePaymentIntentId:'https://evil.example'}),null);assert.equal(stripeTransactionLink({...record,testOnly:true}),null)
  const markup=renderToStaticMarkup(React.createElement(Payments,{family:{id:'fictional',records:[record]},email:{data:{paymentRequests:[]}}}))
