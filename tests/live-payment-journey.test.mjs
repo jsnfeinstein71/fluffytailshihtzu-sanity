@@ -126,7 +126,7 @@ test('verified staff deposit expires public inventory only after commit',async()
 
 const merchant='acct_JeanneFixture'
 function activateMerchant(){
- Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:merchant,STRIPE_LEGACY_LINKS_CLOSED:'1',FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:'whsec_new_merchant_fixture_only'})
+ Object.assign(process.env,{FLUFFYTAIL_STRIPE_ACCOUNT_MIGRATION:'1',STRIPE_ACCOUNT_ID:merchant,STRIPE_LEGACY_LINKS_CLOSED:'1',FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET:'whsec_new_merchant_fixture_only',FLUFFYTAIL_JEANNE_STRIPE_SECRET_KEY:'rk_live_new_merchant_fixture_only'})
  globalThis.fixtureStripe.accounts={retrieve:async()=>({id:merchant,charges_enabled:true,payouts_enabled:true,details_submitted:true,requirements:{currently_due:[],past_due:[],disabled_reason:null}})}
 }
 test('merchant cutover blocks the wrong key and incomplete payout activation before any Checkout is created',async()=>{
@@ -175,4 +175,11 @@ test('cutover rejects the previous webhook secret and fails closed if the new se
  delete process.env.FLUFFYTAIL_JEANNE_STRIPE_WEBHOOK_SECRET
  assert.equal((await callback()).status,503)
  assert.equal([...store.documents.values()].filter(d=>d._type==='paymentRecord').length,0);assert.equal(sent.length,0);assert.equal(store.documents.get('puppy').status,'available')
+})
+
+test('new merchant checkout and public page work with only staged credentials, without the previous keys',async()=>{
+ activateMerchant();delete process.env.STRIPE_SECRET_KEY;delete process.env.STRIPE_WEBHOOK_SECRET
+ const deposit=await create('deposit'),data=await ok(await receipt(deposit.publicToken))
+ assert.equal(data.state,'ready');assert.equal(deposit.stripeAccountId,merchant);assert.equal(sent.length,0)
+ await ok(await signed(deposit));assert.equal((await ok(await receipt(deposit.publicToken))).paidCents,40000)
 })

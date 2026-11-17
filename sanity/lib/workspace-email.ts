@@ -1,4 +1,4 @@
-import {stripeAccountMetadata,requireCurrentStripeAccount,retiredStripeRequest,requireStripeMetadataAccount} from '@/lib/stripe-account'
+import {stripeAccountMetadata,requireCurrentStripeAccount,retiredStripeRequest,requireStripeMetadataAccount,stripeServerSecretKey} from '@/lib/stripe-account'
 import {commitFamilyRecords} from './family-lifecycle'
 import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
 import {findLiveLedger,ledgerMatches,livePaymentContext,livePaymentUrl} from './live-payment'
@@ -300,7 +300,7 @@ async function paymentTransport(action:{type:'checkout'|'verify';familyId:string
   requireWorkspace()
   if(liveWorkspaceEnabled()&&origin!==requireLivePaymentConfiguration())throw new EmailWorkflowError('Open payments on the real FluffyTail website.',409)
   if(paymentTestWorkspaceEnabled()){const canonical=requirePaymentTestConfiguration();if(origin!==canonical)throw new EmailWorkflowError('Open payment testing from its stable entry address.',409)}
-  if(!paymentTestWorkspaceEnabled()&&(liveWorkspaceEnabled()?!/^(?:sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY||''):(process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED!=='1'||! /^(?:sk|rk|rkcs)_test_/.test(process.env.STRIPE_SECRET_KEY||''))))throw new EmailWorkflowError('Stripe test checkout is not configured. No live payment can be created.',503)
+  if(!paymentTestWorkspaceEnabled()&&(liveWorkspaceEnabled()?!/^(?:sk|rk)_live_/.test(stripeServerSecretKey()||''):(process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED!=='1'||! /^(?:sk|rk|rkcs)_test_/.test(stripeServerSecretKey()||''))))throw new EmailWorkflowError('Stripe checkout is not configured. No payment was created.',503)
   if(family.profile.source!=='inquiry')throw new EmailWorkflowError('Connect a saved inquiry family before using Stripe test checkout.',409)
   const request=await checkedPayment(action.paymentRequestId,family,action.type==='checkout')
  if(request.litterReservationId){await reconcileLitterHold(request.litterReservationId);return {}}
