@@ -95,3 +95,20 @@ processing the other two puppies. This authorizes this focused photo release.
 
 Evaluate this first profile before deciding how to manage future approved
 cutouts in Sanity or expanding the treatment to listing cards.
+
+## Hugo, Klaus and Luis website refresh — November 19, 2026
+
+The owner supplied three finished 1254 × 1254 transparent PNGs and requested
+publication. Their exact bytes, hands, fur edges and wrist fades are preserved:
+
+- `hugo-11-18-26.png` → `public/puppies/hugo-profile-2026-11.png`
+- `klaus-11-18-26.png` → `public/puppies/klaus-profile-2026-11.png`
+- `luis-12-18-26.png` → `public/puppies/luis-profile-2026-11.png`
+
+The Luis source filename is retained here as supplied; its date is not treated
+as the capture date. Each replacement uses the existing permanent puppy ID and
+current Sanity source-image guard. Shared cards, detail pages, inquiry previews
+and social images receive the replacement through the existing portrait helper.
+A future Main Image change still supersedes the website override. Studio's Main
+Image and all puppy records remain unchanged; no Sanity write credential is
+required. Connie's previously published replacement is preserved.
