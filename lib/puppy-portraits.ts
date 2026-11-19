@@ -1,8 +1,8 @@
 import type {Puppy} from './inventory'
 
-// Owner-approved Photoshop exports. Match both the puppy and its original
+// Owner-approved transparent exports. Match both the puppy and its original
 // image so a future Sanity photo update automatically replaces an older portrait.
-const portraits: Record<string, {sourcePhotoUrl: string; src: string}> = {
+const portraits: Record<string, {sourcePhotoUrl: string; src: string; previousCdnUrl?: string}> = {
   '136dcb97-3aaf-41dd-9a5d-b5fe194d629e': {
     sourcePhotoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/3fa2bdd49dd9673a24c8a16ead795e9bb514b52b-2048x1984.jpg',
     src: '/puppies/elsie-girl2-profile-v2.png',
@@ -22,8 +22,9 @@ const portraits: Record<string, {sourcePhotoUrl: string; src: string}> = {
     src: 'https://cdn.sanity.io/images/3glz6dkx/production/c27a1020b482919d99c0041e1003d346f8262868-1254x1254.png',
   },
   'b6f038ba-f581-4373-9451-0e3b7f41d46e': {
-    sourcePhotoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/573e48baf9d144e2b39fb43ccec95396d9cab604-1254x1254.png',
-    src: 'https://cdn.sanity.io/images/3glz6dkx/production/573e48baf9d144e2b39fb43ccec95396d9cab604-1254x1254.png',
+    sourcePhotoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/f56495d61f995e286ae2d03d14931d64014525db-1254x1254.png',
+    src: 'https://cdn.sanity.io/images/3glz6dkx/production/f56495d61f995e286ae2d03d14931d64014525db-1254x1254.png',
+    previousCdnUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/573e48baf9d144e2b39fb43ccec95396d9cab604-1254x1254.png',
   },
   '293b3662-1b69-4f9c-bf0c-26131fe942ad': {
     sourcePhotoUrl: 'https://cdn.sanity.io/images/3glz6dkx/production/ea309af20e7d513689e95e6e7ea4bf511f8c60f6-1254x1254.png',
@@ -49,5 +50,8 @@ const portraits: Record<string, {sourcePhotoUrl: string; src: string}> = {
 
 export function getPuppyProfilePortrait(puppy: Pick<Puppy, '_id' | 'photoUrl'>) {
   const portrait = portraits[puppy._id]
-  return portrait && portrait.sourcePhotoUrl === puppy.photoUrl ? portrait.src : null
+  if (!portrait) return null
+  if (portrait.sourcePhotoUrl === puppy.photoUrl) return portrait.src
+  if (portrait.previousCdnUrl && portrait.previousCdnUrl === puppy.photoUrl) return portrait.previousCdnUrl
+  return null
 }
