@@ -12,7 +12,7 @@ Fresh release verification ran the complete suite: **406 passed, 2 skipped, 0 fa
 
 Live staff verification requires an owner passkey session; the current cloud browser reaches the correct protected unlock screen. No recovery credential, bypass session or replacement passkey is created for testing. A real invitation delivery test has not occurred and must not be described as proven by fictional transport tests. Real family invitations remain deliberate staff actions.
 
-The Good Dog migration is still distinct from feature release. The terms inspected during release retain the copying/collection restrictions described below; the owner's customer relationship does not itself establish authorship of customer-written content. No Good Dog story has been imported or published in this release. Original material supplied directly by the owner/author can be processed through the existing private import helper with accurate provenance; uncertain rights must not be recorded as confirmed facts.
+At the initial feature release, no Good Dog story had been imported or published. The subsequent owner-directed import and recorded reuse authorization are documented below. They remain a separate Preview review follow-up; no Good Dog story has been published to production.
 
 ## Review addresses and records
 
@@ -21,6 +21,7 @@ The Good Dog migration is still distinct from feature release. The terms inspect
 - Customer form: `/feedback`, accessible only through a valid private invitation.
 - Isolated storage: `gu1xkpsg`, dataset `synthetic`.
 - New fictional families: **Casey Review — TEST** and **Robin Review — TEST**. Existing Rowan/Juniper, payment tests and conversations are preserved.
+- The owner-authorized Good Dog follow-up adds **10 actual source texts as private review copies**, with no family matches or imported photographs. Only the Casey/Robin fictional stories are public in this Preview.
 - Email/SMS sending and mailbox synchronization are disabled in this Preview. No Stripe credentials or payment activation are added.
 
 ## Staff workflow
@@ -46,14 +47,17 @@ The previously paused historical privacy migration remains separate and unchange
 
 ## Existing Good Dog feedback
 
-The existing FluffyTail profile was located at `https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama`; it reports 10 owner stories. No original reviews, photos or family matches were copied into this Preview or published.
+The owner-authorized follow-up imported the **10 owner-story texts** from the existing [FluffyTail Good Dog profile](https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama) into authenticated **private review only**, using the signed-in source profile and its displayed metadata. These are actual source texts, not fictional customer feedback. They are not public stories and have not been matched to any family record. No Good Dog photographs were copied or imported.
 
-The current [Good Dog terms](https://www.gooddog.com/terms-of-service), sections 3.10.20–3.10.23 and 4.3–4.4, restrict commercial copying/collections and distinguish content ownership. No permitted export or reuse authorization was available. Being the subject of a customer's review does not establish ownership of their text/photo. This is the specific import blocker, not a technical failure.
+Each private record preserves the original wording, displayed attribution and source date precision, plus provenance and a stable source fingerprint for duplicate detection. A displayed November or August month remains that month and year; no day is invented. Missing dates stay unknown. Staff and public source-date rendering share the same precision-aware formatter so local timezones cannot shift a month-only date to the preceding month. Repeating an import with the same source fingerprint reuses the existing record; it cannot replace a different original.
 
-Practical paths:
+Initial import readback confirmed all **10 private records**, with exact source months ranging from **February 2024 through August 2026**, no family IDs, no photos, and `publicationAllowed: false` at that checkpoint. All **208 records present immediately before this import remained unchanged**. Anonymous queries returned **zero** of these private records and **zero corresponding public stories**. A second import changed no record revisions.
 
-- Invite an existing known family through FluffyTail to submit its own feedback/photo directly.
-- Obtain a permitted source export or a copy supplied by the author with reuse permission. Record the original wording, displayed date (leave unknown dates unknown), attribution, original source ID/URL and permission evidence. Import into private review first; never match to a family by name alone. The import helper deduplicates by source/source ID and rejects attempts to overwrite a different original.
+The owner subsequently **approved reuse of these reviews from FluffyTail's own customers** and **declined contact with Good Dog**. That decision is the authorization for preparing the 10 records for publication review; no additional Good Dog-contact approval is pending and no support inquiry has been sent.
+
+The permission follow-up records the owner's attestation separately from each untouched original, with an identified actor, timestamp and audit history, and changes **`publicationAllowed` to `true`**. Readback confirmed all **10 publication-ready records remain Private**, with one owner-authorization audit each, no public projections, and zero anonymous access. Repeating the authorization changed no revisions. All original text, attribution, source months and provenance remained unchanged, as did the 208 pre-import records. The initial `false` state remains part of the historical import evidence.
+
+The audit identifies the evidence accurately as **owner approval/attestation**. It does not claim an author-specific written permission certificate, Good Dog approval, or independent proof of rights ownership. No source photographs are imported under this action, and no family association is inferred from a matching name. The owner can select the final excerpts, order and featured stories in the private review workspace before any separately approved public release.
 
 The homepage testimonial link now stays on FluffyTail. The unrelated Contact-page **FluffyTail on GoodDog** referral link is inventoried and left unchanged. Stored Sanity GoodDog URL fields are not edited.
 
@@ -67,7 +71,7 @@ Production remains unchanged. A future approved release would enable the feature
 
 ## Verification
 
-Checked the hosted Preview through `1b3c6b1` on November 20, 2026. Automated checks: **408 tests passed**, TypeScript passed, ESLint had **0 errors and 16 existing warnings**, and the Vercel build succeeded. The tests use isolated records and fictional providers; they do not demonstrate real invitation delivery.
+Checked the hosted Preview through `1b3c6b1` on November 20, 2026, then deployed the import/date follow-up **`33718be`** to the same alias after a successful Vercel build. The current full suite has **411 passing tests**; TypeScript passed and ESLint had **0 errors and 16 existing warnings**. Hosted **Feedback → Private** shows all 10 imported stories, their exact month/year source dates, dated owner reuse approval and 10 enabled Publish controls. None was published automatically. Desktop 1,440 px and phone 375 px checks found no horizontal overflow; screenshots were saved privately. The tests use isolated records and fictional providers; they do not demonstrate real invitation delivery.
 
 Hosted results:
 
@@ -76,10 +80,10 @@ Hosted results:
 - Robin's personal email text followed immediately by **Invite feedback** saved without a false conflict. After refreshing, the personal text and approved invitation wording remained in the branded preview. The Send control stayed disabled; no message was submitted.
 - At **375 px** phone width, the Feedback area, family conversation and Details panel were exercised through the visible controls. The invitation form and public story/photo presentation were reviewed at phone and desktop widths. Page scroll widths were **360 px at a 375 px viewport** and **1,425 px at a 1,440 px viewport**, with no horizontal overflow. Desktop staff and full-page mobile story screenshots were captured.
 - Permanent family deletion was blocked with an explicit feedback-history explanation. Archiving only the new fictional Robin family retained its published story; Robin was then restored and its drafts were confirmed intact. No preserved test family was archived or deleted.
-- The **194 pre-existing synthetic records remained unchanged**. Tests used only the two newly created feedback-review families and their linked records. Production customer, payment, reservation and staff-access records were not changed.
+- At the pre-import verification checkpoint, the **194 pre-existing synthetic records remained unchanged**. Mutation tests used only the two newly created feedback-review families and their linked records. The separately authorized follow-up adds private source-review records; it does not edit those preserved records. Production customer, payment, reservation and staff-access records were not changed.
 
 Three concrete browser findings were corrected and rechecked: opening a different invitation in the same tab now clears the previous invitation's form state and ignores stale responses; native browser `fetch` is bound to its window instead of the options object; and an invitation save queued behind autosave advances only through revisions confirmed by that same browser. Real other-tab edits still produce a conflict, and clearing a sent draft cannot overwrite newer writing.
 
 The positive email-handler regression exercises save → review → dispatch with the fictional provider, checks HTML/plain-text alternatives and reply threading, and confirms a repeated dispatch produces only one accepted attempt/receipt. Its status remains **delivery unconfirmed**; acceptance does not mark the invitation submitted or publish a story. Revoked, expired and wrong-family invitations are rejected at send time, including pasted links. Preview email/SMS sends and mailbox reads remain disabled regardless of provider settings.
 
-No customer send, payment, reservation change or historical import is part of this review. Actual Pair/Twilio invitation delivery and any production enablement remain outside this phase's authorization.
+No customer send, payment, reservation change or unrelated operational-history migration is part of this review. The 10 private Good Dog source copies remain separate from public publication and family history. Actual Pair/Twilio invitation delivery and any production enablement remain outside this phase's authorization.
