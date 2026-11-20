@@ -3,6 +3,7 @@ import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react'
 import {emptyEmail,sameEmail,type EmailDraft,type EmailValue,type MailAction,type MailData,type MailResult,type TransportAction} from './email-model'
 import {attachmentLimits,type EmailAttachment} from '@/lib/mail/attachment-model'
 import {sendEmailDraft} from './send-draft'
+import {createEmailSaveRevisions} from './email-save-revisions'
 type Entry={value:EmailValue;base:EmailValue;revision:string|null;conflict?:EmailDraft}
 export function useEmailWorkspace(ready:boolean){
   const [data,setData]=useState<MailData|null>(null)
@@ -15,6 +16,7 @@ export function useEmailWorkspace(ready:boolean){
   const [error,setError]=useState('')
   const [busy,setBusy]=useState(false)
   const flight=useRef<Promise<unknown>|null>(null)
+  const localRevisions=useRef(createEmailSaveRevisions())
   const sending=useRef(false)
   const paymentFlow=useRef(false)
   const [paymentBusy,setPaymentBusy]=useState(false)
@@ -42,6 +44,7 @@ export function useEmailWorkspace(ready:boolean){
   const request=useCallback(async(action?:MailAction|TransportAction,clearFrom?:EmailValue,background=false):Promise<MailResult|null>=>{
     if(background&&(flight.current||sending.current||paymentFlow.current||uploading.current))return null
     while(flight.current)await flight.current
+    action=localRevisions.current.advance(action,clearFrom)
     let release!:()=>void
     flight.current=new Promise<void>(resolve=>{release=resolve})
     if(!background){setBusy(true);setError('')}
@@ -54,6 +57,7 @@ export function useEmailWorkspace(ready:boolean){
         throw new Error(result.error||'The email action could not be confirmed. Your entries are kept.')
       }
       if(background)setError('')
+      localRevisions.current.confirmed(action,action?.type==='save'?result.drafts.find(draft=>draft.familyId===action.familyId):undefined)
       merge(result,action,clearFrom);return result
     }catch(cause){setError(cause instanceof Error&&!['TimeoutError','TypeError','SyntaxError'].includes(cause.name)?cause.message:'The email connection is unavailable or timed out. Your entries are kept. Reconnect and retry to confirm the saved result.');return null}
     finally{flight.current=null;release();if(!background)setBusy(false)}

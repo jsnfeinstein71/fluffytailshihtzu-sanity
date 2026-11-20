@@ -10,6 +10,7 @@ const {emailDraftId}=await import('../sanity/lib/workspace-email.ts')
 const {feedbackEmailPatch}=await import('../lib/mail/feedback-email.ts')
 const {emptyEmail}=await import('../app/inbox/workspace/email-model.ts')
 const {getMailProvider}=await import('../sanity/lib/mail-provider.ts')
+const {createEmailSaveRevisions}=await import('../app/inbox/workspace/email-save-revisions.ts')
 const auth='Basic '+Buffer.from('fixture-operator:fixture-only-password').toString('base64'),origin='http://localhost:3100'
 const req=(path,body)=>new Request(origin+path,{method:'POST',headers:{authorization:auth,origin,'content-type':'application/json'},body:JSON.stringify(body)})
 const send=body=>POST(req('/inbox/workspace/api/email',body))
@@ -75,4 +76,24 @@ test('feedback save, review and dispatch accepts once through the fictional prov
   assert.equal(store.documents.get(emailDraftId('avery')).value.body,value.body)
   assert.equal(store.documents.get(created.invitation.id).usedAt,undefined,'Provider acceptance is not feedback submission')
  }finally{delete globalThis.fixtureMailProvider}
+})
+test('Invite feedback queued behind this browser autosave preserves text without masking real other-tab conflicts',async()=>{
+ const revisions=createEmailSaveRevisions(),created=await createFeedbackInvitation('avery','10000000-0000-4000-8000-000000000009')
+ const personal=emptyEmail('Casey, this is my personal note typed immediately before inviting you.'),attached={...personal,...feedbackEmailPatch(personal,created.invitation.id)}
+ const autosave={type:'save',familyId:'avery',revision:null,value:personal},queued={type:'save',familyId:'avery',revision:null,value:attached}
+ const first=await send(autosave);assert.equal(first.status,200);const firstDraft=(await first.json()).drafts.find(d=>d.familyId==='avery');revisions.confirmed(autosave,firstDraft)
+ const rebased=revisions.advance(queued,attached);assert.equal(rebased.revision,firstDraft.revision)
+ const prepared=await send(rebased);assert.equal(prepared.status,200,await prepared.clone().text());const preparedDraft=(await prepared.json()).drafts.find(d=>d.familyId==='avery');revisions.confirmed(rebased,preparedDraft)
+ assert.equal(preparedDraft.value.body,attached.body);assert.equal(preparedDraft.value.feedbackInvitationId,created.invitation.id)
+ // A real other tab writes after our own last successful save. Its revision is
+ // never added to this browser's successful-save chain.
+ const remote=await send({type:'save',familyId:'avery',revision:preparedDraft.revision,value:{...attached,body:'A different tab wrote this.'}});assert.equal(remote.status,200)
+ const nextLocal=revisions.advance({...queued,value:{...attached,body:attached.body+'\nMy next edit.'}})
+ assert.equal(nextLocal.revision,preparedDraft.revision)
+ const conflict=await send(nextLocal);assert.equal(conflict.status,409);assert.match((await conflict.json()).error,/another tab/)
+ assert.equal(store.documents.get(emailDraftId('avery')).value.body,'A different tab wrote this.')
+ // Send cleanup must retain its exact old CAS revision, even if this browser
+ // subsequently saved new personal writing.
+ const clear={...autosave,revision:firstDraft.revision,value:{...personal,body:'',feedbackInvitationId:null}}
+ assert.equal(revisions.advance(clear,personal).revision,firstDraft.revision)
 })
