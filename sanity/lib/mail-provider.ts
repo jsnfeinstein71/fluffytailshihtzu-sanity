@@ -21,6 +21,7 @@ export function ownerTestConfigured(){return process.env.FLUFFYTAIL_MAIL_MODE===
 export function emailRecipient(profileEmail:string){return ownerTestConfigured()?jeanneEmail:profileEmail}
 
 export function getMailCapabilities():MailCapabilities{
+  if(process.env.FLUFFYTAIL_FEEDBACK_PREVIEW==='1')return {provider:'disabled',canDispatch:false,canSync:false}
   if(paymentTestWorkspaceEnabled()){const contacts=testCustomerContacts(),credentials=!!contacts&&process.env.FLUFFYTAIL_MAIL_MODE==='pair-test-customer'&&!!process.env.FLUFFYTAIL_TEST_PAIR_MAIL_PASSWORD;return {provider:credentials?'pair':'disabled',canDispatch:credentials&&process.env.FLUFFYTAIL_TEST_PAIR_SEND_ENABLED==='1',canSync:credentials&&process.env.FLUFFYTAIL_TEST_PAIR_READ_ENABLED==='1',...(contacts?{approvedTestEmail:contacts.email}:{})}}
   if(liveWorkspaceEnabled()&&process.env.FLUFFYTAIL_MAIL_MODE==='pair'){const credentials=!!process.env.FLUFFYTAIL_PAIR_MAIL_PASSWORD;return {provider:'pair',canDispatch:credentials&&process.env.FLUFFYTAIL_PAIR_SEND_ENABLED==='1',canSync:credentials&&process.env.FLUFFYTAIL_PAIR_READ_ENABLED==='1'}}
   if(process.env.FLUFFYTAIL_MAIL_MODE==='fictional'){

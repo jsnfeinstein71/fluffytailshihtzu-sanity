@@ -52,6 +52,7 @@ export default function SiteChrome({children}: {children: ReactNode}) {
         </div>
         <nav aria-label="Explore FluffyTail">
           <Link href="/available-puppies">Our puppies</Link>
+          <Link href="/our-families">Our families</Link>
           <Link href="/the-breed">About the breed</Link>
           <Link href="/puppy-resources">Getting ready for home</Link>
           <Link href="/contact">Contact Jeanne</Link>

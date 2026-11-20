@@ -1,3 +1,4 @@
+import {invitationInText} from './feedback'
 import {commitFamilyRecords,persistInbound} from './family-lifecycle'
 import {approvedTestCustomer,testCustomerContacts,testSmsConsentText} from '@/lib/test-customer'
 import 'server-only'
@@ -11,6 +12,7 @@ import type {SavedFamily} from '@/app/inbox/workspace/persistence'
 
 export async function refreshWorkspaceSms(familyId:string){
  requireWorkspace()
+ if(process.env.FLUFFYTAIL_FEEDBACK_PREVIEW==='1')return
  if(!liveWorkspaceEnabled()){await refreshTestCustomerSms(familyId);return}
  const client=getOperatorClient()
  const records=await client.fetch<{_id:string;_rev:string;messageSid:string;from:string;to:string;statusCheckedAt?:number}[]>('*[_type == "smsMessage" && workspace == $workspace && familyId == $familyId && direction == "outbound" && status == "accepted" && delivery == "unconfirmed" && defined(messageSid)] | order(receivedAt desc)[0...5]',{workspace:workspaceNamespace(),familyId},{cache:'no-store'})
@@ -27,6 +29,7 @@ export async function refreshWorkspaceSms(familyId:string){
 
 export async function submitWorkspaceSms(input:unknown){
  requireWorkspace()
+ if(process.env.FLUFFYTAIL_FEEDBACK_PREVIEW==='1')throw new WorkspaceError('Messages are disabled in this feedback Preview. Your draft is kept.',403)
  if(!liveWorkspaceEnabled()&&(!testCustomerContacts()||process.env.FLUFFYTAIL_TEST_SMS_ENABLED!=='1'))throw new WorkspaceError('SMS sending is unavailable in Preview.',503)
  const data=input as {familyId?:string;body?:string;confirmed?:boolean}
  if(!data||Object.keys(data).some(k=>!['familyId','body','confirmed'].includes(k))||!validFamilyKey(data.familyId)||typeof data.body!=='string'||!data.body.trim()||data.body.length>1600||data.confirmed!==true)throw new WorkspaceError('Confirm a saved text message before sending.')
@@ -41,8 +44,9 @@ export async function submitWorkspaceSms(input:unknown){
  const optOut=await client.fetch<{body:string;optOutType?:string}|null>('*[_type == "smsMessage" && direction == "inbound" && (signatureVerified == true || providerVerified == true) && from == $to && (optOutType in ["STOP","START"] || lower(body) in ["stop","stopall","unsubscribe","cancel","end","quit","start","unstop"])] | order(receivedAt desc)[0]{body,optOutType}',{to},{cache:'no-store'})
  if(optOut&&(optOut.optOutType==='STOP'||!['start','unstop'].includes(optOut.body.trim().toLowerCase())&&optOut.optOutType!=='START'))throw new WorkspaceError('This number has opted out. Do not text it.',403)
  if(!liveWorkspaceEnabled())await refreshTestCustomerSms(family.familyKey)
+ const feedback=await invitationInText(family.familyKey,data.body)
  const twilio=liveWorkspaceEnabled()?getTwilio():getTestCustomerTwilio(),id=privateRecordId('staffSms',`${workspaceNamespace()}:${family.familyKey}:${family.textVersion||0}`)
- await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists({_id:id,_type:'smsMessage',workspace:workspaceNamespace(),familyId:family.familyKey,from:liveWorkspaceEnabled()?process.env.TWILIO_FROM_NUMBER:process.env.FLUFFYTAIL_TEST_TWILIO_FROM_NUMBER,to,body:data.body,direction:'outbound',source:'fluffytail',status:'prepared',delivery:'unconfirmed',receivedAt:new Date().toISOString()}),[id],true)
+ await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists({_id:id,_type:'smsMessage',workspace:workspaceNamespace(),familyId:family.familyKey,from:liveWorkspaceEnabled()?process.env.TWILIO_FROM_NUMBER:process.env.FLUFFYTAIL_TEST_TWILIO_FROM_NUMBER,to,body:data.body,...(feedback?{feedbackInvitationId:feedback.id}:{}),direction:'outbound',source:'fluffytail',status:'prepared',delivery:'unconfirmed',receivedAt:new Date().toISOString()}),[id],true)
  const blocked=await client.fetch<{_id:string}[]>('*[_type == "smsMessage" && workspace == $workspace && familyId == $familyId && status in ["sending","uncertain"]][0...1]',{workspace:workspaceNamespace(),familyId:family.familyKey},{cache:'no-store'});if(blocked.some(r=>r._id!==id))throw new WorkspaceError('This family has an uncertain text attempt. Review it before sending another draft.',409)
  const record=await client.getDocument<{_rev:string;status:string;body:string}>(id)
  if(!record||record.body!==data.body)throw new WorkspaceError('The saved text attempt needs review.',409)
@@ -50,6 +54,7 @@ export async function submitWorkspaceSms(input:unknown){
  try{await client.patch(id).ifRevisionId(record._rev).set({status:'sending'}).commit({visibility:'sync'})}catch{throw new WorkspaceError('This text attempt could not be claimed. Refresh before another action.',409)}
  try{
   if(!liveWorkspaceEnabled()){const stops=await client.fetch<{body:string}|null>('*[_type == \"smsMessage\" && workspace == \"review-v1\" && familyId == $familyId && direction == \"inbound\" && providerVerified == true && lower(body) in [\"stop\",\"stopall\",\"unsubscribe\",\"cancel\",\"end\",\"quit\",\"start\",\"unstop\"]] | order(receivedAt desc)[0]{body}',{familyId:family.familyKey},{cache:'no-store'});if(stops&&!/^(start|unstop)$/i.test(stops.body.trim()))throw Object.assign(new Error('Opted out'),{status:403})}
+  await invitationInText(family.familyKey,data.body)
   const message=await twilio.messages.create({from:liveWorkspaceEnabled()?process.env.TWILIO_FROM_NUMBER:process.env.FLUFFYTAIL_TEST_TWILIO_FROM_NUMBER!,to,body:data.body})
   if(!/^(SM|MM)[a-f0-9]{32}$/i.test(message.sid))throw new Error('Unconfirmed provider acknowledgement')
   await client.patch(id).set({status:'accepted',providerStatus:message.status||'accepted',messageSid:message.sid,delivery:'unconfirmed'}).commit({visibility:'sync'})

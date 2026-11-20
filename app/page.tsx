@@ -10,6 +10,9 @@ import {canInquireAboutPuppy, getLittersByStatus} from '@/lib/inventory'
 import LitterSection from './components/LitterSection'
 import HomeHero from './components/HomeHero'
 import StructuredData from './components/StructuredData'
+import FamilyStories from './components/FamilyStories'
+import FeedbackReviewNotice from './components/FeedbackReviewNotice'
+import {listPublicStories} from '@/sanity/lib/feedback'
 import {homeTitle, organizationJsonLd, publicPageMetadata} from '@/lib/seo'
 
 export const metadata = publicPageMetadata({title: homeTitle, description: pageDescriptions.home, path: '/'})
@@ -20,7 +23,6 @@ type SiteSettings = {
   homepageHeadline?: string
   homepageIntro?: string
   serviceArea?: string
-  goodDogUrl?: string
   heroImageUrl?: string
   heroThumb1Url?: string
   heroThumb2Url?: string
@@ -28,7 +30,7 @@ type SiteSettings = {
 }
 
 const siteSettingsQuery = `*[_type == "siteSettings"][0]{
-  title, homepageHeadline, homepageIntro, serviceArea, goodDogUrl,
+  title, homepageHeadline, homepageIntro, serviceArea,
   "heroImageUrl": heroImage.asset->url,
   "heroThumb1Url": heroThumb1.asset->url,
   "heroThumb2Url": heroThumb2.asset->url,
@@ -36,9 +38,10 @@ const siteSettingsQuery = `*[_type == "siteSettings"][0]{
 }`
 
 export default async function HomePage() {
-  const [publishedSettings, {litters, puppies}] = await Promise.all([
+  const [publishedSettings, {litters, puppies}, stories] = await Promise.all([
     client.fetch<SiteSettings>(siteSettingsQuery, {}, {perspective: 'published', next: {revalidate: 3600}}),
     getInventory(),
+    listPublicStories(),
   ])
   const siteSettings=editorialSettings(publishedSettings)
   const activeLitters = getLittersByStatus(litters, 'current')
@@ -46,7 +49,7 @@ export default async function HomePage() {
   const availableCount = puppies.filter(canInquireAboutPuppy).length
   const designPreview = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview'
   const introHeadline = siteSettings?.homepageHeadline || homepageHeadline
-  const goodDogStoriesUrl = `${(siteSettings?.goodDogUrl || 'https://www.gooddog.com/breeders/fluffytail-shih-tzu-alabama').split('#')[0]}#tab=stories`
+  const featuredStories = stories.filter(story => story.featured).slice(0, 3)
 
   return <main>
     <StructuredData data={organizationJsonLd} />
@@ -70,6 +73,7 @@ export default async function HomePage() {
     </section>
 
     <section id="owner-stories" className="brand-container home-family-stories" aria-labelledby="family-stories-title">
+      <FeedbackReviewNotice />
       <div className="family-stories-panel">
         <div>
           <p className="eyebrow">Their words, their experience</p>
@@ -77,10 +81,10 @@ export default async function HomePage() {
           <p className="family-stories-intro">Choosing a puppy is personal. Get to know FluffyTail through the experiences of families who have brought one of our little ones home.</p>
         </div>
         <div className="family-stories-action">
-          <a className="brand-button" href={goodDogStoriesUrl} target="_blank" rel="noopener noreferrer" aria-describedby="family-stories-destination">Read verified owner stories <span aria-hidden="true">&#8599;</span></a>
-          <p id="family-stories-destination">On Good Dog · Opens in a new tab</p>
+          <Link className="brand-button" href="/our-families">Meet our families <span aria-hidden="true">&rarr;</span></Link>
         </div>
       </div>
+      {featuredStories.length ? <FamilyStories stories={featuredStories} home /> : stories.length ? null : <FamilyStories stories={[]} home />}
     </section>
 
     <section className="home-next">
