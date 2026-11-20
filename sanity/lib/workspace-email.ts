@@ -1,3 +1,5 @@
+import {invitationForMessage,invitationForDraft,invitationInText,listFeedback} from './feedback'
+import {renderFeedbackEmail,type FeedbackEmail} from '@/lib/mail/feedback-email'
 import {stripeAccountMetadata,requireCurrentStripeAccount,retiredStripeRequest,requireStripeMetadataAccount,stripeServerSecretKey} from '@/lib/stripe-account'
 import {commitFamilyRecords} from './family-lifecycle'
 import {requireLivePaymentConfiguration} from '@/lib/live-payment-mode'
@@ -43,10 +45,12 @@ function asDraft(record:DraftDocument):EmailDraft{return {familyId:record.family
 function validValue(input:unknown):EmailValue{
   if(!input||typeof input!=='object'||Array.isArray(input))throw new EmailWorkflowError('Enter a valid email draft.')
   const value=input as Record<string,unknown>
-  if(Object.keys(value).some(key=>!['subject','body','replyToId','paymentRequestId','paymentLinkPurpose','attachmentIds'].includes(key))||typeof value.subject!=='string'||value.subject.length>160||Array.from(value.subject).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127)||typeof value.body!=='string'||value.body.length>10000||!(value.replyToId===null||typeof value.replyToId==='string'&&value.replyToId.length<=100)||!(value.paymentRequestId===null||typeof value.paymentRequestId==='string'&&/^private\.staffPaymentRequest\.[a-f0-9]{64}$/.test(value.paymentRequestId)))throw new EmailWorkflowError('Use a subject up to 160 characters, plain message text up to 10,000 characters, and an existing payment request.')
+  if(Object.keys(value).some(key=>!['subject','body','replyToId','paymentRequestId','paymentLinkPurpose','attachmentIds','feedbackInvitationId'].includes(key))||typeof value.subject!=='string'||value.subject.length>160||Array.from(value.subject).some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127)||typeof value.body!=='string'||value.body.length>10000||!(value.replyToId===null||typeof value.replyToId==='string'&&value.replyToId.length<=100)||!(value.paymentRequestId===null||typeof value.paymentRequestId==='string'&&/^private\.staffPaymentRequest\.[a-f0-9]{64}$/.test(value.paymentRequestId)))throw new EmailWorkflowError('Use a subject up to 160 characters, plain message text up to 10,000 characters, and an existing payment request.')
   if(value.paymentLinkPurpose!==undefined&&!['request','confirmation'].includes(value.paymentLinkPurpose as string))throw new EmailWorkflowError('Choose a payment request or a verified confirmation link.')
   if(value.attachmentIds!==undefined&&(!Array.isArray(value.attachmentIds)||value.attachmentIds.length>5||new Set(value.attachmentIds).size!==value.attachmentIds.length||value.attachmentIds.some(id=>typeof id!=='string'||!/^private\.staffAttachment\.[a-f0-9]{64}$/.test(id))))throw new EmailWorkflowError('Choose up to five saved family files.')
-  return {...(value.paymentLinkPurpose==='confirmation'?{paymentLinkPurpose:'confirmation' as const}:{}),...(value.attachmentIds?{attachmentIds:value.attachmentIds as string[]}:{}),subject:value.subject,body:value.body,replyToId:value.replyToId,paymentRequestId:value.paymentRequestId}
+  if(value.feedbackInvitationId!==undefined&&value.feedbackInvitationId!==null&&(typeof value.feedbackInvitationId!=='string'||!/^private\.feedbackInvitation\.[a-f0-9]{64}$/.test(value.feedbackInvitationId)))throw new EmailWorkflowError('Choose a saved feedback invitation.')
+  if(value.feedbackInvitationId&&value.paymentRequestId)throw new EmailWorkflowError('Send a feedback invitation separately from a payment request. Your draft and attachments are kept.')
+  return {...(value.feedbackInvitationId?{feedbackInvitationId:value.feedbackInvitationId as string}:{}),...(value.paymentLinkPurpose==='confirmation'?{paymentLinkPurpose:'confirmation' as const}:{}),...(value.attachmentIds?{attachmentIds:value.attachmentIds as string[]}:{}),subject:value.subject,body:value.body,replyToId:value.replyToId,paymentRequestId:value.paymentRequestId}
 }
 function validate(input:unknown):MailAction{
   if(!input||typeof input!=='object'||Array.isArray(input))throw new EmailWorkflowError('Invalid email action.')
@@ -174,7 +178,9 @@ export async function loadMailbox():Promise<MailData>{
    else if(liveWorkspaceEnabled()){try{result={...result,checkoutUrl:livePaymentUrl(p)}}catch{/* Unprepared link stays unavailable. */}}
    return result
   })
-  return {litterReservationsEnabled:litterReservationsEnabled(),attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests:presentedPayments,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
+  const feedbackEnabled=process.env.FLUFFYTAIL_FEEDBACK_ENABLED==='1'
+  const feedbackInvitations=feedbackEnabled?(await listFeedback()).invitations:[]
+  return {feedbackEnabled,feedbackPreview:process.env.FLUFFYTAIL_FEEDBACK_PREVIEW==='1',feedbackInvitations,litterReservationsEnabled:litterReservationsEnabled(),attachmentLibrary:await listAttachments(familyIds),paymentTesting:paymentTestWorkspaceEnabled(),families:saved,drafts,messages:liveWorkspaceEnabled()?[]:mailMessages,paymentRequests:presentedPayments,reviews,sendingEnabled:false,inventory:inventory.filter(p=>!paymentTestWorkspaceEnabled()||p.paymentTestScenario).map(p=>({...p,status:typeof p.status==='string'?p.status.charAt(0).toUpperCase()+p.status.slice(1):'Unknown'})),testCheckoutEnabled:liveWorkspaceEnabled()||process.env.FLUFFYTAIL_STRIPE_TEST_ENABLED==='1',live:liveWorkspaceEnabled()}
 }
 export async function prepareEmailAction(input:unknown,origin:string){
   requireWorkspace()
@@ -228,6 +234,7 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const id=emailDraftId(action.familyId)
   const current=await client.getDocument<DraftDocument>(id)
   if(action.type==='save'){
+    if(action.value.feedbackInvitationId)await invitationForDraft(family.familyKey,action.value.feedbackInvitationId)
     await checkedAttachments(action.value.attachmentIds,family.familyKey)
     await checkReply(family,action.value)
     if(action.value.paymentRequestId)await checkedPayment(action.value.paymentRequestId,family,false)
@@ -256,8 +263,14 @@ export async function prepareEmailAction(input:unknown,origin:string){
   const presentation=payment&&liveWorkspaceEnabled()&&!payment.litterReservationId?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
   const paymentEmail=(paymentTestWorkspaceEnabled()||liveWorkspaceEnabled())&&presentation?paymentDraftEmail(presentation,family.profile.name,value.body,value.paymentLinkPurpose):null
   if(liveWorkspaceEnabled()&&payment&&!paymentEmail)throw new EmailWorkflowError('This payment link needs review before sending.',409)
-  const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
-  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(attachments.length?{attachments}:{}),...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
+  const pastedInvitation=await invitationInText(family.familyKey,value.body)
+  if(pastedInvitation&&value.feedbackInvitationId&&pastedInvitation.id!==value.feedbackInvitationId)throw new EmailWorkflowError('Use one current feedback invitation for this family. Your draft is kept.',409)
+  const feedbackInvitationId=value.feedbackInvitationId||pastedInvitation?.id
+  if(feedbackInvitationId&&value.paymentRequestId)throw new EmailWorkflowError('Send a feedback invitation separately from a payment request. Your draft is kept.',409)
+  const invitation=feedbackInvitationId?await invitationForMessage(family.familyKey,feedbackInvitationId):null
+  const feedbackEmail:FeedbackEmail|null=invitation?{name:family.profile.name,message:value.body,url:invitation.link,testOnly:!liveWorkspaceEnabled()}:null
+  const formatted=feedbackEmail?renderFeedbackEmail(feedbackEmail):paymentEmail?renderPaymentEmail(paymentEmail):null
+  const record:EmailReview={_id:emailReviewId(action.requestId),_type:'staffEmailReview',workspace:workspaceNamespace(),requestId:action.requestId,familyId:family.familyKey,draftRevision:current._rev,from:jeanneEmail,replyTo:jeanneEmail,to:emailRecipient(family.profile.email),subject:value.subject,body:formatted?.text||body,...(attachments.length?{attachments}:{}),...(paymentEmail&&formatted?{paymentEmail,html:formatted.html}:{}),...(feedbackEmail&&formatted?{feedbackEmail,feedbackInvitationId:feedbackInvitationId!,html:formatted.html}:{}),inReplyTo:parent?.messageId||null,references:parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[],paymentRequestId:payment?._id||null,createdAt:new Date().toISOString(),status:'held',testOnly:!liveWorkspaceEnabled()}
   await commitFamilyRecords(family.familyKey,tx=>tx.createIfNotExists(record),[record._id],true)
   const stored=await client.getDocument<EmailReview>(record._id)
   if(!stored||stored.familyId!==record.familyId||stored.draftRevision!==record.draftRevision||stored.to!==record.to||stored.body!==record.body||stored.subject!==record.subject||!sameAttachments(stored.attachments,record.attachments)||stored.html!==record.html||!samePaymentEmail(stored.paymentEmail,record.paymentEmail))throw new EmailWorkflowError('This review request ID belongs to another saved email. Prepare a new review.',409)
@@ -290,7 +303,14 @@ export async function validateSavedEmailReview(id:string,origin:string){
   const presentation=review.paymentEmail&&payment&&liveWorkspaceEnabled()&&!payment.litterReservationId?{...payment,checkoutUrl:livePaymentUrl((await livePaymentContext(await getStripe().checkout.sessions.retrieve(payment.checkoutSessionId!))).request)}:payment
   const currentTemplate=review.paymentEmail&&presentation?paymentDraftEmail(presentation,family.profile.name,value.body,value.paymentLinkPurpose):null
   const paymentEmail=currentTemplate?{...currentTemplate,version:review.paymentEmail!.version}:null
-  const formatted=paymentEmail?renderPaymentEmail(paymentEmail):null
+  const pastedInvitation=await invitationInText(family.familyKey,value.body)
+  if(pastedInvitation&&value.feedbackInvitationId&&pastedInvitation.id!==value.feedbackInvitationId)throw new EmailWorkflowError('Use one current feedback invitation for this family. Your draft is kept.',409)
+  const feedbackInvitationId=value.feedbackInvitationId||pastedInvitation?.id
+  if(feedbackInvitationId&&value.paymentRequestId)throw new EmailWorkflowError('Send a feedback invitation separately from a payment request. Your draft is kept.',409)
+  const invitation=feedbackInvitationId?await invitationForMessage(family.familyKey,feedbackInvitationId):null
+  const feedbackEmail:FeedbackEmail|null=invitation?{name:family.profile.name,message:value.body,url:invitation.link,testOnly:!liveWorkspaceEnabled()}:null
+  const formatted=feedbackEmail?renderFeedbackEmail(feedbackEmail):paymentEmail?renderPaymentEmail(paymentEmail):null
+  if((review.feedbackInvitationId||null)!==(feedbackInvitationId||null)||JSON.stringify(review.feedbackEmail||null,Object.keys(review.feedbackEmail||{}).sort())!==JSON.stringify(feedbackEmail,Object.keys(feedbackEmail||{}).sort()))throw new EmailWorkflowError('This feedback invitation changed. Your draft is kept; review the current invitation before sending.',409)
   if(review.html!==formatted?.html||!samePaymentEmail(review.paymentEmail,paymentEmail||undefined))throw new EmailWorkflowError('The formatted payment email changed. Prepare a fresh review.',409)
   if(review.from!==jeanneEmail||review.replyTo!==jeanneEmail||review.to!==emailRecipient(family.profile.email)||review.subject!==value.subject||review.body!==(formatted?.text||body)||review.inReplyTo!==(parent?.messageId||null)||JSON.stringify(review.references)!==JSON.stringify(parent?[...new Set([...parent.references,parent.messageId])].slice(-10):[])||review.paymentRequestId!==(payment?._id||null))throw new EmailWorkflowError('The saved review no longer matches this family, draft or payment context. Prepare a fresh review.',409)
   return review

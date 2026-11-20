@@ -55,6 +55,7 @@ async function inspect(id:string,locked?:SavedFamily){
  if(linked.some(r=>r._type==='staffPaymentRequest'))warnings.push('This family has payment requests. Any outstanding request stays payable; archiving does not close it.')
  if(family.profile.records?.length||family.profile.litterReservationId||linked.some(r=>/payment|agreement|contract|reservation|litterFamily|litterCredit/i.test(r._type)))blocked.push('Payment records, payment requests, agreements or reservation history must be preserved. Archive this family instead.')
  if(family.profile.puppyId)blocked.push('A puppy is associated with this family. Archive it to preserve that relationship.')
+ if(linked.some(d=>['staffFeedbackInvitation','staffFeedbackSubmission','feedbackInvitation','feedbackSubmission'].includes(d._type)))blocked.push('Feedback invitations and submissions must be kept. Archive this family instead.')
  const removable=linked.filter(r=>{
   const owned=r.familyId===id&&r.workspace===workspaceNamespace()
   if(r._id===family.profile.inquiryId)return false // Original inquiries are retained; the deletion marker prevents re-import.

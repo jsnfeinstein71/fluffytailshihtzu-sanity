@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/studio'],
+      disallow: ['/studio', '/feedback'],
     },
     sitemap: 'https://www.fluffytailshihtzu.com/sitemap.xml',
     host: 'https://www.fluffytailshihtzu.com',

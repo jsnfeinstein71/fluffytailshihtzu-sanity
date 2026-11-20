@@ -1,0 +1,27 @@
+.family-story-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 28px; }
+.family-story-grid-home { margin-top: 28px; }
+.family-story { min-width: 0; border: 1px solid var(--brand-champagne); border-radius: 6px; background: #fbf8f3; overflow: hidden; scroll-margin-top: 24px; }
+.family-story-photo { background: #f1e9df; padding: 16px; }
+.family-story-photo img { display: block; width: 100%; height: 300px; object-fit: contain; }
+.family-story-content { padding: 28px; }
+.family-story blockquote { margin: 0 0 24px; padding: 0; border: 0; color: var(--brand-ink); font-size: 17px; line-height: 1.8; }
+.family-story blockquote p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.family-story footer p { margin: 0; }
+.family-story-name { color: var(--brand-brown); font-weight: 600; }
+.family-story-puppy, .family-story time { color: var(--brand-muted); font-size: 14px; overflow-wrap: anywhere; }
+.family-story time { display: block; margin-top: 4px; }
+.family-story-link { margin-top: 24px; font-size: 14px; }
+.family-stories-empty { color: var(--brand-muted); max-width: 65ch; }
+.family-stories-empty p { margin: 0 0 20px; }
+.home-family-stories .family-stories-empty { margin-top: 26px; }
+.our-families-page .page-intro { margin-bottom: 20px; }
+@media (max-width: 700px) {
+  .family-story-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .family-story-content { padding: 24px; }
+  .family-story-photo img { height: 280px; }
+}
+@media (max-width: 380px) {
+  .family-story-content { padding: 22px 18px; }
+  .family-story-photo { padding: 12px; }
+  .family-story-photo img { height: 240px; }
+}
