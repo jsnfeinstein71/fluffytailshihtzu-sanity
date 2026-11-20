@@ -1,6 +1,18 @@
 # Invitation-only family feedback — review release
 
-Status: draft PR and isolated Preview only. Production release and real invitations are not authorized in this phase. Based on main `3ae4605` (November 20, 2026); preserves the portrait, payment, passkey, communications, family-management and availability work already published.
+Status: owner authorized completion and Production release on November 20, 2026, after the Preview review. The earlier review-only boundaries below describe the completed Preview phase. Based on main `3ae4605`; preserves the portrait, payment, passkey, communications, family-management and availability work already published.
+
+## Production release follow-through — November 20
+
+The owner instructed: “its our clients, we don't need permission, see this through to completion.” This authorizes completing and releasing the feedback feature. No customer permission checkbox or separate permission-request step is added to invitations. The form retains the straightforward notice that the submitted story/display name/optional photograph may appear on FluffyTail. Internal approval remains required before publication.
+
+Production configuration adds only `FLUFFYTAIL_FEEDBACK_ENABLED=1` and a separately generated sensitive `FEEDBACK_INVITATION_SECRET`. The existing production operational client, live namespace, public domain and passkey protection remain in use. The synthetic Preview configuration and fictional records remain separate. No mail/payment settings or existing credentials are changed.
+
+Fresh release verification ran the complete suite: **406 passed, 2 skipped, 0 failed (408 total)**; type checking passed; lint reported 0 errors and 16 existing warnings. GitHub verification for the implementation/review head also passed. Production deployment and live smoke-check evidence are recorded on PR #46 when completed.
+
+Live staff verification requires an owner passkey session; the current cloud browser reaches the correct protected unlock screen. No recovery credential, bypass session or replacement passkey is created for testing. A real invitation delivery test has not occurred and must not be described as proven by fictional transport tests. Real family invitations remain deliberate staff actions.
+
+The Good Dog migration is still distinct from feature release. The terms inspected during release retain the copying/collection restrictions described below; the owner's customer relationship does not itself establish authorship of customer-written content. No Good Dog story has been imported or published in this release. Original material supplied directly by the owner/author can be processed through the existing private import helper with accurate provenance; uncertain rights must not be recorded as confirmed facts.
 
 ## Review addresses and records
 
