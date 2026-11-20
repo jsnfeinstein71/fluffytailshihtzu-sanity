@@ -49,8 +49,25 @@ The homepage testimonial link now stays on FluffyTail. The unrelated Contact-pag
 
 Branch-only Preview configuration: `FLUFFYTAIL_FEEDBACK_ENABLED=1`, `FLUFFYTAIL_FEEDBACK_PREVIEW=1`, exact `FEEDBACK_PUBLIC_ORIGIN`, dedicated `FEEDBACK_INVITATION_SECRET` (at least 43 characters), synthetic project/dataset and its scoped write credential. Preview staff access uses the existing branded sign-in/session flow with owner-set branch-only credentials. Secrets are not committed or reported.
 
+The deployment-protection exception is limited to the feedback review alias/branch. It permits the customer-facing review form to open while staff routes retain the branded private session gate. It does not reopen historical production deployments, restore old production credentials, or replace production passkeys.
+
 Production remains unchanged. A future approved release would enable the feature against the existing production operational client, use an independent invitation secret and the real public origin, and retain passkey staff protection. The Preview no-send switch must remain restricted to review deployments; it is not a replacement for production message safeguards.
 
 ## Verification
 
-Verification results and hosted screenshots will be added after the integrated review build is checked. Tests use fictional records and providers; they do not demonstrate real invitation delivery. No customer send, payment, reservation change or historical import is part of this task.
+Checked the hosted Preview through `1b3c6b1` on November 20, 2026. Automated checks: **408 tests passed**, TypeScript passed, ESLint had **0 errors and 16 existing warnings**, and the Vercel build succeeded. The tests use isolated records and fictional providers; they do not demonstrate real invitation delivery.
+
+Hosted results:
+
+- The owner completed a fresh sign-in using the branded Preview entry screen. The private workspace opens through the owner-facing alias; this check did not rely on a developer's old session.
+- Casey's fictional customer feedback and uploaded photo persisted. Private feedback/original-photo access and the minimal public story/photo separation were checked. After Unpublish, the actual public photo endpoint returned **HTTP 404** with **Cache-Control: no-store**. The story was then republished through the staff controls and the untouched original was confirmed again.
+- Robin's personal email text followed immediately by **Invite feedback** saved without a false conflict. After refreshing, the personal text and approved invitation wording remained in the branded preview. The Send control stayed disabled; no message was submitted.
+- At **375 px** phone width, the Feedback area, family conversation and Details panel were exercised through the visible controls. The invitation form and public story/photo presentation were reviewed at phone and desktop widths. Page scroll widths were **360 px at a 375 px viewport** and **1,425 px at a 1,440 px viewport**, with no horizontal overflow. Desktop staff and full-page mobile story screenshots were captured.
+- Permanent family deletion was blocked with an explicit feedback-history explanation. Archiving only the new fictional Robin family retained its published story; Robin was then restored and its drafts were confirmed intact. No preserved test family was archived or deleted.
+- The **194 pre-existing synthetic records remained unchanged**. Tests used only the two newly created feedback-review families and their linked records. Production customer, payment, reservation and staff-access records were not changed.
+
+Three concrete browser findings were corrected and rechecked: opening a different invitation in the same tab now clears the previous invitation's form state and ignores stale responses; native browser `fetch` is bound to its window instead of the options object; and an invitation save queued behind autosave advances only through revisions confirmed by that same browser. Real other-tab edits still produce a conflict, and clearing a sent draft cannot overwrite newer writing.
+
+The positive email-handler regression exercises save → review → dispatch with the fictional provider, checks HTML/plain-text alternatives and reply threading, and confirms a repeated dispatch produces only one accepted attempt/receipt. Its status remains **delivery unconfirmed**; acceptance does not mark the invitation submitted or publish a story. Revoked, expired and wrong-family invitations are rejected at send time, including pasted links. Preview email/SMS sends and mailbox reads remain disabled regardless of provider settings.
+
+No customer send, payment, reservation change or historical import is part of this review. Actual Pair/Twilio invitation delivery and any production enablement remain outside this phase's authorization.
