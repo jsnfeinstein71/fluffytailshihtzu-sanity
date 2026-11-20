@@ -7,7 +7,7 @@ import {privateRecordId} from './private-records'
 import {savedFamily,commitFamilyRecords} from './family-lifecycle'
 import {WorkspaceError,requireWorkspace} from './workspace'
 import {liveWorkspaceEnabled,syntheticWorkspaceEnabled,workspaceNamespace} from '@/lib/workspace-mode'
-import {feedbackPhotoLimit,conservativeDisplayName,feedbackInvitationCopy,type FeedbackInvitationView,type FeedbackSubmissionView,type FeedbackStatus,type PublicStory} from '@/lib/feedback'
+import {feedbackPhotoLimit,conservativeDisplayName,feedbackInvitationCopy,feedbackDatePrecision,type FeedbackInvitationView,type FeedbackSubmissionView,type FeedbackStatus,type PublicStory} from '@/lib/feedback'
 
 type Base={_id:string;_rev:string;_type:string;workspace:string}
 type Invitation=Base&{familyId:string;tokenHash:string;createdAt:string;expiresAt:string;usedAt?:string;revokedAt?:string;submissionId?:string;displayName:string;puppyName:string}
@@ -86,7 +86,7 @@ export async function importFeedback(input:{source:string;sourceId:string;origin
  requireFeedback()
  if(!input||typeof input!=='object'||!actor)throw new WorkspaceError('Record the original source and attribution.')
  const source=text(input.source,100),sourceId=text(input.sourceId,250),attribution=text(input.attribution,200),permissionNote=text(input.permissionNote,2000),originalText=text(input.originalText,6000),displayName=text(input.displayName,80),puppyName=text(input.puppyName,80,true)
- if(input.originalDate!==null&&(typeof input.originalDate!=='string'||input.originalDate.length>50||!Number.isFinite(Date.parse(input.originalDate))))throw new WorkspaceError('Use the known source date or leave it unknown.')
+ if(input.originalDate!==null&&!feedbackDatePrecision(input.originalDate))throw new WorkspaceError('Use the known source month (YYYY-MM), exact date (YYYY-MM-DD), or complete ISO timestamp; leave unknown dates blank.')
  if(input.originalUrl){let url:URL;try{url=new URL(input.originalUrl)}catch{throw new WorkspaceError('Record a valid source URL.')};if(input.originalUrl.length>2000||!['https:','http:'].includes(url.protocol)||url.username||url.password)throw new WorkspaceError('Record a valid source URL.')}
  if(input.familyId!==undefined)await savedFamily(input.familyId)
  const id=privateRecordId('feedbackSubmission',workspaceNamespace()+':import:'+source+':'+sourceId),client=getOperatorClient()

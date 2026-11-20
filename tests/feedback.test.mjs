@@ -130,3 +130,11 @@ test('staff APIs require authentication and same-origin; customer cannot publish
  process.env.FLUFFYTAIL_WRITE_FREEZE='0';process.env.FLUFFYTAIL_FEEDBACK_ENABLED='0';assert.equal((await customer.POST(req({action:'status',token:'x'}))).status,503)
  process.env.FLUFFYTAIL_FEEDBACK_ENABLED='1';process.env.NEXT_PUBLIC_SANITY_PROJECT_ID='3glz6dkx';assert.equal((await customer.POST(req({action:'status',token:'x'}))).status,503);assert.deepEqual(await service.listPublicStories(),[])
 })
+
+test('import preserves known date precision and rejects ambiguous or nonexistent calendar dates',async()=>{
+ const base={source:'owner-export',attribution:'Morgan F.',permissionNote:'Owner has written permission',publicationAllowed:true,originalText:'Exact source words.',displayName:'Morgan F.'}
+ for(const date of [null,'2025-09','2024-02-29','2025-09-18T14:30:00.000Z','2025-09-18T14:30:00-05:00']){
+  const s=await service.importFeedback({...base,sourceId:randomUUID(),originalDate:date},'jeanne');assert.equal(s.originalDate,date);await publish(s);assert.equal((await service.listPublicStories()).find(p=>p.text===s.originalText&&p.originalDate===date)?.originalDate,date)
+ }
+ for(const date of ['09/10/2025','September 2025','2025','2025-13','2025-02-29','2025-09-18T14:30:00','2025-02-29T14:30:00Z','2025-09-18T24:00:00Z'])await assert.rejects(service.importFeedback({...base,sourceId:randomUUID(),originalDate:date},'jeanne'),/known source month/)
+})

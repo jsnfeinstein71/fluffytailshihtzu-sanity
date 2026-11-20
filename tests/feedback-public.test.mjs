@@ -35,6 +35,16 @@ test('optional public photo has no private original URL and text is rendered saf
   assert.doesNotMatch(html, /<script|<time|cloudfront|cdn\.sanity/)
 })
 
+test('month-only source dates do not invent a day and ambiguous source dates are omitted',()=>{
+ const month=renderToStaticMarkup(React.createElement(FamilyStory,{story:{...story,originalDate:'2025-09'}}))
+ assert.match(month,/<time dateTime="2025-09">September 2025<\/time>/)
+ assert.doesNotMatch(month,/September 1/)
+ const exact=renderToStaticMarkup(React.createElement(FamilyStory,{story:{...story,originalDate:'2025-09-18'}}))
+ assert.match(exact,/September 18, 2025/)
+ const ambiguous=renderToStaticMarkup(React.createElement(FamilyStory,{story:{...story,originalDate:'09\/10\/2025'}}))
+ assert.doesNotMatch(ambiguous,/<time/)
+})
+
 test('empty public collection has no fabricated quote, rating or marketplace fallback', () => {
   const html = renderToStaticMarkup(React.createElement(FamilyStories, {stories: []}))
   assert.match(html, /This is where our families can share/)
