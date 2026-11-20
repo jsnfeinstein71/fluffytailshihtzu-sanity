@@ -1,6 +1,7 @@
 import './register-typescript.mjs'
 import assert from 'node:assert/strict'
 import {test,beforeEach} from 'node:test'
+import nodemailer from 'nodemailer'
 import {workspaceStoreFixture} from './workspace-store-fixture.mjs'
 const {POST}=await import('../app/inbox/workspace/api/email/route.ts')
 const {POST:statePost}=await import('../app/inbox/workspace/api/state/route.ts')
@@ -8,6 +9,7 @@ const {createFeedbackInvitation,manageFeedback}=await import('../sanity/lib/feed
 const {emailDraftId}=await import('../sanity/lib/workspace-email.ts')
 const {feedbackEmailPatch}=await import('../lib/mail/feedback-email.ts')
 const {emptyEmail}=await import('../app/inbox/workspace/email-model.ts')
+const {getMailProvider}=await import('../sanity/lib/mail-provider.ts')
 const auth='Basic '+Buffer.from('fixture-operator:fixture-only-password').toString('base64'),origin='http://localhost:3100'
 const req=(path,body)=>new Request(origin+path,{method:'POST',headers:{authorization:auth,origin,'content-type':'application/json'},body:JSON.stringify(body)})
 const send=body=>POST(req('/inbox/workspace/api/email',body))
@@ -44,4 +46,33 @@ test('pasting a raw invitation link cannot bypass family ownership or revocation
  const draft=(await save.json()).drafts.find(d=>d.familyId==='morgan')
  const review=await send({type:'review',familyId:'morgan',revision:draft.revision,requestId:'10000000-0000-4000-8000-000000000006'});assert.equal(review.status,409);assert.match((await review.json()).error,/different family/)
  assert.equal(store.documents.get(emailDraftId('morgan')).value.body,value.body)
+})
+test('feedback save, review and dispatch accepts once through the fictional provider with multipart content and truthful delivery status',async()=>{
+ const created=await createFeedbackInvitation('avery','10000000-0000-4000-8000-000000000007')
+ const original={...emptyEmail('Avery, I enjoyed the update about your puppy.'),replyToId:'a1'},value={...original,...feedbackEmailPatch(original,created.invitation.id)}
+ const saved=await send({type:'save',familyId:'avery',revision:null,value});assert.equal(saved.status,200,await saved.clone().text())
+ const draft=(await saved.json()).drafts.find(d=>d.familyId==='avery')
+ const reviewed=await send({type:'review',familyId:'avery',revision:draft.revision,requestId:'10000000-0000-4000-8000-000000000008'});assert.equal(reviewed.status,200,await reviewed.clone().text())
+ const review=await reviewed.json(),prepared=review.outgoing.find(o=>o.feedbackInvitationId===created.invitation.id)
+ const fictional=getMailProvider();let calls=0,submitted,mime
+ globalThis.fixtureMailProvider={...fictional,async send(message,scenario){
+  calls++;submitted=message
+  // A stream transport assembles the actual alternatives locally; it has no
+  // network delivery. The real fictional provider records its isolated receipt.
+  mime=(await nodemailer.createTransport({streamTransport:true,buffer:true}).sendMail({from:message.from,to:message.to,replyTo:message.replyTo,subject:message.subject,text:message.body,html:message.html,messageId:message.messageId,inReplyTo:message.inReplyTo,references:message.references})).message.toString()
+  return fictional.send(message,scenario)
+ }}
+ try{
+  const dispatched=await send({type:'dispatch',reviewId:review.reviewId,confirmed:true});assert.equal(dispatched.status,200,await dispatched.clone().text())
+  const accepted=(await dispatched.json()).outgoing.find(o=>o._id===prepared._id)
+  assert.equal(calls,1);assert.equal(accepted.state,'accepted');assert.equal(accepted.source,'fictional');assert.equal(accepted.delivery,'unconfirmed');assert.equal(accepted.attempts.length,1);assert.equal(accepted.attempts[0].state,'accepted');assert.equal(accepted.feedbackInvitationId,created.invitation.id)
+  assert.equal(submitted.html,prepared.html);assert.equal(submitted.body,prepared.body);assert.ok(submitted.body.includes(original.body));assert.ok(submitted.body.includes(created.link));assert.match(submitted.html,/Share your feedback<\/a>/);assert.ok(submitted.inReplyTo);assert.ok(submitted.references.includes(submitted.inReplyTo));assert.equal(submitted.messageId,prepared.messageId)
+  assert.match(mime,/multipart\/alternative/);assert.match(mime,/Content-Type: text\/plain/);assert.match(mime,/Content-Type: text\/html/)
+  const duplicate=await send({type:'dispatch',reviewId:review.reviewId,confirmed:true});assert.equal(duplicate.status,200,await duplicate.clone().text())
+  const unchanged=(await duplicate.json()).outgoing.find(o=>o._id===prepared._id)
+  assert.equal(calls,1);assert.equal(unchanged.attempts.length,1);assert.equal(unchanged.messageId,prepared.messageId);assert.equal(unchanged.delivery,'unconfirmed')
+  assert.equal([...store.documents.values()].filter(d=>d._type==='fixtureMailReceipt').length,1)
+  assert.equal(store.documents.get(emailDraftId('avery')).value.body,value.body)
+  assert.equal(store.documents.get(created.invitation.id).usedAt,undefined,'Provider acceptance is not feedback submission')
+ }finally{delete globalThis.fixtureMailProvider}
 })

@@ -2,15 +2,14 @@
 
 import {useEffect, useRef, useState} from 'react'
 import Link from 'next/link'
-import {feedbackPhotoLimit, type FeedbackStatus} from '@/lib/feedback'
+import {feedbackPhotoLimit} from '@/lib/feedback'
+import {createInvitationSession, type InvitationState} from './invitation-session'
 
 // This preview is a local object URL, never an uploaded or optimized asset.
 /* eslint-disable @next/next/no-img-element */
 
-const invitationStorageKey = 'fluffytail.feedback.invitation.v1'
-const invitationTokenPattern = /^[a-f0-9]{64}\.[\w-]{43}$/
 const photoTypes = ['image/jpeg', 'image/png', 'image/webp']
-type FormStatus = FeedbackStatus['status'] | 'loading' | 'unavailable' | 'submitted'
+type FormStatus = InvitationState | 'submitted'
 
 async function photoPayload(file: File) {
   const contentBase64 = await new Promise<string>((resolve, reject) => {
@@ -31,51 +30,37 @@ export default function FeedbackForm() {
   const [photoPreview, setPhotoPreview] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [retry, setRetry] = useState(0)
-  const token = useRef('')
+  const invitation = useRef<ReturnType<typeof createInvitationSession> | null>(null)
+  const submissionRequest = useRef<AbortController | null>(null)
   const sending = useRef(false)
   const photoInput = useRef<HTMLInputElement>(null)
   const resultHeading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    const controller = new AbortController()
-    // A fragment is never sent to the server or in a Referrer. Remove it before
-    // checking the invitation and retain it only for this tab's reloads.
-    const fragment = window.location.hash.slice(1)
-    const invitationFragment = fragment && fragment !== 'site-content' ? fragment : ''
-    if (invitationFragment) window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
-    try {
-      if (invitationFragment) {
-        token.current = invitationTokenPattern.test(invitationFragment) ? invitationFragment : ''
-        if (token.current) sessionStorage.setItem(invitationStorageKey, token.current)
-        else sessionStorage.removeItem(invitationStorageKey)
-      } else token.current = token.current || sessionStorage.getItem(invitationStorageKey) || ''
-    } catch {
-      if (invitationFragment) token.current = invitationTokenPattern.test(invitationFragment) ? invitationFragment : ''
-    }
-
-    async function checkInvitation() {
-      if (!token.current) { setStatus('invalid'); return }
-      try {
-        const response = await fetch('/api/feedback', {
-          method: 'POST', headers: {'Content-Type': 'application/json'}, cache: 'no-store',
-          body: JSON.stringify({action: 'status', token: token.current}), signal: controller.signal,
-        })
-        if (!response.ok) throw new Error('invitation-check-failed')
-        const result: FeedbackStatus = await response.json()
-        if (!['ready', 'used', 'expired', 'revoked', 'invalid'].includes(result.status)) throw new Error('invalid-status')
-        setStatus(result.status)
-        if (result.status === 'ready') {
-          setDisplayName(current => current || result.displayName || '')
-          setPuppyName(current => current || result.puppyName || '')
-        }
-      } catch {
-        if (!controller.signal.aborted) setStatus('unavailable')
-      }
-    }
-    void checkInvitation()
-    return () => controller.abort()
-  }, [retry])
+    const session = createInvitationSession({
+      browser: window, fetch,
+      onChange() {
+        submissionRequest.current?.abort()
+        sending.current = false
+        setBusy(false)
+        setFeedback('')
+        setDisplayName('')
+        setPuppyName('')
+        setPhoto(null)
+        setPhotoPreview('')
+        setError('')
+        if (photoInput.current) photoInput.current.value = ''
+      },
+      onStatus: setStatus,
+      onDefaults(result) {
+        setDisplayName(current => current || result.displayName || '')
+        setPuppyName(current => current || result.puppyName || '')
+      },
+    })
+    invitation.current = session
+    void session.refresh()
+    return () => { session.dispose(); submissionRequest.current?.abort() }
+  }, [])
 
   useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview) }, [photoPreview])
   useEffect(() => { if (status === 'submitted') resultHeading.current?.focus() }, [status])
@@ -96,15 +81,24 @@ export default function FeedbackForm() {
     event.preventDefault()
     if (sending.current || status !== 'ready') return
     if (!feedback.trim() || !displayName.trim()) { setError('Please add your feedback and the name you would like to share.'); return }
+    const session = invitation.current
+    const request = session?.snapshot()
+    if (!session || !request?.token) return
+    const controller = new AbortController()
+    submissionRequest.current = controller
     sending.current = true
     setBusy(true)
     setError('')
     try {
+      const preparedPhoto = photo ? await photoPayload(photo) : undefined
+      if (!session.isCurrent(request) || controller.signal.aborted) return
       const response = await fetch('/api/feedback', {
         method: 'POST', headers: {'Content-Type': 'application/json'}, cache: 'no-store',
-        body: JSON.stringify({action: 'submit', token: token.current, feedback: feedback.trim(), displayName: displayName.trim(), puppyName: puppyName.trim(), ...(photo ? {photo: await photoPayload(photo)} : {})}),
+        body: JSON.stringify({action: 'submit', token: request.token, feedback: feedback.trim(), displayName: displayName.trim(), puppyName: puppyName.trim(), ...(preparedPhoto ? {photo: preparedPhoto} : {})}),
+        signal: controller.signal,
       })
       const result = await response.json().catch(() => null)
+      if (!session.isCurrent(request) || controller.signal.aborted) return
       if (response.status === 404 || response.status === 410) {
         setError('This invitation is no longer available. Your words and photograph are still here. Please reply to Jeanne’s invitation for help or a new link.')
         return
@@ -122,10 +116,9 @@ export default function FeedbackForm() {
       setPhoto(null)
       setPhotoPreview('')
     } catch {
-      setError('Your feedback could not be confirmed. Your words and photograph are still here. Please try again; a retry will not send a second submission. If this continues, reply to Jeanne’s invitation for help.')
+      if (session.isCurrent(request) && !controller.signal.aborted) setError('Your feedback could not be confirmed. Your words and photograph are still here. Please try again; a retry will not send a second submission. If this continues, reply to Jeanne’s invitation for help.')
     } finally {
-      sending.current = false
-      setBusy(false)
+      if (session.isCurrent(request)) { sending.current = false; setBusy(false) }
     }
   }
 
@@ -139,7 +132,7 @@ export default function FeedbackForm() {
   if (status !== 'ready') return <section className="feedback-result" aria-labelledby="feedback-unavailable-title">
     <h2 id="feedback-unavailable-title">{status === 'unavailable' ? 'Let’s try that again.' : status === 'expired' ? 'This invitation has expired.' : status === 'revoked' ? 'This invitation is no longer available.' : 'Open your personal invitation.'}</h2>
     <p>{status === 'unavailable' ? 'Your invitation could not be checked just now. Please try again in a moment.' : status === 'invalid' ? 'Use the “Share your feedback” link Jeanne sent you. If that link is not working, reply to her message and she can help.' : 'Reply to Jeanne’s message to ask for a fresh invitation. You do not need an account.'}</p>
-    {status === 'unavailable' ? <button type="button" className="brand-button" onClick={() => {setStatus('loading'); setRetry(value => value + 1)}}>Try again</button> : <Link className="text-link" href="/contact">Contact Jeanne <span aria-hidden="true">&rarr;</span></Link>}
+    {status === 'unavailable' ? <button type="button" className="brand-button" onClick={() => void invitation.current?.refresh()}>Try again</button> : <Link className="text-link" href="/contact">Contact Jeanne <span aria-hidden="true">&rarr;</span></Link>}
   </section>
 
   return <form className="feedback-form" onSubmit={submit} aria-busy={busy}>
