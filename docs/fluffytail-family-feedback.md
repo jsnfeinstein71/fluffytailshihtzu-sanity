@@ -12,7 +12,7 @@ Fresh release verification ran the complete suite: **406 passed, 2 skipped, 0 fa
 
 Live staff verification requires an owner passkey session; the current cloud browser reaches the correct protected unlock screen. No recovery credential, bypass session or replacement passkey is created for testing. A real invitation delivery test has not occurred and must not be described as proven by fictional transport tests. Real family invitations remain deliberate staff actions.
 
-The Good Dog migration is still distinct from feature release. The terms inspected during release retain the copying/collection restrictions described below; the owner's customer relationship does not itself establish authorship of customer-written content. No Good Dog story has been imported or published in this release. Original material supplied directly by the owner/author can be processed through the existing private import helper with accurate provenance; uncertain rights must not be recorded as confirmed facts.
+At the initial feature release, no Good Dog story had been imported or published. The subsequent owner-directed import and recorded reuse authorization are documented below. They remain a separate Preview review follow-up; no Good Dog story has been published to production.
 
 ## Review addresses and records
 
@@ -71,7 +71,7 @@ Production remains unchanged. A future approved release would enable the feature
 
 ## Verification
 
-Checked the hosted Preview through `1b3c6b1` on November 20, 2026. The follow-up source-date and authorization checks bring the current full suite to **411 passing tests**; TypeScript passed and ESLint had **0 errors and 16 existing warnings**. The initial Vercel build succeeded; the follow-up date/authorization UI will use the same Preview alias after its build. The tests use isolated records and fictional providers; they do not demonstrate real invitation delivery.
+Checked the hosted Preview through `1b3c6b1` on November 20, 2026, then deployed the import/date follow-up **`33718be`** to the same alias after a successful Vercel build. The current full suite has **411 passing tests**; TypeScript passed and ESLint had **0 errors and 16 existing warnings**. Hosted **Feedback → Private** shows all 10 imported stories, their exact month/year source dates, dated owner reuse approval and 10 enabled Publish controls. None was published automatically. Desktop 1,440 px and phone 375 px checks found no horizontal overflow; screenshots were saved privately. The tests use isolated records and fictional providers; they do not demonstrate real invitation delivery.
 
 Hosted results:
 
