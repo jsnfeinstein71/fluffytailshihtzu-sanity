@@ -27,7 +27,7 @@ const tokenFor=(id:string)=>id.slice('private.feedbackInvitation.'.length)+'.'+c
 function invitationId(token:unknown){if(typeof token!=='string'||!/^([a-f0-9]{64})\.([\w-]{43})$/.test(token))return null;const id='private.feedbackInvitation.'+token.slice(0,64);const expected=tokenFor(id);return timingSafeEqual(Buffer.from(expected),Buffer.from(token))?id:null}
 const inviteState=(i:Invitation):FeedbackInvitationView['status']=>i.usedAt?'used':i.revokedAt?'revoked':Date.parse(i.expiresAt)<=Date.now()?'expired':'open'
 function invitationView(i:Invitation):FeedbackInvitationView{return {id:i._id,familyId:i.familyId,createdAt:i.createdAt,expiresAt:i.expiresAt,status:inviteState(i),...(inviteState(i)==='open'?{link:publicOrigin()+'/feedback#'+tokenFor(i._id)}:{}),...(i.usedAt?{usedAt:i.usedAt}:{}),...(i.revokedAt?{revokedAt:i.revokedAt}:{}),...(i.submissionId?{submissionId:i.submissionId}:{})}}
-function submissionView(s:Submission):FeedbackSubmissionView{return {id:s._id,familyId:s.familyId,invitationId:s.invitationId,originalText:s.originalText,displayName:s.displayName,puppyName:s.puppyName,originalDate:s.originalDate,receivedAt:s.receivedAt,state:s.state,publicText:s.publicText,publicDisplayName:s.publicDisplayName,publicPuppyName:s.publicPuppyName,featured:s.featured,order:s.order,source:s.source,provenance:s.provenance,publicationAllowed:s.publicationAllowed,history:s.history,...(s.photo||s.hasPhoto?{photoUrl:'/inbox/workspace/api/feedback/photo/'+s._id}:{})}}
+function submissionView(s:Submission):FeedbackSubmissionView{return {id:s._id,familyId:s.familyId,invitationId:s.invitationId,originalText:s.originalText,displayName:s.displayName,puppyName:s.puppyName,originalDate:s.originalDate,receivedAt:s.receivedAt,state:s.state,publicText:s.publicText,publicDisplayName:s.publicDisplayName,publicPuppyName:s.publicPuppyName,featured:s.featured,order:s.order,source:s.source,provenance:s.provenance,publicationAllowed:s.publicationAllowed,...(s.publicationPermission?{publicationPermission:s.publicationPermission}:{}),history:s.history,...(s.photo||s.hasPhoto?{photoUrl:'/inbox/workspace/api/feedback/photo/'+s._id}:{})}}
 async function invitationById(id:string){requireFeedback();if(!invitationPattern.test(id))throw new WorkspaceError('Invitation not found.',404);const item=await getOperatorClient().getDocument<Invitation>(id);if(!item||item._type!=='feedbackInvitation'||item.workspace!==workspaceNamespace())throw new WorkspaceError('Invitation not found.',404);return item}
 async function submissionById(id:string){requireFeedback();if(!submissionPattern.test(id))throw new WorkspaceError('Feedback not found.',404);const item=await getOperatorClient().getDocument<Submission>(id);if(!item||item._type!=='feedbackSubmission'||item.workspace!==workspaceNamespace())throw new WorkspaceError('Feedback not found.',404);return item}
 export async function invitationForMessage(familyId:string,id:string){const i=await invitationById(id);if(i.familyId!==familyId)throw new WorkspaceError('That invitation belongs to a different family.',409);await savedFamily(familyId);if(inviteState(i)!=='open')throw new WorkspaceError('This feedback invitation has been used, expired or revoked. Remove it or create a new invitation.',409);return {id:i._id,link:publicOrigin()+'/feedback#'+tokenFor(i._id),displayName:i.displayName,expiresAt:i.expiresAt}}
@@ -44,7 +44,7 @@ export async function invitationInText(familyId:string,body:string){
 export async function listFeedback(familyId?:string){
  requireFeedback();if(familyId)await savedFamily(familyId)
  // List refreshes never download original uploads or derivative bytes.
- const client=getOperatorClient(),records=await client.fetch<(Invitation|Submission)[]>('*[_type in ["feedbackInvitation","feedbackSubmission"] && workspace == $workspace && (!defined($familyId) || familyId == $familyId)] | order(createdAt desc,receivedAt desc)[0...501]{_id,_type,familyId,invitationId,createdAt,expiresAt,usedAt,revokedAt,submissionId,originalText,displayName,puppyName,originalDate,receivedAt,state,publicText,publicDisplayName,publicPuppyName,featured,order,source,provenance,publicationAllowed,history,"hasPhoto":defined(photo)}',{workspace:workspaceNamespace(),familyId:familyId||null},{cache:'no-store'})
+ const client=getOperatorClient(),records=await client.fetch<(Invitation|Submission)[]>('*[_type in ["feedbackInvitation","feedbackSubmission"] && workspace == $workspace && (!defined($familyId) || familyId == $familyId)] | order(createdAt desc,receivedAt desc)[0...501]{_id,_type,familyId,invitationId,createdAt,expiresAt,usedAt,revokedAt,submissionId,originalText,displayName,puppyName,originalDate,receivedAt,state,publicText,publicDisplayName,publicPuppyName,featured,order,source,provenance,publicationAllowed,publicationPermission,history,"hasPhoto":defined(photo)}',{workspace:workspaceNamespace(),familyId:familyId||null},{cache:'no-store'})
  if(records.length>500)throw new WorkspaceError('More than 500 feedback records need paginated review.',409)
  const invitations=records.filter((r):r is Invitation=>r._type==='feedbackInvitation').map(invitationView)
  const delivery= invitations.length?await client.fetch<{_type:string;feedbackInvitationId:string;state?:string;status?:string;delivery?:string;createdAt?:string;receivedAt?:string}[]>('*[_type in ["staffOutgoingEmail","smsMessage"] && workspace == $workspace && feedbackInvitationId in $ids] | order(createdAt desc,receivedAt desc)[0...500]{_type,feedbackInvitationId,state,status,delivery,createdAt,receivedAt}',{workspace:workspaceNamespace(),ids:invitations.map(i=>i.id)},{cache:'no-store'}):[]
@@ -95,4 +95,25 @@ export async function importFeedback(input:{source:string;sourceId:string;origin
  const receivedAt=now(),doc={_id:id,_type:'feedbackSubmission',workspace:workspaceNamespace(),...(input.familyId?{familyId:input.familyId}:{}),publicId:'family-story-'+hash(randomUUID()),originalText,displayName,puppyName,originalDate:input.originalDate,receivedAt,state:'private',publicText:originalText,publicDisplayName:displayName,publicPuppyName:puppyName,featured:false,order:0,source:'import',publicationAllowed:input.publicationAllowed===true,provenance:{source,sourceId,...(input.originalUrl?{originalUrl:input.originalUrl}:{}),attribution,permissionNote},history:[{_key:randomUUID(),action:'import',actor,at:receivedAt}]}
  if(input.familyId)await commitFamilyRecords(input.familyId,tx=>tx.createIfNotExists(doc),[id],true);else await client.createIfNotExists(doc)
  return assertSame((await client.getDocument<Submission>(id))!)
+}
+
+// Explicit owner authorization is separate from importing and publishing.
+// Keep the initial source note unchanged; never label this as platform approval
+// or customer-specific written consent.
+export async function recordImportedFeedbackPermission(submissionId:string,note:string,actor:string){
+ requireFeedback()
+ if(actor!=='jeanne'&&actor!=='jason')throw new WorkspaceError('A named FluffyTail owner must record publication authorization.',401)
+ const evidence=text(note,2000)
+ for(let attempt=0;attempt<3;attempt++){
+  const s=await submissionById(submissionId)
+  if(s.source!=='import'||!s.provenance)throw new WorkspaceError('This action applies only to imported feedback.',409)
+  if(s.publicationAllowed&&s.publicationPermission?.basis==='owner-authorization'&&s.publicationPermission.note===evidence&&s.publicationPermission.actor===actor)return submissionView(s)
+  const at=now(),history=[...s.history,{_key:randomUUID(),action:'owner-publication-authorized',actor,at,note:evidence}]
+  if(history.length>1000)throw new WorkspaceError('This story history needs administrator review.',409)
+  try{
+   await getOperatorClient().patch(s._id).ifRevisionId(s._rev).set({publicationAllowed:true,publicationPermission:{basis:'owner-authorization',note:evidence,actor,recordedAt:at},history}).commit({visibility:'sync'})
+   return submissionView(await submissionById(submissionId))
+  }catch(error){if(!conflict(error)||attempt===2)throw error}
+ }
+ throw new WorkspaceError('The permission record changed. Refresh and review before retrying.',409)
 }

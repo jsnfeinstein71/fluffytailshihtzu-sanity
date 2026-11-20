@@ -138,3 +138,22 @@ test('import preserves known date precision and rejects ambiguous or nonexistent
  }
  for(const date of ['09/10/2025','September 2025','2025','2025-13','2025-02-29','2025-09-18T14:30:00','2025-02-29T14:30:00Z','2025-09-18T24:00:00Z'])await assert.rejects(service.importFeedback({...base,sourceId:randomUUID(),originalDate:date},'jeanne'),/known source month/)
 })
+
+test('owner permission is a separate audited idempotent action that preserves originals, private photos and publication state',async()=>{
+ const input={source:'Good Dog',sourceId:'fictional-gooddog-story',attribution:'Fictional Morgan F.',permissionNote:'Initial private import; publication authorization not yet recorded.',publicationAllowed:false,originalText:' Exact original customer wording. ',originalDate:'2025-09',displayName:'Morgan F.'}
+ const s=await service.importFeedback(input,'jason'),photo={originalBase64:'cHJpdmF0ZS1vcmlnaW5hbA==',derivativeBase64:'cHJpdmF0ZS1kZXJpdmF0aXZl',filename:'private-original.jpg',contentType:'image/jpeg',sha256:'unchanged'}
+ await store.patch(s.id).set({photo}).commit();const before=structuredClone(store.documents.get(s.id))
+ const note='Owner authorizes use of these customer communications for FluffyTail stories. This records owner approval, not Good Dog approval or customer-specific written consent.'
+ const [a,b]=await Promise.all([service.recordImportedFeedbackPermission(s.id,note,'jason'),service.recordImportedFeedbackPermission(s.id,note,'jason')])
+ assert.equal(a.publicationAllowed,true);assert.equal(b.publicationAllowed,true)
+ const after=store.documents.get(s.id)
+ for(const field of ['originalText','displayName','puppyName','originalDate','provenance','publicText','publicDisplayName','publicPuppyName','photo','state','publicId','featured','order','receivedAt'])assert.deepEqual(after[field],before[field],field+' must stay unchanged')
+ assert.equal(after.state,'private');assert.equal(after.publicationPermission.basis,'owner-authorization');assert.equal(after.publicationPermission.actor,'jason');assert.equal(after.publicationPermission.note,note)
+ assert.equal(after.history.filter(h=>h.action==='owner-publication-authorized').length,1);assert.equal(after.history.at(-1).note,note)
+ assert.equal(store.documents.has(after.publicId),false);assert.deepEqual(await service.listPublicStories(),[])
+ const revision=after._rev;await service.recordImportedFeedbackPermission(s.id,note,'jason');assert.equal(store.documents.get(s.id)._rev,revision)
+ assert.equal((await service.listFeedback()).submissions[0].publicationPermission.note,note)
+ for(const actor of ['', 'customer', 'Good Dog', 'preview-operator'])await assert.rejects(service.recordImportedFeedbackPermission(s.id,note,actor),/named FluffyTail owner/)
+ await assert.rejects(service.recordImportedFeedbackPermission(s.id,'   ','jeanne'),/check your feedback/)
+ const own=await submit(await invitation());await assert.rejects(service.recordImportedFeedbackPermission(own.id,note,'jeanne'),/only to imported feedback/)
+})

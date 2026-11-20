@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import {feedbackDatePrecision,type PublicStory} from '@/lib/feedback'
+import {feedbackSourceDateLabel,type PublicStory} from '@/lib/feedback'
 import '../our-families/families.css'
 
 // Keep images on the revocable no-store photo route; an image optimizer cache
@@ -7,11 +7,7 @@ import '../our-families/families.css'
 /* eslint-disable @next/next/no-img-element */
 
 export function FamilyStory({story, linkToCollection = false}: {story: PublicStory; linkToCollection?: boolean}) {
-  const precision = feedbackDatePrecision(story.originalDate)
-  const date = precision ? new Date(precision==='month'?story.originalDate+'-01T00:00:00Z':story.originalDate!) : null
-  const dateLabel = date && !Number.isNaN(date.getTime())
-    ? new Intl.DateTimeFormat('en-US', {month: 'long', ...(precision==='month'?{}:{day:'numeric' as const}), year: 'numeric', timeZone: 'UTC'}).format(date)
-    : ''
+  const dateLabel = feedbackSourceDateLabel(story.originalDate)
 
   return <article className="family-story" id={`story-${story.id}`}>
     {story.photoUrl ? <div className="family-story-photo"><img src={story.photoUrl} alt={story.puppyName ? `${story.puppyName}, shared by their family` : 'A puppy photograph shared by their family'} loading="lazy" /></div> : null}
