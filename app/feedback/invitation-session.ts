@@ -13,6 +13,8 @@ export function createInvitationSession(options: {
   onDefaults: (result: FeedbackStatus) => void
 }) {
   const {browser} = options
+  // Native Window.fetch must receive its Window, not this options object.
+  const requestFetch = options.fetch.bind(browser)
   let token = ''
   let revision = 0
   let disposed = false
@@ -49,7 +51,7 @@ export function createInvitationSession(options: {
     options.onStatus(token ? 'loading' : 'invalid')
     if (!token) return
     try {
-      const response = await options.fetch('/api/feedback', {
+      const response = await requestFetch('/api/feedback', {
         method: 'POST', headers: {'Content-Type': 'application/json'}, cache: 'no-store',
         body: JSON.stringify({action: 'status', token: request.token}), signal: controller.signal,
       })

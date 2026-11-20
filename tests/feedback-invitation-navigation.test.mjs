@@ -26,6 +26,19 @@ function browserAt(hash) {
   return browser
 }
 
+test('native fetch receives the browser receiver instead of the controller options object', async () => {
+  const browser = browserAt('#' + caseyToken), statuses = []
+  const session = createInvitationSession({browser, fetch: async function (url, options) {
+    assert.equal(this, browser, 'Window.fetch throws Illegal invocation with another receiver')
+    assert.equal(url, '/api/feedback')
+    assert.equal(JSON.parse(options.body).token, caseyToken)
+    return response({status: 'ready', displayName: 'Casey C.'})
+  }, onChange: () => {}, onStatus: value => statuses.push(value), onDefaults: () => {}})
+  await session.refresh()
+  assert.equal(statuses.at(-1), 'ready')
+  session.dispose()
+})
+
 test('opening another family invitation in the same tab replaces used confirmation and clears prior-family state', async () => {
   const browser = browserAt('#' + caseyToken), statuses = [], defaults = [], requests = []
   let changes = 0
